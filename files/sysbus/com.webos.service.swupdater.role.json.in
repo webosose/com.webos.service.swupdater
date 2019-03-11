@@ -1,0 +1,11 @@
+{
+    "exeName":"@WEBOS_INSTALL_SBINDIR@/swupdater",
+    "type": "regular",
+    "allowedNames": ["com.webos.service.swupdater"],
+    "permissions": [
+        {
+            "service":"com.webos.service.swupdater",
+            "outbound": ["*"]
+        }
+    ]
+}
