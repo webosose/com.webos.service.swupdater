@@ -14,12 +14,23 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "ProgressListener.h"
+#include "HawkBitManager.h"
 
-ProgressListener::ProgressListener() {
-
+HawkBitManager::HawkBitManager()
+{
 }
 
-ProgressListener::~ProgressListener() {
+HawkBitManager::~HawkBitManager()
+{
+}
 
+
+bool HawkBitManager::onInitialization()
+{
+    return true;
+}
+
+bool HawkBitManager::onFinalization()
+{
+    return true;
 }

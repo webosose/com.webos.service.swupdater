@@ -15,30 +15,27 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "UpdateManager.h"
-#include "util/Logger.hpp"
+#include "util/Logger.h"
 
 const string UpdateManager::NAME = "com.webos.service.swupdater";
 
 UpdateManager::UpdateManager()
     : LS::Handle(LS::registerService(NAME.c_str()))
-    , m_progressWrapper(NULL)
-    , m_prevProgress(0)
 {
-    m_prevStatus = "idle";
 }
 
 UpdateManager::~UpdateManager() {
 }
 
-bool UpdateManager::initialize(GMainLoop *mainLoop) {
-    Logger::info("UpdateManager", "initialize", "");
-
-    if (mainLoop == NULL) {
+bool UpdateManager::onInitialization()
+{
+    Logger::normal("UpdateManager", "initialize");
+    if (m_mainloop == NULL) {
         return false;
     }
 
     try {
-        attachToLoop(mainLoop);
+        attachToLoop(m_mainloop);
 
         LS_CATEGORY_BEGIN(UpdateManager, "/")
             LS_CATEGORY_METHOD(status)
@@ -47,53 +44,36 @@ bool UpdateManager::initialize(GMainLoop *mainLoop) {
         m_statusSubscription.setServiceHandle(this);
 
     } catch (const LS::Error& e) {
-        Logger::error("UpdateManager", "Error in register category: %s", e.what());
+        Logger::error("UpdateManager", e.what());
     }
-
     return true;
 }
 
-bool UpdateManager::status(LSMessage &message) {
+bool UpdateManager::onFinalization()
+{
+    detach();
+    return true;
+}
+
+bool UpdateManager::status(LSMessage &message)
+{
     LS::Message request(&message);
     JValue requestPayload = JDomParser::fromString(request.getPayload());
     JValue responsePayload = pbnjson::Object();
-
-    ProgressManager::getInstance().initialize();
-    ProgressManager::getInstance().setListener(this);
 
     bool subscribed = m_statusSubscription.subscribe(request);
 
     responsePayload.put("returnValue", true);
     responsePayload.put("subscribed", subscribed);
-    responsePayload.put("status", m_prevStatus);
-    responsePayload.put("progress", m_prevProgress);
 
     request.respond(responsePayload.stringify().c_str());
     return true;
 }
 
-void UpdateManager::onUpdateProgress(string status, int progress)
+void UpdateManager::postStatus(JValue& responsePayload)
 {
-    Logger::info("UpdateManager", "onUpdateProgress %s, %d", status.c_str(), progress, "");
-
-    if (m_prevStatus == status && m_prevProgress == progress) {
-        return;
-    }
-
-    m_prevStatus = status;
-    m_prevProgress = progress;
-
     if (0 == m_statusSubscription.getSubscribersCount()) {
         return;
     }
-
-    JValue responsePayload = Object();
-    responsePayload.put("returnValue", true);
-    responsePayload.put("subscribed", true);
-    responsePayload.put("status", status);
-    responsePayload.put("progress", progress);
     m_statusSubscription.post(responsePayload.stringify().c_str());
 }
-
-
-

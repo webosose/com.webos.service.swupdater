@@ -17,48 +17,35 @@
 #ifndef _WRAPPER_PROGRESSMANAGER_H_
 #define _WRAPPER_PROGRESSMANAGER_H_
 
-#include <gio/gio.h>
-#include <gio/gunixsocketaddress.h>
-#include <glib.h>
-#include <glib-object.h>
 #include <iostream>
-
-extern "C" {
-#include <progress_ipc.h>
-}
-
-#include "listener/ProgressListener.h"
+#include <glib.h>
+#include <gio/gunixsocketaddress.h>
 
 using namespace std;
 
-class ProgressManager
-{
+class SocketListener {
 public:
-    virtual ~ProgressManager();
+    SocketListener() {};
+    virtual ~SocketListener() {};
 
-    static ProgressManager& getInstance()
-    {
-        static ProgressManager _instance;
-        return _instance;
-    }
+    virtual void onRead(GIOChannel* channel) = 0;
+};
 
-    static string convertString(RECOVERY_STATUS status);
+class Socket {
+public:
+    Socket();
+    virtual ~Socket();
 
-    static gboolean connect(gpointer data);
-    static gboolean onRead(GIOChannel* channel, GIOCondition condition, gpointer data);
-
-    bool initialize();
-
-    void setListener(ProgressListener* listener);
-
+    bool isConnected();
+    void setListener(SocketListener* listener);
 
 private:
-    GSocket* m_socket;
-    GSocketAddress* m_socketAddr;
-    ProgressListener* m_listener;
-    string m_prevStatus;
+    static gboolean onRead(GIOChannel* channel, GIOCondition condition, gpointer data);
 
-    ProgressManager();
+    GSocket* m_socket;
+    GSocketAddress* m_socketAddress;
+    SocketListener* m_socketListener;
+
 };
 
 #endif /* _WRAPPER_PROGRESSMANAGER_H_ */

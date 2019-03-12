@@ -14,20 +14,21 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef _LISTENER_PROGRESSLISTENER_H_
-#define _LISTENER_PROGRESSLISTENER_H_
+#ifndef MANAGER_HAWKBITMANAGER_H_
+#define MANAGER_HAWKBITMANAGER_H_
 
-#include <iostream>
+#include "interface/IManageable.h"
 
-using namespace std;
-
-class ProgressListener
-{
+class HawkBitManager : public IManageable<HawkBitManager> {
+friend IManageable<HawkBitManager>;
 public:
-    ProgressListener();
-    virtual ~ProgressListener();
+    virtual ~HawkBitManager();
 
-    virtual void onUpdateProgress(string status, int progress) = 0;
+    virtual bool onInitialization() override;
+    virtual bool onFinalization() override;
+
+private:
+    HawkBitManager();
 };
 
-#endif /* _LISTENER_PROGRESSLISTENER_H_ */
+#endif /* MANAGER_HAWKBITMANAGER_H_ */

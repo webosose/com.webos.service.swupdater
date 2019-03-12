@@ -19,41 +19,30 @@
 
 #include <luna-service2/lunaservice.hpp>
 #include <pbnjson.hpp>
-
-#include "listener/ProgressListener.h"
-#include "manager/ProgressManager.h"
+#include <util/Socket.h>
+#include "interface/IManageable.h"
 
 using namespace std;
 using namespace pbnjson;
 
-class UpdateManager : public LS::Handle, ProgressListener
-{
+class UpdateManager : public IManageable<UpdateManager>, public LS::Handle {
+friend IManageable<UpdateManager>;
 public:
     virtual ~UpdateManager();
 
-    static UpdateManager& getInstance()
-    {
-        static UpdateManager _instance;
-        return _instance;
-    }
-
-    bool initialize(GMainLoop *mainLoop);
+    virtual bool onInitialization() override;
+    virtual bool onFinalization() override;
 
     // API
     bool status(LSMessage &message);
-
-    // ProgressListener
-    void onUpdateProgress(string status, int progress);
+    void postStatus(JValue& responsePayload);
 
 private:
     static const string NAME;
 
-    ProgressManager* m_progressWrapper;
-    LS::SubscriptionPoint m_statusSubscription;
-    string m_prevStatus;
-    int m_prevProgress;
-
     UpdateManager();
+
+    LS::SubscriptionPoint m_statusSubscription;
 };
 
 #endif /* _MANAGER_UPDATEMANAGER_H_ */
