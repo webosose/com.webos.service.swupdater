@@ -14,21 +14,26 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef MANAGER_HAWKBITMANAGER_H_
-#define MANAGER_HAWKBITMANAGER_H_
+#ifndef MANAGER_BOOTLOADER_H_
+#define MANAGER_BOOTLOADER_H_
+
+#include <iostream>
 
 #include "interface/IManageable.h"
 
-class HawkBitManager : public IManageable<HawkBitManager> {
-friend IManageable<HawkBitManager>;
+class Bootloader : public IManageable<Bootloader> {
+friend IManageable<Bootloader>;
 public:
-    virtual ~HawkBitManager();
+    virtual ~Bootloader();
 
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
+    virtual void setEnv(const string& key, const string& value);
+    virtual string getEnv(const string& key);
+
 private:
-    HawkBitManager();
+    Bootloader();
 };
 
-#endif /* MANAGER_HAWKBITMANAGER_H_ */
+#endif /* MANAGER_BOOTLOADER_H_ */

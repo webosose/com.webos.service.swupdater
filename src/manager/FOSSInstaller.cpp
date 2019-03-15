@@ -14,11 +14,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "SWUpdateManager.h"
+#include <manager/FOSSInstaller.h>
+#include <manager/LS2Handler.h>
 
-#include "UpdateManager.h"
 
-string SWUpdateManager::toString(RECOVERY_STATUS status)
+string FOSSInstaller::toString(RECOVERY_STATUS status)
 {
     switch (status) {
     case IDLE:
@@ -40,26 +40,26 @@ string SWUpdateManager::toString(RECOVERY_STATUS status)
     return "unknown";
 }
 
-SWUpdateManager::SWUpdateManager()
+FOSSInstaller::FOSSInstaller()
 {
-    setName("SWUpdateManager");
+    setName("FOSSInstaller");
 }
 
-SWUpdateManager::~SWUpdateManager()
+FOSSInstaller::~FOSSInstaller()
 {
 }
 
-bool SWUpdateManager::onInitialization()
-{
-    return true;
-}
-
-bool SWUpdateManager::onFinalization()
+bool FOSSInstaller::onInitialization()
 {
     return true;
 }
 
-void SWUpdateManager::onRead(GIOChannel* channel)
+bool FOSSInstaller::onFinalization()
+{
+    return true;
+}
+
+void FOSSInstaller::onRead(GIOChannel* channel)
 {
     struct progress_msg msg;
     gsize len;
@@ -111,10 +111,10 @@ void SWUpdateManager::onRead(GIOChannel* channel)
     responsePayload.put("subscribed", true);
     responsePayload.put("status", status);
     responsePayload.put("progress", progress);
-    UpdateManager::getInstance().postStatus(responsePayload);
+    // LS2Handler::getInstance().postStatus(responsePayload);
 }
 
-bool SWUpdateManager::install(/* command line parameters */)
+bool FOSSInstaller::install(/* command line parameters */)
 {
     if (m_swupdate.isRunning()) {
         m_swupdate.stop();

@@ -14,9 +14,11 @@
 #include <iostream>
 #include <glib.h>
 
-#include "manager/HawkBitManager.h"
-#include "manager/SWUpdateManager.h"
-#include "manager/UpdateManager.h"
+#include "manager/Bootloader.h"
+#include "manager/FOSSInstaller.h"
+#include "manager/HawkBitClient.h"
+#include "manager/LS2Handler.h"
+
 
 using namespace std;
 
@@ -35,16 +37,18 @@ int main()
     s_mainloop = g_main_loop_new(NULL, FALSE);
 
     // xxx: DON'T change initialization order.
-    UpdateManager::getInstance().initialize(s_mainloop);
-    SWUpdateManager::getInstance().initialize(s_mainloop);
-    HawkBitManager::getInstance().initialize(s_mainloop);
+    Bootloader::getInstance().initialize(s_mainloop);
+    LS2Handler::getInstance().initialize(s_mainloop);
+    FOSSInstaller::getInstance().initialize(s_mainloop);
+    HawkBitClient::getInstance().initialize(s_mainloop);
 
     g_main_loop_run(s_mainloop);
 
     // xxx: DON'T change finalize order.
-    HawkBitManager::getInstance().finalize();
-    SWUpdateManager::getInstance().finalize();
-    UpdateManager::getInstance().finalize();
+    HawkBitClient::getInstance().finalize();
+    FOSSInstaller::getInstance().finalize();
+    LS2Handler::getInstance().finalize();
+    Bootloader::getInstance().finalize();
 
     g_main_loop_unref(s_mainloop);
 

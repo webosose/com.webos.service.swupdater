@@ -17,32 +17,43 @@
 #ifndef _MANAGER_UPDATEMANAGER_H_
 #define _MANAGER_UPDATEMANAGER_H_
 
+#include <iostream>
+#include <queue>
+
 #include <luna-service2/lunaservice.hpp>
 #include <pbnjson.hpp>
-#include <util/Socket.h>
+
 #include "interface/IManageable.h"
 
 using namespace std;
+using namespace LS;
 using namespace pbnjson;
 
-class UpdateManager : public IManageable<UpdateManager>, public LS::Handle {
-friend IManageable<UpdateManager>;
+class LS2Handler : public Handle, public IManageable<LS2Handler> {
+friend class IManageable<LS2Handler>;
 public:
-    virtual ~UpdateManager();
+    virtual ~LS2Handler();
 
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    // API
-    bool status(LSMessage &message);
-    void postStatus(JValue& responsePayload);
+    void check(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
+    void install(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
+    void cancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
+    void getStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
 
 private:
     static const string NAME;
+    static const LSMethod METHODS[];
 
-    UpdateManager();
+    queue<LS::Message> m_requests;
 
-    LS::SubscriptionPoint m_statusSubscription;
+    static bool onRequest(LSHandle* sh, LSMessage* msg, void* category_context);
+
+    static void pre(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
+    static void post(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
+
+    LS2Handler();
 };
 
 #endif /* _MANAGER_UPDATEMANAGER_H_ */

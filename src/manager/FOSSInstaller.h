@@ -14,8 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef MANAGER_SWUPDATEMANAGER_H_
-#define MANAGER_SWUPDATEMANAGER_H_
+#ifndef MANAGER_FOSSINSTALLER_H_
+#define MANAGER_FOSSINSTALLER_H_
 
 #include <iostream>
 #include <glib.h>
@@ -71,12 +71,12 @@
 using namespace std;
 using namespace pbnjson;
 
-class SWUpdateManager : public IManageable<SWUpdateManager>, public SocketListener {
-friend IManageable<SWUpdateManager>;
+class FOSSInstaller : public IManageable<FOSSInstaller>, public SocketListener {
+friend IManageable<FOSSInstaller>;
 public:
     static string toString(RECOVERY_STATUS status);
 
-    virtual ~SWUpdateManager();
+    virtual ~FOSSInstaller();
 
     // IManageable
     virtual bool onInitialization() override;
@@ -88,7 +88,7 @@ public:
     virtual bool install();
 
 private:
-    SWUpdateManager();
+    FOSSInstaller();
 
     Process m_swupdate;
     shared_ptr<Socket> m_clientSocket;
@@ -96,4 +96,4 @@ private:
     int m_progress;
 };
 
-#endif /* MANAGER_SWUPDATEMANAGER_H_ */
+#endif /* MANAGER_FOSSINSTALLER_H_ */

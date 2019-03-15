@@ -14,23 +14,24 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "HawkBitManager.h"
+#include <manager/HawkBitClient.h>
 
-HawkBitManager::HawkBitManager()
+HawkBitClient::HawkBitClient()
+{
+    setName("HawkBitClient");
+}
+
+HawkBitClient::~HawkBitClient()
 {
 }
 
-HawkBitManager::~HawkBitManager()
-{
-}
 
-
-bool HawkBitManager::onInitialization()
+bool HawkBitClient::onInitialization()
 {
     return true;
 }
 
-bool HawkBitManager::onFinalization()
+bool HawkBitClient::onFinalization()
 {
     return true;
 }
