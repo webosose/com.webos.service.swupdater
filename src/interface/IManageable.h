@@ -35,19 +35,19 @@ public:
     virtual bool initialize(GMainLoop* mainloop) final
     {
         bool result;
-        Logger::getInstance().normal("initialize starts", m_name);
+        Logger::info(m_name, "Start initialization");
         m_mainloop = mainloop;
         result = onInitialization();
-        Logger::getInstance().normal("initialize ends", m_name);
+        Logger::info(m_name, "End initialization");
         return result;
     }
 
     virtual bool finalize() final
     {
         bool result;
-        Logger::getInstance().normal("finalize starts", m_name);
+        Logger::info(m_name, "Start finalization");
         result = onFinalization();
-        Logger::getInstance().normal("finalize ends", m_name);
+        Logger::info(m_name, "End finalization");
         return result;
     }
 

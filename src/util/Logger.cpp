@@ -15,66 +15,83 @@
 
 #include <string.h>
 
-void Logger::append(string& msg, string log)
+const string Logger::EMPTY = "";
+
+void Logger::verbose(const string& main, string msg)
 {
-    msg += "[" + log + "]";
+    getInstance().write(LogLevel_VERBOSE, main, EMPTY, msg);
 }
 
-void Logger::prepend(string& msg, string log)
+void Logger::verbose(const string& main, const string& sub, string msg)
 {
-    msg = "[" + log + "]" + msg;
+    getInstance().write(LogLevel_VERBOSE, main, sub, msg);
 }
 
-void Logger::verbose(string msg, string name)
+void Logger::debug(const string& main, string msg)
 {
-    getInstance().write(msg, name, LogLevel_VERBOSE);
+    getInstance().write(LogLevel_DEBUG, main, EMPTY, msg);
 }
 
-void Logger::debug(string msg, string name)
+void Logger::debug(const string& main, const string& sub, string msg)
 {
-    getInstance().write(msg, name, LogLevel_DEBUG);
+    getInstance().write(LogLevel_DEBUG, main, sub, msg);
 }
 
-void Logger::normal(string msg, string name)
+void Logger::info(const string& main, string msg)
 {
-    getInstance().write(msg, name, LogLevel_NORMAL);
+    getInstance().write(LogLevel_INFO, main, EMPTY, msg);
 }
 
-void Logger::warning(string msg, string name)
+void Logger::info(const string& main, const string& sub, string msg)
 {
-    getInstance().write(msg, name, LogLevel_WARNING);
+    getInstance().write(LogLevel_INFO, main, sub, msg);
 }
 
-void Logger::error(string msg, string name)
+void Logger::warning(const string& main, string msg)
 {
-    getInstance().write(msg, name, LogLevel_ERROR);
+    getInstance().write(LogLevel_WARNING, main, EMPTY, msg);
 }
 
-string& Logger::convertLevel(enum LogLevel& level)
+void Logger::warning(const string& main, const string& sub, string msg)
 {
-    static string verbose = "VERBOSE";
-    static string debug = "DEBUG";
-    static string normal = "NORMAL";
-    static string warning = "WARNING";
-    static string error = "ERROR";
+    getInstance().write(LogLevel_WARNING, main, sub, msg);
+}
+
+void Logger::error(const string& main, string msg)
+{
+    getInstance().write(LogLevel_ERROR, main, EMPTY, msg);
+}
+
+void Logger::error(const string& main, const string& sub, string msg)
+{
+    getInstance().write(LogLevel_ERROR, main, sub, msg);
+}
+
+const string& Logger::toString(const enum LogLevel& level)
+{
+    static const string VERBOSE = "[V]";
+    static const string DEBUG = "[D]";
+    static const string INFO = "[I]";
+    static const string WARNING = "[W]";
+    static const string ERROR = "[E]";
 
     switch(level) {
     case LogLevel_VERBOSE:
-        return verbose;
+        return VERBOSE;
 
     case LogLevel_DEBUG:
-        return debug;
+        return DEBUG;
 
-    case LogLevel_NORMAL:
-        return normal;
+    case LogLevel_INFO:
+        return INFO;
 
     case LogLevel_WARNING:
-        return warning;
+        return WARNING;
 
     case LogLevel_ERROR:
-       return error;
+       return ERROR;
     }
-    return debug;
+    return DEBUG;
 }
 
 Logger::Logger()
@@ -97,18 +114,23 @@ void Logger::setType(enum LogType type)
     m_type = type;
 }
 
-void Logger::write(string& msg, string& name, enum LogLevel level)
+void Logger::write(const enum LogLevel level, const string& main, const string& sub, const string& msg)
 {
     if (level < m_level)
         return;
 
-    msg = " " + msg;
-    Logger::prepend(msg, (name.empty() ? "UNKNOWN" : name));
-    Logger::prepend(msg, convertLevel(level));
+    string log = toString(level);
+    if (!main.empty()) {
+        log += "[" + main + "]";
+    }
+    if (!sub.empty()) {
+        log += "[" + sub + "]";
+    }
+    log += " " + msg;
 
     switch (m_type) {
     case LogType_CONSOLE:
-        writeConsole(msg, level);
+        writeConsole(level, log);
         break;
 
     default:
@@ -117,12 +139,12 @@ void Logger::write(string& msg, string& name, enum LogLevel level)
     }
 }
 
-void Logger::writeConsole(string& log, enum LogLevel& level)
+void Logger::writeConsole(const enum LogLevel& level, const string& log)
 {
     switch(level) {
     case LogLevel_VERBOSE:
     case LogLevel_DEBUG:
-    case LogLevel_NORMAL:
+    case LogLevel_INFO:
         cout << log << endl;
         break;
 

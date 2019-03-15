@@ -42,6 +42,7 @@ string SWUpdateManager::toString(RECOVERY_STATUS status)
 
 SWUpdateManager::SWUpdateManager()
 {
+    setName("SWUpdateManager");
 }
 
 SWUpdateManager::~SWUpdateManager()
@@ -62,20 +63,20 @@ void SWUpdateManager::onRead(GIOChannel* channel)
 {
     struct progress_msg msg;
     gsize len;
-    GIOStatus result;
     string status;
     int progress;
-    result = g_io_channel_read_chars(channel, (char*) &msg, sizeof(msg),
-            &len, NULL);
+
+    GIOStatus result = g_io_channel_read_chars(channel, (char*) &msg, sizeof(msg), &len, NULL);
     switch (result) {
     case G_IO_STATUS_ERROR:
-        Logger::normal("ProgressManager", "onRead: read error");
+        Logger::info(m_name, "onRead", "read error");
         break;
+
     case G_IO_STATUS_EOF:
-        Logger::normal("ProgressManager", "onRead: read eof");
+        Logger::info(m_name, "onRead", "read eof");
         break;
+
     default:
-        Logger::normal("ProgressManager", "onRead: read %u bytes (%u)");
         break;
     }
 

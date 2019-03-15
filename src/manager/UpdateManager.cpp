@@ -22,6 +22,7 @@ const string UpdateManager::NAME = "com.webos.service.swupdater";
 UpdateManager::UpdateManager()
     : LS::Handle(LS::registerService(NAME.c_str()))
 {
+    setName(NAME);
 }
 
 UpdateManager::~UpdateManager() {
@@ -29,7 +30,6 @@ UpdateManager::~UpdateManager() {
 
 bool UpdateManager::onInitialization()
 {
-    Logger::normal("UpdateManager", "initialize");
     if (m_mainloop == NULL) {
         return false;
     }
@@ -44,7 +44,7 @@ bool UpdateManager::onInitialization()
         m_statusSubscription.setServiceHandle(this);
 
     } catch (const LS::Error& e) {
-        Logger::error("UpdateManager", e.what());
+        Logger::error(m_name, e.what());
     }
     return true;
 }

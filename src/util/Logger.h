@@ -23,7 +23,7 @@ using namespace std;
 enum LogLevel {
     LogLevel_VERBOSE,
     LogLevel_DEBUG,
-    LogLevel_NORMAL,
+    LogLevel_INFO,
     LogLevel_WARNING,
     LogLevel_ERROR,
 };
@@ -35,20 +35,16 @@ enum LogType {
 
 class Logger {
 public:
-    static void append(string& msg, string log);
-    static void prepend(string& msg, string log);
-
-    static void verbose(string msg, string name = "");
-    static void debug(string msg, string name = "");
-    static void normal(string msg, string name = "");
-    static void warning(string msg, string name = "");
-    static void error(string msg, string name = "");
-
-    static Logger& getInstance()
-    {
-        static Logger _instance;
-        return _instance;
-    }
+    static void verbose(const string& main, string msg);
+    static void verbose(const string& main, const string& sub, string msg);
+    static void debug(const string& main, string msg);
+    static void debug(const string& main, const string& sub, string msg);
+    static void info(const string& main, string msg);
+    static void info(const string& main, const string& sub, string msg);
+    static void warning(const string& main, string msg);
+    static void warning(const string& main, const string& sub, string msg);
+    static void error(const string& main, string msg);
+    static void error(const string& main, const string& sub, string msg);
 
     virtual ~Logger();
 
@@ -56,12 +52,20 @@ public:
     void setType(enum LogType type);
 
 private:
-    static string& convertLevel(enum LogLevel& level);
+    static const string EMPTY;
+
+    static const string& toString(const enum LogLevel& level);
+
+    static Logger& getInstance()
+    {
+        static Logger _instance;
+        return _instance;
+    }
 
     Logger();
 
-    void write(string& msg, string& name, enum LogLevel level = LogLevel_DEBUG);
-    void writeConsole(string& log, enum LogLevel& level);
+    void write(const enum LogLevel level, const string& main, const string& sub, const string& msg);
+    void writeConsole(const enum LogLevel& level, const string& log);
 
     enum LogLevel m_level;
     enum LogType m_type;
