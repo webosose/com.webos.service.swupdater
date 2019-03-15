@@ -16,6 +16,9 @@
 
 #include "Bootloader.h"
 
+#include <sstream>
+#include <stdio.h>
+
 Bootloader::Bootloader()
 {
 }
@@ -36,10 +39,31 @@ bool Bootloader::onFinalization()
 
 void Bootloader::setEnv(const string& key, const string& value)
 {
+    string command = "/sbin/fw_setenv " + key + " " + value;
 
+    FILE* file = popen(command.c_str(), "r");
+    if (!file) {
+        return;
+    }
+
+    pclose(file);
 }
 
 string Bootloader::getEnv(const string& key)
 {
-    return "";
+    char buff[256];
+    stringstream ss;
+    string command = "/sbin/fw_printenv -n " + key + " 2>/dev/null";
+
+    FILE* file = popen(command.c_str(), "r");
+    if (!file) {
+        return "";
+    }
+
+    while (fgets(buff, sizeof(buff), file)) {
+        ss << buff;
+    }
+
+    pclose(file);
+    return ss.str();
 }

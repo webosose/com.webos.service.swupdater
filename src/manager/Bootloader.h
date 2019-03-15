@@ -21,6 +21,8 @@
 
 #include "interface/IManageable.h"
 
+using namespace std;
+
 class Bootloader : public IManageable<Bootloader> {
 friend IManageable<Bootloader>;
 public:
