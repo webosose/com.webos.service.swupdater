@@ -17,7 +17,7 @@
 #include "Bootloader.h"
 
 #include <sstream>
-#include <stdio.h>
+#include <string.h>
 
 Bootloader::Bootloader()
 {
@@ -61,6 +61,8 @@ string Bootloader::getEnv(const string& key)
     }
 
     while (fgets(buff, sizeof(buff), file)) {
+        // remove trailing newline
+        buff[strcspn(buff, "\n")] = 0;
         ss << buff;
     }
 

@@ -17,7 +17,12 @@
 #ifndef MANAGER_HAWKBITCLIENT_H_
 #define MANAGER_HAWKBITCLIENT_H_
 
+#include <pbnjson.hpp>
+
 #include "interface/IManageable.h"
+#include "util/HttpCall.h"
+
+using namespace pbnjson;
 
 class HawkBitClient : public IManageable<HawkBitClient> {
 friend IManageable<HawkBitClient>;
@@ -27,8 +32,28 @@ public:
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
+    static guint poll(gpointer data);
+    void handlePollResponse(const JValue& body);
+
 private:
+    static const string BLKEY_HAWKBIT_TENENT;
+    static const string BLKEY_HAWKBIT_URL;
+    static const string BLKEY_HAWKBIT_ID;
+    static const string BLKEY_HAWKBIT_TOKEN;
+
+    static const int POLLING_INTERVAL_DEFAULT;
+
     HawkBitClient();
+
+    void registerPollingInterval(int seconds);
+    void unregisterPollingInterval();
+
+    GSource* m_pollingSrc;
+    string m_url;
+    string m_tenent;
+    string m_controllerId;
+    string m_token;
+    int m_pollingIntervalSec;
 };
 
 #endif /* MANAGER_HAWKBITCLIENT_H_ */

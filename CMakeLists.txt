@@ -1,6 +1,6 @@
 # @@@LICENSE
 #
-#      Copyright (c) 2017 LG Electronics, Inc.
+#      Copyright (c) 2019 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,12 +24,7 @@ include(webOS/webOS)
 
 # modules
 webos_modules_init(1 1 1 QUALIFIER RC4)
-webos_component(2 0 0)
-
-# headers
-# webos_machine_dep()
-# webos_distro_variant_dep()
-webos_configure_header_files(${CMAKE_CURRENT_SOURCE_DIR}/include)
+webos_component(1 0 0)
 
 add_subdirectory(src)
 
