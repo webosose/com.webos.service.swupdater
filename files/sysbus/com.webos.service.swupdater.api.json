@@ -1,0 +1,8 @@
+{
+    "swupdate": [
+        "com.webos.service.swupdater/cancel",
+        "com.webos.service.swupdater/check",
+        "com.webos.service.swupdater/getStatus",
+        "com.webos.service.swupdater/install"
+    ]
+}
