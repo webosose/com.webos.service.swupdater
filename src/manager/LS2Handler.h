@@ -29,6 +29,18 @@ using namespace std;
 using namespace LS;
 using namespace pbnjson;
 
+class LS2HandlerListener {
+public:
+    LS2HandlerListener() {};
+    virtual ~LS2HandlerListener() {};
+
+    virtual bool onCheck(JValue& responsePayload/**/) = 0;
+    virtual bool onInstall(JValue& responsePayload/**/) = 0;
+    virtual bool onCancel(JValue& responsePayload/**/) = 0;
+    virtual bool onGetStatus(JValue& responsePayload/**/) = 0;
+
+};
+
 class LS2Handler : public Handle, public IManageable<LS2Handler> {
 friend class IManageable<LS2Handler>;
 public:
@@ -42,18 +54,25 @@ public:
     void cancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
     void getStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
 
+    virtual void setListener(LS2HandlerListener* listener)
+    {
+        m_listener = listener;
+    }
+
 private:
-    static const string NAME;
-    static const LSMethod METHODS[];
-
-    queue<LS::Message> m_requests;
-
     static bool onRequest(LSHandle* sh, LSMessage* msg, void* category_context);
 
     static void pre(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
     static void post(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
 
     LS2Handler();
+
+    static const string NAME;
+    static const LSMethod METHODS[];
+
+    queue<LS::Message> m_requests;
+
+    LS2HandlerListener* m_listener;
 };
 
 #endif /* _MANAGER_UPDATEMANAGER_H_ */

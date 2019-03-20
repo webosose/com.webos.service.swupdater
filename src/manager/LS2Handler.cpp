@@ -52,13 +52,15 @@ bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
         pre(request, requestPayload, responsePayload);
         string method = request.getMethod();
 
-        if (method == "register") {
-            LS2Handler::getInstance().check(request, requestPayload, responsePayload);
-        } else if (method == "unregister") {
-            LS2Handler::getInstance().install(request, requestPayload, responsePayload);
-        } else if (method == "resolve") {
-            LS2Handler::getInstance().cancel(request, requestPayload, responsePayload);
+        if (LS2Handler::getInstance().m_listener == nullptr) {
+            responsePayload.put("errorText", "API handler is null");
         } else if (method == "check") {
+            LS2Handler::getInstance().check(request, requestPayload, responsePayload);
+        } else if (method == "install") {
+            LS2Handler::getInstance().install(request, requestPayload, responsePayload);
+        } else if (method == "cancel") {
+            LS2Handler::getInstance().cancel(request, requestPayload, responsePayload);
+        } else if (method == "getStatus") {
             LS2Handler::getInstance().getStatus(request, requestPayload, responsePayload);
         } else {
             responsePayload.put("errorText", "Please extend API handlers");
@@ -71,6 +73,7 @@ bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
 
 LS2Handler::LS2Handler()
     : Handle(LS::registerService(NAME.c_str()))
+    , m_listener(nullptr)
 {
     setName("LS2Handler");
     this->registerCategory("/", METHODS, NULL, NULL);
@@ -116,16 +119,28 @@ void LS2Handler::post(LS::Message& request, JValue& requestPayload, JValue& resp
 
 void LS2Handler::check(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
+    if (!m_listener->onCheck(responsePayload)) {
+        responsePayload.put("errorText", "Failed to handle check API");
+    }
 }
 
 void LS2Handler::install(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
+    if (!m_listener->onInstall(responsePayload)) {
+        responsePayload.put("errorText", "Failed to handle install API");
+    }
 }
 
 void LS2Handler::cancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
+    if (!m_listener->onCancel(responsePayload)) {
+        responsePayload.put("errorText", "Failed to handle cancel API");
+    }
 }
 
 void LS2Handler::getStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
+    if (!m_listener->onGetStatus(responsePayload)) {
+        responsePayload.put("errorText", "Failed to handle getStatus API");
+    }
 }

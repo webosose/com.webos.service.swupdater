@@ -27,10 +27,33 @@ PolicyManager::~PolicyManager()
 bool PolicyManager::onInitialization()
 {
     HawkBitClient::getInstance().setListener(this);
+    LS2Handler::getInstance().setListener(this);
     return true;
 }
 
 bool PolicyManager::onFinalization()
+{
+    return true;
+}
+
+bool PolicyManager::onCheck(JValue& responsePayload/**/)
+{
+    // HawkBitClient::getInstance().poll();
+    // TODO API에 해당하는 인자전달이 필요함.
+    return true;
+}
+
+bool PolicyManager::onInstall(JValue& responsePayload/**/)
+{
+    return true;
+}
+
+bool PolicyManager::onCancel(JValue& responsePayload/**/)
+{
+    return true;
+}
+
+bool PolicyManager::onGetStatus(JValue& responsePayload/**/)
 {
     return true;
 }

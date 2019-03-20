@@ -23,7 +23,7 @@
 #include "manager/HawkBitClient.h"
 #include "manager/LS2Handler.h"
 
-class PolicyManager : public IManageable<PolicyManager>, public HawkBitClientListener {
+class PolicyManager : public IManageable<PolicyManager>, public LS2HandlerListener, public HawkBitClientListener {
 friend IManageable<PolicyManager>;
 public:
     virtual ~PolicyManager();
@@ -31,6 +31,12 @@ public:
     // IManageable
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
+
+    // LS2HandlerListener
+    virtual bool onCheck(JValue& responsePayload/**/) override;
+    virtual bool onInstall(JValue& responsePayload/**/) override;
+    virtual bool onCancel(JValue& responsePayload/**/) override;
+    virtual bool onGetStatus(JValue& responsePayload/**/) override;
 
     // HawkBitClientListener
     virtual void onCancelUpdate() override;
