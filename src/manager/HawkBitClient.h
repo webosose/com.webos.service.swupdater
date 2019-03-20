@@ -17,7 +17,6 @@
 #ifndef MANAGER_HAWKBITCLIENT_H_
 #define MANAGER_HAWKBITCLIENT_H_
 
-#include <core/HttpCall.h>
 #include <pbnjson.hpp>
 
 #include "interface/IManageable.h"
@@ -54,7 +53,7 @@ private:
     bool isStarted();
     void stop();
 
-    static const string HAWKBIT_TENENT;
+    static const string HAWKBIT_TENANT;
     static const string HAWKBIT_URL;
     static const string HAWKBIT_ID;
     static const string HAWKBIT_TOKEN;

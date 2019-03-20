@@ -14,17 +14,17 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <core/HttpCall.h>
 #include "HawkBitClient.h"
 
 #include <curl/curl.h>
 #include <glib.h>
 
+#include "core/HttpCall.h"
 #include "manager/Bootloader.h"
 #include "util/Logger.h"
 #include "util/Socket.h"
 
-const string HawkBitClient::HAWKBIT_TENENT = "hawkbit_tenent";
+const string HawkBitClient::HAWKBIT_TENANT = "hawkbit_tenant";
 const string HawkBitClient::HAWKBIT_URL = "hawkbit_url";
 const string HawkBitClient::HAWKBIT_ID = "hawkbit_id";
 const string HawkBitClient::HAWKBIT_TOKEN = "hawkbit_token";
@@ -32,8 +32,9 @@ const string HawkBitClient::HAWKBIT_TOKEN = "hawkbit_token";
 const int HawkBitClient::POLLING_INTERVAL_DEFAULT = 600;
 
 HawkBitClient::HawkBitClient()
-    : m_pollingSrc(NULL)
+    : m_pollingSrc(nullptr)
     , m_pollingInterval(-1)
+    , m_listener(nullptr)
 {
     setName("HawkBitClient");
 }
@@ -53,19 +54,20 @@ bool HawkBitClient::onInitialization()
 
     // hawkBit configuration
     string hawkBitUrl = Bootloader::getInstance().getEnv(HAWKBIT_URL);
-    string hawkBitTenet = Bootloader::getInstance().getEnv(HAWKBIT_TENENT);
+    string hawkBitTenant = Bootloader::getInstance().getEnv(HAWKBIT_TENANT);
     string hawkBitId = Bootloader::getInstance().getEnv(HAWKBIT_ID);
 
-    m_hawkBitToken = Bootloader::getInstance().getEnv(HAWKBIT_TOKEN);
-    m_hawkBitUrl = hawkBitUrl + "/" + hawkBitTenet + "/controller/v1/" + hawkBitId;
-
-    if (hawkBitUrl.empty() || hawkBitTenet.empty() || m_hawkBitToken.empty()) {
-        Logger::error(m_name, "HawkBit connection info could not be found");
-        return false;
-    }
     if (hawkBitId.empty()) {
         hawkBitId = Socket::getMacAddress("eth0");
         Bootloader::getInstance().setEnv(HAWKBIT_ID, hawkBitId);
+    }
+
+    m_hawkBitToken = Bootloader::getInstance().getEnv(HAWKBIT_TOKEN);
+    m_hawkBitUrl = hawkBitUrl + "/" + hawkBitTenant + "/controller/v1/" + hawkBitId;
+
+    if (hawkBitUrl.empty() || hawkBitTenant.empty() || m_hawkBitToken.empty()) {
+        Logger::error(m_name, "HawkBit connection info could not be found");
+        return false;
     }
 
     start(POLLING_INTERVAL_DEFAULT);
