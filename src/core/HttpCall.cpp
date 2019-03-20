@@ -14,8 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "HttpCall.h"
-
+#include <core/HttpCall.h>
 #include "util/Logger.h"
 
 const string HttpCall::LOG_PREFIX = "HttpCall";
@@ -56,19 +55,19 @@ void HttpCall::setMethod(MethodType method)
 {
     CURLcode rc = CURLE_OK;
     switch (method) {
-    case kMethodGET:
+    case MethodType_GET:
         rc = curl_easy_setopt(m_curl, CURLOPT_HTTPGET, 1L);
         break;
 
-    case kMethodPOST:
+    case MethodType_POST:
         rc = curl_easy_setopt(m_curl, CURLOPT_POST, 1L);
         break;
 
-    case kMethodPUT:
+    case MethodType_PUT:
         rc = curl_easy_setopt(m_curl, CURLOPT_PUT, 1L);
         break;
 
-    case kMethodDELETE:
+    case MethodType_DELETE:
         rc = curl_easy_setopt(m_curl, CURLOPT_CUSTOMREQUEST, "DELETE");
         break;
     }

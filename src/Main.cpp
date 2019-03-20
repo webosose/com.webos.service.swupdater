@@ -18,6 +18,7 @@
 #include "manager/FOSSInstaller.h"
 #include "manager/HawkBitClient.h"
 #include "manager/LS2Handler.h"
+#include "manager/PolicyManager.h"
 
 
 using namespace std;
@@ -41,10 +42,12 @@ int main()
     LS2Handler::getInstance().initialize(s_mainloop);
     FOSSInstaller::getInstance().initialize(s_mainloop);
     HawkBitClient::getInstance().initialize(s_mainloop);
+    PolicyManager::getInstance().initialize(s_mainloop);
 
     g_main_loop_run(s_mainloop);
 
     // xxx: DON'T change finalize order.
+    PolicyManager::getInstance().finalize();
     HawkBitClient::getInstance().finalize();
     FOSSInstaller::getInstance().finalize();
     LS2Handler::getInstance().finalize();

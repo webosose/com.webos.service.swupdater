@@ -28,8 +28,6 @@
 #include "util/Socket.h"
 
 #if defined(LIBSWUPDATE)
-    #include <progress_ipc.h>
-#else
     typedef enum {
            IDLE,
            START,
@@ -66,6 +64,8 @@
            unsigned int    infolen;        /* Len of data valid in info */
            char            info[2048];     /* additional information about install */
     };
+#else
+    #include <progress_ipc.h>
 #endif
 
 using namespace std;

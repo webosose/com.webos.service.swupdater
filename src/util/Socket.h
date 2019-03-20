@@ -33,6 +33,8 @@ public:
 
 class Socket {
 public:
+    static string getMacAddress(const string& ifaceName);
+
     Socket();
     virtual ~Socket();
 

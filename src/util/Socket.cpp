@@ -16,9 +16,44 @@
 
 #include "Socket.h"
 
+
+#include <ifaddrs.h>
+#include <linux/if_packet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 #include "util/Logger.h"
 
 char* SOCKET_PROGRESS_PATH = "";
+
+string Socket::getMacAddress(const string& ifaceName)
+{
+    struct ifaddrs* ifas;
+    struct ifaddrs* ifa;
+
+    int fd;
+    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+        return "";
+    }
+
+    if (getifaddrs(&ifas) == -1) {
+        close(fd);
+        return "";
+    }
+
+    char buff[18] = { 0, };
+    for (ifa = ifas; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr->sa_family == AF_PACKET) {
+            if (ifa->ifa_name != ifaceName) continue;
+            struct sockaddr_ll* s = (struct sockaddr_ll*)ifa->ifa_addr;
+            snprintf(buff, sizeof(buff), "%02x:%02x:%02x:%02x:%02x:%02x",
+                     s->sll_addr[0], s->sll_addr[1], s->sll_addr[2], s->sll_addr[3], s->sll_addr[4], s->sll_addr[5]);
+        }
+    }
+
+    close(fd);
+    return buff;
+}
 
 gboolean Socket::onRead(GIOChannel* channel, GIOCondition condition, gpointer data)
 {

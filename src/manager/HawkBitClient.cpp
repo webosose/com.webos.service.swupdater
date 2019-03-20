@@ -14,26 +14,26 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include <core/HttpCall.h>
 #include "HawkBitClient.h"
 
 #include <curl/curl.h>
 #include <glib.h>
 
 #include "manager/Bootloader.h"
-#include "util/HttpCall.h"
 #include "util/Logger.h"
-#include "util/Util.h"
+#include "util/Socket.h"
 
-const string HawkBitClient::BLKEY_HAWKBIT_TENENT = "hawkbit_tenent";
-const string HawkBitClient::BLKEY_HAWKBIT_URL = "hawkbit_url";
-const string HawkBitClient::BLKEY_HAWKBIT_ID = "hawkbit_id";
-const string HawkBitClient::BLKEY_HAWKBIT_TOKEN = "hawkbit_token";
+const string HawkBitClient::HAWKBIT_TENENT = "hawkbit_tenent";
+const string HawkBitClient::HAWKBIT_URL = "hawkbit_url";
+const string HawkBitClient::HAWKBIT_ID = "hawkbit_id";
+const string HawkBitClient::HAWKBIT_TOKEN = "hawkbit_token";
 
 const int HawkBitClient::POLLING_INTERVAL_DEFAULT = 600;
 
 HawkBitClient::HawkBitClient()
     : m_pollingSrc(NULL)
-    , m_pollingIntervalSec(-1)
+    , m_pollingInterval(-1)
 {
     setName("HawkBitClient");
 }
@@ -42,31 +42,33 @@ HawkBitClient::~HawkBitClient()
 {
 }
 
-
 bool HawkBitClient::onInitialization()
 {
     // Init libcurl
     const CURLcode code = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (code != CURLE_OK) {
-        Logger::error(m_name, "Failed in curl_global_init", curl_easy_strerror(code));
+        Logger::error(m_name, __FUNCTION__, curl_easy_strerror(code));
         return false;
     }
 
     // hawkBit configuration
-    m_url = Bootloader::getInstance().getEnv(BLKEY_HAWKBIT_URL);
-    m_tenent = Bootloader::getInstance().getEnv(BLKEY_HAWKBIT_TENENT);
-    m_token = Bootloader::getInstance().getEnv(BLKEY_HAWKBIT_TOKEN);
-    m_controllerId = Bootloader::getInstance().getEnv(BLKEY_HAWKBIT_ID);
-    if (m_url.empty() || m_tenent.empty() || m_token.empty()) {
+    string hawkBitUrl = Bootloader::getInstance().getEnv(HAWKBIT_URL);
+    string hawkBitTenet = Bootloader::getInstance().getEnv(HAWKBIT_TENENT);
+    string hawkBitId = Bootloader::getInstance().getEnv(HAWKBIT_ID);
+
+    m_hawkBitToken = Bootloader::getInstance().getEnv(HAWKBIT_TOKEN);
+    m_hawkBitUrl = hawkBitUrl + "/" + hawkBitTenet + "/controller/v1/" + hawkBitId;
+
+    if (hawkBitUrl.empty() || hawkBitTenet.empty() || m_hawkBitToken.empty()) {
         Logger::error(m_name, "HawkBit connection info could not be found");
         return false;
     }
-    if (m_controllerId.empty()) {
-        m_controllerId = Util::getMacAddress("eth0");
-        Bootloader::getInstance().setEnv(BLKEY_HAWKBIT_ID, m_controllerId);
+    if (hawkBitId.empty()) {
+        hawkBitId = Socket::getMacAddress("eth0");
+        Bootloader::getInstance().setEnv(HAWKBIT_ID, hawkBitId);
     }
 
-    registerPollingInterval(POLLING_INTERVAL_DEFAULT);
+    start(POLLING_INTERVAL_DEFAULT);
 
     // first polling
     HawkBitClient::poll(this);
@@ -76,29 +78,37 @@ bool HawkBitClient::onInitialization()
 
 bool HawkBitClient::onFinalization()
 {
-    unregisterPollingInterval();
+    stop();
     return true;
 }
 
-void HawkBitClient::registerPollingInterval(int seconds)
+void HawkBitClient::start(int seconds)
 {
-    if (m_pollingSrc && !g_source_is_destroyed(m_pollingSrc) && seconds == m_pollingIntervalSec) {
+    if (seconds == 0) {
+        seconds = POLLING_INTERVAL_DEFAULT;
+    }
+    if (isStarted() && seconds == m_pollingInterval) {
         return;
     }
-
-    unregisterPollingInterval();
+    stop();
 
     m_pollingSrc = g_timeout_source_new_seconds(seconds);
     g_source_set_callback(m_pollingSrc, (GSourceFunc)&HawkBitClient::poll, this, NULL);
     g_source_attach(m_pollingSrc, g_main_context_default());
     g_source_unref(m_pollingSrc);
-    m_pollingIntervalSec = seconds;
+    m_pollingInterval = seconds;
 }
 
-void HawkBitClient::unregisterPollingInterval()
+bool HawkBitClient::isStarted()
 {
-    if (m_pollingSrc && !g_source_is_destroyed(m_pollingSrc)) {
+    return (m_pollingSrc && !g_source_is_destroyed(m_pollingSrc));
+}
+
+void HawkBitClient::stop()
+{
+    if (isStarted()) {
         g_source_destroy(m_pollingSrc);
+        m_pollingSrc = nullptr;
     }
 }
 
@@ -106,15 +116,13 @@ guint HawkBitClient::poll(gpointer data)
 {
     HawkBitClient* self = (HawkBitClient*) data;
     if (!self) {
-        Logger::error("HawkBitClient", __FUNCTION__, "data is null");
+        Logger::error(HawkBitClient::getInstance().m_name, __FUNCTION__, "data is null");
         return G_SOURCE_REMOVE;
     }
 
-    string url = self->m_url + "/" + self->m_tenent + "/controller/v1/" + self->m_controllerId;
-
-    HttpCall httpCall(url, HttpCall::kMethodGET);
+    HttpCall httpCall(self->m_hawkBitUrl, HttpCall::MethodType_GET);
     httpCall.appendHeader("Accept", "application/hal+json");
-    httpCall.appendHeader("Authorization", "GatewayToken " + self->m_token);
+    httpCall.appendHeader("Authorization", "GatewayToken " + self->m_hawkBitToken);
     if (!httpCall.perform()) {
         Logger::error(self->m_name, "Error while polling");
         return G_SOURCE_CONTINUE;
@@ -130,32 +138,27 @@ guint HawkBitClient::poll(gpointer data)
         return G_SOURCE_CONTINUE;
     }
 
-    string pollingInterval;
-    if (CONV_OK == body["config"]["polling"]["sleep"].asString(pollingInterval)) {
-        Logger::info(self->m_name, "config.polling.sleep", pollingInterval);
+    string sleep;
+    if (CONV_OK == body["config"]["polling"]["sleep"].asString(sleep)) {
+        Logger::info(self->m_name, "config.polling.sleep", sleep);
         int hours, minutes, seconds;
-        sscanf(pollingInterval.c_str(), "%d:%d:%d", &hours, &minutes, &seconds);
-        int pollingIntervalSec = hours * 3600 + minutes * 60 + seconds;
-        self->registerPollingInterval(pollingIntervalSec);
+        sscanf(sleep.c_str(), "%d:%d:%d", &hours, &minutes, &seconds);
+        int pollingInterval = hours * 3600 + minutes * 60 + seconds;
+        self->start(pollingInterval);
     }
 
-    JValue linksObj = body["_links"];
-    string configDataHref;
-    if (linksObj.hasKey("configData") &&
-            CONV_OK == linksObj["configData"]["href"].asString(configDataHref)) {
-        Logger::info(self->m_name, "_links.configData.href", configDataHref);
-    }
+    if (self->m_listener == nullptr)
+        return G_SOURCE_CONTINUE;
 
-    string cancelActionHref;
-    string deploymentBaseHref;
-    if (linksObj.hasKey("cancelAction") &&
-            CONV_OK == linksObj["cancelAction"]["href"].asString(cancelActionHref)) {
+    JValue _links = body["_links"];
+    string href;
+    if (_links.hasKey("cancelAction") && CONV_OK == _links["cancelAction"]["href"].asString(href)) {
+        self->m_listener->onCancelUpdate();
         // TODO update_canceled
-        Logger::info(self->m_name, "_links.cancelAction.href", cancelActionHref);
-    } else if (linksObj.hasKey("deploymentBase") &&
-            CONV_OK == body["_links"]["deploymentBase"]["href"].asString(deploymentBaseHref)) {
+        Logger::info(self->m_name, "_links.cancelAction.href", href);
+    } else if (_links.hasKey("deploymentBase") && CONV_OK == body["_links"]["deploymentBase"]["href"].asString(href)) {
         // TODO update_available
-        Logger::info(self->m_name, "_links.deploymentBase.href", deploymentBaseHref);
+        Logger::info(self->m_name, "_links.deploymentBase.href", href);
     } else {
         // TODO no_update_available
     }

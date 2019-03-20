@@ -17,12 +17,20 @@
 #ifndef MANAGER_HAWKBITCLIENT_H_
 #define MANAGER_HAWKBITCLIENT_H_
 
+#include <core/HttpCall.h>
 #include <pbnjson.hpp>
 
 #include "interface/IManageable.h"
-#include "util/HttpCall.h"
 
 using namespace pbnjson;
+
+class HawkBitClientListener {
+public:
+    HawkBitClientListener() {};
+    virtual ~HawkBitClientListener() {};
+
+    virtual void onCancelUpdate(/* Need to define paramters */) = 0;
+};
 
 class HawkBitClient : public IManageable<HawkBitClient> {
 friend IManageable<HawkBitClient>;
@@ -32,28 +40,34 @@ public:
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    static guint poll(gpointer data);
-    void handlePollResponse(const JValue& body);
+    virtual void setListener(HawkBitClientListener *listener)
+    {
+        m_listener = listener;
+    }
 
 private:
-    static const string BLKEY_HAWKBIT_TENENT;
-    static const string BLKEY_HAWKBIT_URL;
-    static const string BLKEY_HAWKBIT_ID;
-    static const string BLKEY_HAWKBIT_TOKEN;
-
-    static const int POLLING_INTERVAL_DEFAULT;
+    static guint poll(gpointer data);
 
     HawkBitClient();
 
-    void registerPollingInterval(int seconds);
-    void unregisterPollingInterval();
+    void start(int seconds = 0);
+    bool isStarted();
+    void stop();
+
+    static const string HAWKBIT_TENENT;
+    static const string HAWKBIT_URL;
+    static const string HAWKBIT_ID;
+    static const string HAWKBIT_TOKEN;
+
+    static const int POLLING_INTERVAL_DEFAULT;
+
+    string m_hawkBitUrl;
+    string m_hawkBitToken;
 
     GSource* m_pollingSrc;
-    string m_url;
-    string m_tenent;
-    string m_controllerId;
-    string m_token;
-    int m_pollingIntervalSec;
+    int m_pollingInterval;
+
+    HawkBitClientListener* m_listener;
 };
 
 #endif /* MANAGER_HAWKBITCLIENT_H_ */

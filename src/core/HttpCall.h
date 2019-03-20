@@ -14,8 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef UTIL_HTTPCALL_H_
-#define UTIL_HTTPCALL_H_
+#ifndef CORE_HTTPCALL_H_
+#define CORE_HTTPCALL_H_
 
 #include <algorithm>
 #include <curl/curl.h>
@@ -29,10 +29,10 @@ using namespace std;
 class HttpCall {
 public:
     enum MethodType {
-        kMethodGET,
-        kMethodPOST,
-        kMethodPUT,
-        kMethodDELETE,
+        MethodType_GET,
+        MethodType_POST,
+        MethodType_PUT,
+        MethodType_DELETE,
     };
 
     HttpCall(const string& url, MethodType methodType);
@@ -60,4 +60,4 @@ public:
     stringstream m_response;
 };
 
-#endif /* UTIL_HTTPCALL_H_ */
+#endif /* CORE_HTTPCALL_H_ */

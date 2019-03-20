@@ -14,16 +14,28 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef UTIL_UTIL_H_
-#define UTIL_UTIL_H_
+#include "PolicyManager.h"
 
-#include <string>
+PolicyManager::PolicyManager()
+{
+}
 
-using namespace std;
+PolicyManager::~PolicyManager()
+{
+}
 
-class Util {
-public:
-    static string getMacAddress(const string& ifaceName);
-};
+bool PolicyManager::onInitialization()
+{
+    HawkBitClient::getInstance().setListener(this);
+    return true;
+}
 
-#endif /* UTIL_UTIL_H_ */
+bool PolicyManager::onFinalization()
+{
+    return true;
+}
+
+void PolicyManager::onCancelUpdate()
+{
+
+}
