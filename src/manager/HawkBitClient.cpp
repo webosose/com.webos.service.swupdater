@@ -71,10 +71,6 @@ bool HawkBitClient::onInitialization()
     }
 
     start(POLLING_INTERVAL_DEFAULT);
-
-    // first polling
-    HawkBitClient::poll(this);
-
     return true;
 }
 
@@ -114,6 +110,42 @@ void HawkBitClient::stop()
     }
 }
 
+bool HawkBitClient::sendToServer(const string& url, HttpCall::MethodType method, const JValue& request, long& responseCode, JValue& response)
+{
+    HttpCall httpCall(url, method);
+    httpCall.appendHeader("Accept", "application/hal+json");
+    httpCall.appendHeader("Authorization", "GatewayToken " + m_hawkBitToken);
+    httpCall.appendHeader("Content-Type", "application/json;charset=UTF-8");
+    if (!request.isNull() && request.isValid()) {
+        httpCall.setBody(request);
+    }
+    if (!httpCall.perform()) {
+        Logger::error(m_name, "Error while requesting", url);
+        return false;
+    }
+    responseCode = httpCall.getResponseCode();
+    if (httpCall.getResponseCode() != 200L) {
+        Logger::error(m_name, "HTTPCODE", to_string(httpCall.getResponseCode()));
+        return false;
+    }
+
+    string bodyStr = httpCall.getResponse().str();
+    if (!bodyStr.empty()) {
+        JValue body = JDomParser::fromString(bodyStr);
+        if (!body.isValid() || body.isNull()) {
+            Logger::error(m_name, "Error while parsing: " + httpCall.getResponse().str());
+            return false;
+        }
+        response = body;
+    }
+    return true;
+}
+
+void HawkBitClient::pollOnce()
+{
+    HawkBitClient::poll(this);
+}
+
 guint HawkBitClient::poll(gpointer data)
 {
     HawkBitClient* self = (HawkBitClient*) data;
@@ -122,26 +154,15 @@ guint HawkBitClient::poll(gpointer data)
         return G_SOURCE_REMOVE;
     }
 
-    HttpCall httpCall(self->m_hawkBitUrl, HttpCall::MethodType_GET);
-    httpCall.appendHeader("Accept", "application/hal+json");
-    httpCall.appendHeader("Authorization", "GatewayToken " + self->m_hawkBitToken);
-    if (!httpCall.perform()) {
-        Logger::error(self->m_name, "Error while polling");
-        return G_SOURCE_CONTINUE;
-    }
-    if (httpCall.getResponseCode() != 200L) {
-        Logger::error(self->m_name, "HTTPCODE", to_string(httpCall.getResponseCode()));
-        return G_SOURCE_CONTINUE;
-    }
-
-    JValue body = JDomParser::fromString(httpCall.getResponse().str());
-    if (!body.isValid() || body.isNull()) {
-        Logger::error(self->m_name, "Error while parsing");
+    JValue response;
+    long responseCode = 0;
+    if (!self->sendToServer(self->m_hawkBitUrl, HttpCall::MethodType_GET, JValue(), responseCode, response)) {
+        Logger::error(self->m_name, to_string(responseCode), "url: " + self->m_hawkBitUrl);
         return G_SOURCE_CONTINUE;
     }
 
     string sleep;
-    if (CONV_OK == body["config"]["polling"]["sleep"].asString(sleep)) {
+    if (CONV_OK == response["config"]["polling"]["sleep"].asString(sleep)) {
         Logger::info(self->m_name, "config.polling.sleep", sleep);
         int hours, minutes, seconds;
         sscanf(sleep.c_str(), "%d:%d:%d", &hours, &minutes, &seconds);
@@ -152,18 +173,62 @@ guint HawkBitClient::poll(gpointer data)
     if (self->m_listener == nullptr)
         return G_SOURCE_CONTINUE;
 
-    JValue _links = body["_links"];
+    shared_ptr<Action> action;
+    JValue _links = response["_links"];
     string href;
     if (_links.hasKey("cancelAction") && CONV_OK == _links["cancelAction"]["href"].asString(href)) {
-        self->m_listener->onCancelUpdate();
-        // TODO update_canceled
-        Logger::info(self->m_name, "_links.cancelAction.href", href);
-    } else if (_links.hasKey("deploymentBase") && CONV_OK == body["_links"]["deploymentBase"]["href"].asString(href)) {
-        // TODO update_available
-        Logger::info(self->m_name, "_links.deploymentBase.href", href);
+        Logger::info(self->m_name, "cancelAction.href", href);
+        action = make_shared<ActionCancel>();
+    } else if (_links.hasKey("deploymentBase") && CONV_OK == response["_links"]["deploymentBase"]["href"].asString(href)) {
+        Logger::info(self->m_name, "deploymentBase.href", href);
+        action = make_shared<ActionInstall>();
     } else {
-        // TODO no_update_available
+        return G_SOURCE_CONTINUE;
+    }
+
+    responseCode = 0;
+    response = JValue();
+    if (!self->sendToServer(href, HttpCall::MethodType_GET, JValue(), responseCode, response)) {
+        Logger::error(self->m_name, to_string(responseCode), "url: " + self->m_hawkBitUrl);
+        return G_SOURCE_CONTINUE;
+    }
+    if (!action->fromJson(response)) {
+        Logger::error(self->m_name, "Error while parsing action");
+        return G_SOURCE_CONTINUE;
+    }
+
+    switch (action->getType()) {
+    case ActionType::ActionType_CANCEL:
+        self->m_listener->onCancelUpdate(action);
+        break;
+    case ActionType::ActionType_INSTALL:
+        self->m_listener->onInstallUpdate(action);
+        break;
+    case ActionType::ActionType_NONE:
+        break;
     }
 
     return G_SOURCE_CONTINUE;
+}
+
+/*
+   long responseCode = 0;
+   Feedback feedback(action->getId(), ExecutionType_CLOSED, FinishedType_SUCCESS);
+   if (!HawkBitClient::getInstance().feedback(false, feedback, responseCode)) {
+      Logger::error(m_name, to_string(responseCode), "[cancel] feedback failed");
+   }
+ */
+bool HawkBitClient::feedback(bool isInstall, Feedback& feedback, long& responseCode)
+{
+    string url;
+    if (isInstall) {
+        url = m_hawkBitUrl + "/deploymentBase/" + feedback.getActionId() + "/feedback";
+    } else {
+        url = m_hawkBitUrl + "/cancelAction/" + feedback.getActionId() + "/feedback";
+    }
+
+    JValue request = Object();
+    feedback.toJson(request);
+    JValue response = Object();
+    return sendToServer(url, HttpCall::MethodType_POST, request, responseCode, response);
 }

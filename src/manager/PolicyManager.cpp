@@ -16,8 +16,13 @@
 
 #include "PolicyManager.h"
 
+#include "core/Action.h"
+#include "core/Feedback.h"
+#include "util/Logger.h"
+
 PolicyManager::PolicyManager()
 {
+    setName("PolicyManager");
 }
 
 PolicyManager::~PolicyManager()
@@ -28,6 +33,9 @@ bool PolicyManager::onInitialization()
 {
     HawkBitClient::getInstance().setListener(this);
     LS2Handler::getInstance().setListener(this);
+
+    // first polling
+    HawkBitClient::getInstance().pollOnce();
     return true;
 }
 
@@ -58,7 +66,28 @@ bool PolicyManager::onGetStatus(JValue& responsePayload/**/)
     return true;
 }
 
-void PolicyManager::onCancelUpdate()
+void PolicyManager::onCancelUpdate(shared_ptr<Action> _action)
 {
+    shared_ptr<ActionCancel> action = dynamic_pointer_cast<ActionCancel>(_action);
+    JValue debugJson = Object();
+    action->toDebugJson(debugJson);
+    Logger::info(m_name, "[cancel] action: " + debugJson.stringify("  "));
+
+    // cancel
+
+    // feedback
+
+}
+
+void PolicyManager::onInstallUpdate(shared_ptr<Action> _action)
+{
+    shared_ptr<ActionInstall> action = dynamic_pointer_cast<ActionInstall>(_action);
+    JValue debugJson = Object();
+    action->toDebugJson(debugJson);
+    Logger::info(m_name, "[install] action: " + debugJson.stringify("  "));
+
+    // install
+
+    // feedback
 
 }

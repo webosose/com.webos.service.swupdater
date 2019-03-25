@@ -19,6 +19,9 @@
 
 #include <pbnjson.hpp>
 
+#include "core/Action.h"
+#include "core/Feedback.h"
+#include "core/HttpCall.h"
 #include "interface/IManageable.h"
 
 using namespace pbnjson;
@@ -28,7 +31,8 @@ public:
     HawkBitClientListener() {};
     virtual ~HawkBitClientListener() {};
 
-    virtual void onCancelUpdate(/* Need to define paramters */) = 0;
+    virtual void onCancelUpdate(shared_ptr<Action> action) = 0;
+    virtual void onInstallUpdate(shared_ptr<Action> action) = 0;
 };
 
 class HawkBitClient : public IManageable<HawkBitClient> {
@@ -44,6 +48,9 @@ public:
         m_listener = listener;
     }
 
+    void pollOnce();
+    bool feedback(bool isInstall, Feedback& feedback, long& responseCode);
+
 private:
     static guint poll(gpointer data);
 
@@ -52,6 +59,8 @@ private:
     void start(int seconds = 0);
     bool isStarted();
     void stop();
+
+    bool sendToServer(const string& url, HttpCall::MethodType method, const JValue& request, long& responseCode, JValue& response);
 
     static const string HAWKBIT_TENANT;
     static const string HAWKBIT_URL;
