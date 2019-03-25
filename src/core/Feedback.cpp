@@ -36,7 +36,6 @@ bool Feedback::toJson(JValue& json)
     json.put("id", m_actionId);
     json.put("time", Time::getUtcTime());
 
-    JValue status = Object();
     JValue result = Object();
     if (m_progressOf != -1 && m_progressCnt != -1) {
         JValue progress = Object();
@@ -45,6 +44,8 @@ bool Feedback::toJson(JValue& json)
         result.put("progress", progress);
     }
     result.put("finished", toString(m_finished));
+
+    JValue status = Object();
     status.put("result", result);
     status.put("execution", toString(m_execution));
     json.put("status", status);
@@ -59,7 +60,7 @@ bool Feedback::toJson(JValue& json)
     return true;
 }
 
-string Feedback::toString(enum FinishedType type)
+string Feedback::toString(enum FinishedType& type)
 {
     switch (type) {
     case FinishedType_NONE:
@@ -72,7 +73,7 @@ string Feedback::toString(enum FinishedType type)
     return "none";
 }
 
-string Feedback::toString(enum ExecutionType type)
+string Feedback::toString(enum ExecutionType& type)
 {
     switch (type) {
     case ExecutionType_CLOSED:

@@ -66,24 +66,22 @@ bool PolicyManager::onGetStatus(JValue& responsePayload/**/)
     return true;
 }
 
-void PolicyManager::onCancelUpdate(shared_ptr<Action> _action)
+void PolicyManager::onCancelUpdate(shared_ptr<Action> action)
 {
-    shared_ptr<ActionCancel> action = dynamic_pointer_cast<ActionCancel>(_action);
     JValue debugJson = Object();
-    action->toDebugJson(debugJson);
+    action->toJson(debugJson);
     Logger::info(m_name, "[cancel] action: " + debugJson.stringify("  "));
 
     // cancel
 
     // feedback
-
 }
 
 void PolicyManager::onInstallUpdate(shared_ptr<Action> _action)
 {
     shared_ptr<ActionInstall> action = dynamic_pointer_cast<ActionInstall>(_action);
     JValue debugJson = Object();
-    action->toDebugJson(debugJson);
+    action->toJson(debugJson);
     Logger::info(m_name, "[install] action: " + debugJson.stringify("  "));
 
     // install

@@ -31,13 +31,13 @@ enum FinishedType {
 };
 
 enum ExecutionType {
+    ExecutionType_UNKNOWN,
     ExecutionType_CLOSED,
     ExecutionType_CANCELED,
     ExecutionType_REJECTED,
     ExecutionType_PROCEEDING,
     ExecutionType_SCHEDULED,
     ExecutionType_RESUMED,
-    ExecutionType_UNKNOWN,
 };
 
 class Feedback {
@@ -49,23 +49,28 @@ public:
     {
         return m_actionId;
     }
+
     void setActionId(const string& actionId)
     {
         m_actionId = actionId;
     }
+
     void setProgress(int of, int cnt)
     {
         m_progressOf = of;
         m_progressCnt = cnt;
     }
+
     void setExecution(ExecutionType execution)
     {
         m_execution = execution;
     }
+
     void setFinished(FinishedType finished)
     {
         m_finished = finished;
     }
+
     void addDetail(string detail)
     {
         m_details.push_back(detail);
@@ -74,8 +79,8 @@ public:
     virtual bool toJson(JValue& json);
 
 private:
-    static string toString(enum FinishedType type);
-    static string toString(enum ExecutionType type);
+    static string toString(enum FinishedType& type);
+    static string toString(enum ExecutionType& type);
 
     string m_actionId;
     int m_progressOf;

@@ -178,7 +178,8 @@ guint HawkBitClient::poll(gpointer data)
     string href;
     if (_links.hasKey("cancelAction") && CONV_OK == _links["cancelAction"]["href"].asString(href)) {
         Logger::info(self->m_name, "cancelAction.href", href);
-        action = make_shared<ActionCancel>();
+        action = make_shared<Action>();
+        action->setType(ActionType_CANCEL);
     } else if (_links.hasKey("deploymentBase") && CONV_OK == response["_links"]["deploymentBase"]["href"].asString(href)) {
         Logger::info(self->m_name, "deploymentBase.href", href);
         action = make_shared<ActionInstall>();
@@ -218,10 +219,10 @@ guint HawkBitClient::poll(gpointer data)
       Logger::error(m_name, to_string(responseCode), "[cancel] feedback failed");
    }
  */
-bool HawkBitClient::feedback(bool isInstall, Feedback& feedback, long& responseCode)
+bool HawkBitClient::feedback(Action& action, Feedback& feedback)
 {
     string url;
-    if (isInstall) {
+    if (action.getType() == ActionType_INSTALL) {
         url = m_hawkBitUrl + "/deploymentBase/" + feedback.getActionId() + "/feedback";
     } else {
         url = m_hawkBitUrl + "/cancelAction/" + feedback.getActionId() + "/feedback";
@@ -230,5 +231,6 @@ bool HawkBitClient::feedback(bool isInstall, Feedback& feedback, long& responseC
     JValue request = Object();
     feedback.toJson(request);
     JValue response = Object();
+    long responseCode;
     return sendToServer(url, HttpCall::MethodType_POST, request, responseCode, response);
 }

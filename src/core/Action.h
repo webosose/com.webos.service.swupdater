@@ -22,6 +22,9 @@
 #include <pbnjson.hpp>
 #include <string>
 
+#include "Chunk.h"
+#include "interface/ISerializable.h"
+
 using namespace pbnjson;
 using namespace std;
 
@@ -31,113 +34,54 @@ enum ActionType {
     ActionType_CANCEL,
 };
 
-class Action {
+enum ScheduleType {
+    ScheduleType_UNKNOWN,
+    ScheduleType_ATTEMPT,
+    ScheduleType_FORCED,
+    ScheduleType_SKIP,
+};
+
+class Action : public ISerializable {
 public:
-    Action() { };
-    virtual ~Action() { };
+    Action()
+    {
+        m_type = ActionType_NONE;
+    }
+
+    virtual ~Action() {}
 
     virtual const string& getId()
     {
         return m_id;
     }
-    virtual ActionType getType() = 0;
-    virtual bool fromJson(const JValue& json) = 0;
-    virtual void toDebugJson(JValue& json) = 0;
+
+    virtual void setType(ActionType type)
+    {
+        m_type = type;
+    }
+
+    virtual ActionType getType()
+    {
+        return m_type;
+    }
+
+    virtual bool fromJson(const JValue& json) override
+    {
+        if (json.hasKey("id") && json["id"].isString()) {
+            m_id = json["id"].asString();
+        }
+        return true;
+    }
+    virtual bool toJson(JValue& json) override
+    {
+        json.put("id", m_id);
+        return true;
+    }
 
 protected:
     string m_id;
-};
+    ActionType m_type;
 
-class Artifact {
-public:
-    Artifact();
-    virtual ~Artifact();
-
-    const string& getFilename()
-    {
-        return m_filename;
-    }
-    const string& getSha1Hash()
-    {
-        return m_hashSha1;
-    }
-    const string& getMd5Hash()
-    {
-        return m_hashMd5;
-    }
-    int getSize()
-    {
-        return m_size;
-    }
-    const string& getDownloadHttps()
-    {
-        return m_downloadHttps;
-    }
-    const string& getDownloadMd5Https()
-    {
-        return m_downloadMd5Https;
-    }
-    const string& getDownloadHttp()
-    {
-        return m_downloadHttp;
-    }
-    const string& getDownloadMd5Http()
-    {
-        return m_downloadMd5Http;
-    }
-
-    virtual bool fromJson(const JValue& json);
-    virtual void toDebugJson(JValue& json);
-
-private:
-    string m_filename;
-    string m_hashSha1;
-    string m_hashMd5;
-    int m_size;
-    string m_downloadHttps;
-    string m_downloadMd5Https;
-    string m_downloadHttp;
-    string m_downloadMd5Http;
-};
-
-class Chunk {
-public:
-    Chunk();
-    virtual ~Chunk();
-
-    const string& getPart()
-    {
-        return m_part;
-    }
-    const string& getName()
-    {
-        return m_name;
-    }
-    const string& getVersion()
-    {
-        return m_version;
-    }
-    const list<Artifact>& getArtifacts()
-    {
-        return m_artifacts;
-    }
-
-    virtual bool fromJson(const JValue& json);
-    virtual void toDebugJson(JValue& json);
-
-private:
-    string m_part;
-    string m_name;
-    string m_version;
-    list<Artifact> m_artifacts;
-    map<string, string> m_metadata;
-};
-
-enum ScheduleType {
-    ScheduleType_SKIP,
-    ScheduleType_ATTEMPT,
-    ScheduleType_FORCED,
-    ScheduleType_UNKNOWN,
 };
 
 class ActionInstall : public Action {
@@ -147,11 +91,11 @@ public:
 
     ScheduleType getDownloadSchedule()
     {
-        return m_downloadSchedule;
+        return m_download;
     }
     ScheduleType getUpdateSchedule()
     {
-        return m_updateSchedule;
+        return m_update;
     }
     bool isMaintenanceWindowAvailable()
     {
@@ -166,36 +110,19 @@ public:
         return m_chunks;
     }
 
-    virtual ActionType getType()
-    {
-        return ActionType_INSTALL;
-    }
-    virtual bool fromJson(const JValue& json);
-    virtual void toDebugJson(JValue& json);
+    virtual bool fromJson(const JValue& json) override;
+    virtual bool toJson(JValue& json) override;
 
 private:
-    static string toString(enum ScheduleType type);
-    static ScheduleType getScheduleTypeEnum(const string& type);
+    static string toString(enum ScheduleType& type);
+    static ScheduleType toEnum(const string& type);
 
-    ScheduleType m_downloadSchedule;
-    ScheduleType m_updateSchedule;
+    ScheduleType m_download;
+    ScheduleType m_update;
     string m_maintenanceWindow;
     string m_historyStatus;
     list<string> m_historyMessages;
     list<Chunk> m_chunks;
-};
-
-class ActionCancel : public Action {
-public:
-    ActionCancel();
-    virtual ~ActionCancel();
-
-    virtual ActionType getType()
-    {
-        return ActionType_CANCEL;
-    }
-    virtual bool fromJson(const JValue& json);
-    virtual void toDebugJson(JValue& json);
 };
 
 #endif /* CORE_ACTION_H_ */

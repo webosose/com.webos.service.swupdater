@@ -49,7 +49,7 @@ public:
     }
 
     void pollOnce();
-    bool feedback(bool isInstall, Feedback& feedback, long& responseCode);
+    bool feedback(Action& action, Feedback& feedback);
 
 private:
     static guint poll(gpointer data);
