@@ -13,6 +13,8 @@
 
 #include "Logger.h"
 
+#include <PmLogLib.h>
+
 #include <string.h>
 
 const string Logger::EMPTY = "";
@@ -133,6 +135,10 @@ void Logger::write(const enum LogLevel level, const string& main, const string& 
         writeConsole(level, log);
         break;
 
+    case LogType_PMLOG:
+        writePmlog(level, log);
+        break;
+
     default:
         cerr << "Unsupported Log Type" << endl;
         break;
@@ -151,6 +157,36 @@ void Logger::writeConsole(const enum LogLevel& level, const string& log)
     case LogLevel_WARNING:
     case LogLevel_ERROR:
         cerr << log << endl;
+        break;
+    }
+}
+
+void Logger::writePmlog(const enum LogLevel& level, const string& log)
+{
+    static PmLogContext context = nullptr;
+    if (context == nullptr) {
+        context = PmLogGetContextInline("intent");
+    }
+
+    switch(level) {
+    case LogLevel_VERBOSE:
+        PmLogDebug(context, "common", 0, log.c_str());
+        break;
+
+    case LogLevel_DEBUG:
+        PmLogDebug(context, "common", 0, log.c_str());
+        break;
+
+    case LogLevel_INFO:
+        PmLogInfo(context, "common", 0, log.c_str());
+        break;
+
+    case LogLevel_WARNING:
+        PmLogWarning(context, "common", 0, log.c_str());
+        break;
+
+    case LogLevel_ERROR:
+        PmLogError(context, "common", 0, log.c_str());
         break;
     }
 }

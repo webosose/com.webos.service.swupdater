@@ -22,7 +22,7 @@
 
 PolicyManager::PolicyManager()
 {
-    setName("PolicyManager");
+    setClassName("PolicyManager");
 }
 
 PolicyManager::~PolicyManager()
@@ -35,7 +35,7 @@ bool PolicyManager::onInitialization()
     LS2Handler::getInstance().setListener(this);
 
     // first polling
-    HawkBitClient::getInstance().pollOnce();
+    HawkBitClient::getInstance().poll(&HawkBitClient::getInstance());
     return true;
 }
 
@@ -66,23 +66,23 @@ bool PolicyManager::onGetStatus(JValue& responsePayload/**/)
     return true;
 }
 
-void PolicyManager::onCancelUpdate(shared_ptr<Action> action)
+void PolicyManager::onCancelUpdate(Action& action)
 {
-    JValue debugJson = Object();
-    action->toJson(debugJson);
-    Logger::info(m_name, "[cancel] action: " + debugJson.stringify("  "));
+//    JValue json = Object();
+//    action->toJson(json);
+//    Logger::verbose(getClassName(), "CancelAction", "\n" + json.stringify("  "));
 
     // cancel
 
     // feedback
 }
 
-void PolicyManager::onInstallUpdate(shared_ptr<Action> _action)
+void PolicyManager::onInstallUpdate(ActionInstall& _action)
 {
-    shared_ptr<ActionInstall> action = dynamic_pointer_cast<ActionInstall>(_action);
-    JValue debugJson = Object();
-    action->toJson(debugJson);
-    Logger::info(m_name, "[install] action: " + debugJson.stringify("  "));
+//    shared_ptr<ActionInstall> action = dynamic_pointer_cast<ActionInstall>(_action);
+//    JValue json = Object();
+//    action->toJson(json);
+//    Logger::verbose(getClassName(), "InstallAction", "\n" + json.stringify("  "));
 
     // install
 

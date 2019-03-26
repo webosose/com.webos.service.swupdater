@@ -42,7 +42,7 @@ string FOSSInstaller::toString(RECOVERY_STATUS status)
 
 FOSSInstaller::FOSSInstaller()
 {
-    setName("FOSSInstaller");
+    setClassName("FOSSInstaller");
 }
 
 FOSSInstaller::~FOSSInstaller()
@@ -69,11 +69,11 @@ void FOSSInstaller::onRead(GIOChannel* channel)
     GIOStatus result = g_io_channel_read_chars(channel, (char*) &msg, sizeof(msg), &len, NULL);
     switch (result) {
     case G_IO_STATUS_ERROR:
-        Logger::info(m_name, "onRead", "read error");
+        Logger::info(getClassName(), "onRead", "read error");
         break;
 
     case G_IO_STATUS_EOF:
-        Logger::info(m_name, "onRead", "read eof");
+        Logger::info(getClassName(), "onRead", "read eof");
         break;
 
     default:

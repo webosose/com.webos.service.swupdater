@@ -75,7 +75,7 @@ LS2Handler::LS2Handler()
     : Handle(LS::registerService(NAME.c_str()))
     , m_listener(nullptr)
 {
-    setName("LS2Handler");
+    setClassName("LS2Handler");
     this->registerCategory("/", METHODS, NULL, NULL);
 }
 

@@ -14,28 +14,23 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef MANAGER_BOOTLOADER_H_
-#define MANAGER_BOOTLOADER_H_
+#ifndef HARDWARE_RPI3_H_
+#define HARDWARE_RPI3_H_
 
 #include <iostream>
+#include <sstream>
 
-#include "interface/IManageable.h"
+#include "AbsHardware.h"
 
 using namespace std;
 
-class Bootloader : public IManageable<Bootloader> {
-friend IManageable<Bootloader>;
+class RPi3 : public AbsHardware {
 public:
-    virtual ~Bootloader();
+    RPi3();
+    virtual ~RPi3();
 
-    virtual bool onInitialization() override;
-    virtual bool onFinalization() override;
-
-    virtual void setEnv(const string& key, const string& value);
-    virtual string getEnv(const string& key);
-
-private:
-    Bootloader();
+    virtual void setEnv(const string& key, const string& value) override;
+    virtual string getEnv(const string& key) override;
 };
 
-#endif /* MANAGER_BOOTLOADER_H_ */
+#endif /* HARDWARE_RPI3_H_ */

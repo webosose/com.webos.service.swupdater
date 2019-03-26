@@ -76,7 +76,6 @@ add_executable(${BIN_NAME} ${SRC})
 
 # Link
 set(LIBS
-    -lswupdate
     ${CURL_LDFLAGS}
     ${GLIB2_LDFLAGS}
     ${GIO_UNIX2_LDFLAGS}
@@ -86,6 +85,7 @@ set(LIBS
     ${PMLOG_LDFLAGS}
     ${PBNJSON_C_LDFLAGS}
     ${PBNJSON_CPP_LDFLAGS}
+#    -lswupdate
 )
 target_link_libraries(${BIN_NAME} ${LIBS})
 

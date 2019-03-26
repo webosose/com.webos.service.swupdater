@@ -17,12 +17,13 @@
 #include <iostream>
 #include <glib.h>
 
+#include "IClassName.h"
 #include "util/Logger.h"
 
 using namespace std;
 
 template <class T>
-class IManageable {
+class IManageable : public IClassName {
 public:
     static T& getInstance()
     {
@@ -34,21 +35,34 @@ public:
 
     virtual bool initialize(GMainLoop* mainloop) final
     {
-        bool result;
-        Logger::info(m_name, "Start initialization");
+        Logger::info(getClassName(), "Start initialization");
         m_mainloop = mainloop;
-        result = onInitialization();
-        Logger::info(m_name, "End initialization");
-        return result;
+        m_isInitalized = onInitialization();
+        Logger::info(getClassName(), "End initialization");
+        return m_isInitalized;
     }
 
     virtual bool finalize() final
     {
-        bool result;
-        Logger::info(m_name, "Start finalization");
-        result = onFinalization();
-        Logger::info(m_name, "End finalization");
-        return result;
+        Logger::info(getClassName(), "Start finalization");
+        m_isFinalized = onFinalization();
+        Logger::info(getClassName(), "End finalization");
+        return m_isFinalized;
+    }
+
+    virtual bool isReady()
+    {
+        return m_isReady;
+    }
+
+    virtual bool isInitalized()
+    {
+        return m_isInitalized;
+    }
+
+    virtual bool isFinalized()
+    {
+        return m_isFinalized;
     }
 
     virtual bool onInitialization() = 0;
@@ -57,22 +71,24 @@ public:
 protected:
     IManageable()
         : m_mainloop(nullptr)
-        , m_name("")
+        , m_isReady(false)
+        , m_isInitalized(false)
+        , m_isFinalized(false)
     {
     };
 
-    string& getName()
+    void ready()
     {
-        return m_name;
-    }
-
-    void setName(string name)
-    {
-        m_name = name;
+        Logger::info(getClassName(), "Ready");
+        m_isReady = true;
     }
 
     GMainLoop* m_mainloop;
-    string m_name;
+
+private:
+    bool m_isReady;
+    bool m_isInitalized;
+    bool m_isFinalized;
 
 };
 

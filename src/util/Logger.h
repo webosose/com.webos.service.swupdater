@@ -48,6 +48,12 @@ public:
 
     virtual ~Logger();
 
+    static Logger& getInstance()
+    {
+        static Logger _instance;
+        return _instance;
+    }
+
     void setLevel(enum LogLevel level);
     void setType(enum LogType type);
 
@@ -56,16 +62,11 @@ private:
 
     static const string& toString(const enum LogLevel& level);
 
-    static Logger& getInstance()
-    {
-        static Logger _instance;
-        return _instance;
-    }
-
     Logger();
 
     void write(const enum LogLevel level, const string& main, const string& sub, const string& msg);
     void writeConsole(const enum LogLevel& level, const string& log);
+    void writePmlog(const enum LogLevel& level, const string& log);
 
     enum LogLevel m_level;
     enum LogType m_type;

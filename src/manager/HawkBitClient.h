@@ -31,13 +31,15 @@ public:
     HawkBitClientListener() {};
     virtual ~HawkBitClientListener() {};
 
-    virtual void onCancelUpdate(shared_ptr<Action> action) = 0;
-    virtual void onInstallUpdate(shared_ptr<Action> action) = 0;
+    virtual void onCancelUpdate(Action& action) = 0;
+    virtual void onInstallUpdate(ActionInstall& action) = 0;
 };
 
 class HawkBitClient : public IManageable<HawkBitClient> {
 friend IManageable<HawkBitClient>;
 public:
+    static guint poll(gpointer data);
+
     virtual ~HawkBitClient();
 
     virtual bool onInitialization() override;
@@ -48,19 +50,20 @@ public:
         m_listener = listener;
     }
 
-    void pollOnce();
-    bool feedback(Action& action, Feedback& feedback);
+    bool sendFeedback(Action& action, Feedback& feedback);
 
 private:
-    static guint poll(gpointer data);
-
     HawkBitClient();
 
     void start(int seconds = 0);
     bool isStarted();
     void stop();
 
-    bool sendToServer(const string& url, HttpCall::MethodType method, const JValue& request, long& responseCode, JValue& response);
+    void checkPollingInterval(const pbnjson::JValue& responsePayload);
+    enum ActionType checkLink(const JValue& responsePayload, string& link);
+
+    bool getRequest(JValue& responsePayload);
+    bool getAction(const string& link, JValue& responsePayload);
 
     static const string HAWKBIT_TENANT;
     static const string HAWKBIT_URL;

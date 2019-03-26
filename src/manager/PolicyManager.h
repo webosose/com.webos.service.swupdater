@@ -17,10 +17,9 @@
 #ifndef MANAGER_POLICYMANAGER_H_
 #define MANAGER_POLICYMANAGER_H_
 
+#include <hardware/AbsHardware.h>
 #include "core/Action.h"
 #include "interface/IManageable.h"
-#include "manager/Bootloader.h"
-#include "manager/FOSSInstaller.h"
 #include "manager/HawkBitClient.h"
 #include "manager/LS2Handler.h"
 
@@ -40,8 +39,8 @@ public:
     virtual bool onGetStatus(JValue& responsePayload/**/) override;
 
     // HawkBitClientListener
-    virtual void onCancelUpdate(shared_ptr<Action> action) override;
-    virtual void onInstallUpdate(shared_ptr<Action> action) override;
+    virtual void onCancelUpdate(Action& action) override;
+    virtual void onInstallUpdate(ActionInstall& action) override;
 
 private:
     PolicyManager();

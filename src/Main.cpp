@@ -13,15 +13,15 @@
 
 #include <iostream>
 #include <glib.h>
+#include <pbnjson.hpp>
 
-#include "manager/Bootloader.h"
 #include "manager/FOSSInstaller.h"
 #include "manager/HawkBitClient.h"
 #include "manager/LS2Handler.h"
 #include "manager/PolicyManager.h"
 
-
 using namespace std;
+using namespace pbnjson;
 
 static GMainLoop *s_mainloop;
 
@@ -38,9 +38,8 @@ int main()
     s_mainloop = g_main_loop_new(NULL, FALSE);
 
     // xxx: DON'T change initialization order.
-    Bootloader::getInstance().initialize(s_mainloop);
     LS2Handler::getInstance().initialize(s_mainloop);
-    FOSSInstaller::getInstance().initialize(s_mainloop);
+    // FOSSInstaller::getInstance().initialize(s_mainloop);
     HawkBitClient::getInstance().initialize(s_mainloop);
     PolicyManager::getInstance().initialize(s_mainloop);
 
@@ -49,9 +48,8 @@ int main()
     // xxx: DON'T change finalize order.
     PolicyManager::getInstance().finalize();
     HawkBitClient::getInstance().finalize();
-    FOSSInstaller::getInstance().finalize();
+    // FOSSInstaller::getInstance().finalize();
     LS2Handler::getInstance().finalize();
-    Bootloader::getInstance().finalize();
 
     g_main_loop_unref(s_mainloop);
 

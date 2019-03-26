@@ -14,30 +14,19 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "Bootloader.h"
+#include "RPi3.h"
 
-#include <sstream>
 #include <string.h>
 
-Bootloader::Bootloader()
+RPi3::RPi3()
 {
 }
 
-Bootloader::~Bootloader()
+RPi3::~RPi3()
 {
 }
 
-bool Bootloader::onInitialization()
-{
-    return true;
-}
-
-bool Bootloader::onFinalization()
-{
-    return true;
-}
-
-void Bootloader::setEnv(const string& key, const string& value)
+void RPi3::setEnv(const string& key, const string& value)
 {
     string command = "/sbin/fw_setenv " + key + " " + value;
 
@@ -49,7 +38,7 @@ void Bootloader::setEnv(const string& key, const string& value)
     pclose(file);
 }
 
-string Bootloader::getEnv(const string& key)
+string RPi3::getEnv(const string& key)
 {
     char buff[256];
     stringstream ss;

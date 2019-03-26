@@ -23,36 +23,39 @@
 #include <sstream>
 #include <string>
 
+#include "interface/IClassName.h"
+
 using namespace pbnjson;
 using namespace std;
 
-class HttpCall {
-public:
-    enum MethodType {
-        MethodType_GET,
-        MethodType_POST,
-        MethodType_PUT,
-        MethodType_DELETE,
-    };
+enum MethodType {
+    MethodType_GET,
+    MethodType_POST,
+    MethodType_PUT,
+    MethodType_DELETE,
+};
 
-    HttpCall(const string& url, MethodType methodType);
+class HttpCall : public IClassName {
+public:
+    static bool initialize();
+    static void finalize();
+
+    HttpCall(const MethodType& methodType, const string& url, const string& token);
     virtual ~HttpCall();
 
     void setUrl(const std::string& url);
     void setMethod(MethodType method);
-    void appendHeader(const std::string& key, const std::string& val);
-    void setBody(std::string& body);
     void setBody(pbnjson::JValue body);
     bool perform();
     long getResponseCode();
     stringstream& getResponse();
 
 public:
-    static const string LOG_PREFIX;
-
     static size_t onReceiveBody(char* contents, size_t size, size_t nmemb, void* userdata);
 
-    CURL *m_curl;
+    void appendHeader(const std::string& key, const std::string& val);
+
+    static CURL* s_curl;
     string m_url;
     MethodType m_methodType;
     struct curl_slist* m_header;
