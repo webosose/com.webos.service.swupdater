@@ -30,7 +30,7 @@ public:
     Artifact();
     virtual ~Artifact();
 
-    const string& getFilename()
+    const string& getFilename() const
     {
         return m_filename;
     }

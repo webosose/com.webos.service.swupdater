@@ -17,18 +17,16 @@
 #include "HttpCall.h"
 
 #include "manager/Setting.h"
+#include "util/glibcurl.h"
 #include "util/Logger.h"
 
 CURL* HttpCall::s_curl = nullptr;
 
 bool HttpCall::initialize()
 {
-    // Init libcurl
-    const CURLcode code = curl_global_init(CURL_GLOBAL_DEFAULT);
-    if (code != CURLE_OK) {
-        Logger::error("libcurl", __FUNCTION__, curl_easy_strerror(code));
-        return false;
-    }
+    // Init glibcurl
+    glibcurl_init();
+
     s_curl = curl_easy_init();
     if (s_curl == nullptr)
         return false;
@@ -38,7 +36,7 @@ bool HttpCall::initialize()
 void HttpCall::finalize()
 {
     curl_easy_cleanup(s_curl);
-    curl_global_cleanup();
+    glibcurl_cleanup();
 }
 
 HttpCall::HttpCall(const MethodType& methodType, const string& url, const string& token)
@@ -46,6 +44,7 @@ HttpCall::HttpCall(const MethodType& methodType, const string& url, const string
     , m_requestPayload("")
     , m_responsePayload("")
     , m_responsePayloadSize(0)
+    , m_responseFile(NULL)
 {
     setClassName("HttpCall");
 
@@ -105,7 +104,7 @@ void HttpCall::setBody(pbnjson::JValue body)
         m_requestPayload = body.stringify();
 }
 
-bool HttpCall::performSync()
+void HttpCall::preparePerform()
 {
     CURLcode rc = CURLE_OK;
 
@@ -129,14 +128,30 @@ bool HttpCall::performSync()
         }
     }
 
-    if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_WRITEFUNCTION, &HttpCall::onReceiveBody))) {
-        Logger::error(getClassName(), "Failed in curl_easy_setopt(WRITEFUNCTION", curl_easy_strerror(rc));
-    }
+    if (m_responseFile) {
+        if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_WRITEFUNCTION, &HttpCall::onReceiveFile))) {
+            Logger::error(getClassName(), "Failed in curl_easy_setopt(WRITEFUNCTION", curl_easy_strerror(rc));
+        }
 
-    if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_WRITEDATA, this))) {
-        Logger::error(getClassName(), "Failed in curl_easy_setopt(WRITEDATA)", curl_easy_strerror(rc));
-    }
+        if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_WRITEDATA, m_responseFile))) {
+            Logger::error(getClassName(), "Failed in curl_easy_setopt(WRITEDATA)", curl_easy_strerror(rc));
+        }
+    } else {
+        if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_WRITEFUNCTION, &HttpCall::onReceiveText))) {
+            Logger::error(getClassName(), "Failed in curl_easy_setopt(WRITEFUNCTION", curl_easy_strerror(rc));
+        }
 
+        if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_WRITEDATA, this))) {
+            Logger::error(getClassName(), "Failed in curl_easy_setopt(WRITEDATA)", curl_easy_strerror(rc));
+        }
+    }
+}
+
+bool HttpCall::performSync()
+{
+    preparePerform();
+
+    CURLcode rc = CURLE_OK;
     if (CURLE_OK != (rc = curl_easy_perform(s_curl))) {
         Logger::error(getClassName(), "Failed in curl_easy_perform", curl_easy_strerror(rc));
         return false;
@@ -145,9 +160,19 @@ bool HttpCall::performSync()
     return true;
 }
 
-bool HttpCall::performAsync()
+bool HttpCall::performAsync(AsyncCallback callback)
 {
-    // TODO 명철선임님!!!!
+    preparePerform();
+
+    m_asyncCallback = callback;
+    glibcurl_set_callback(&HttpCall::cbGlibcurl, this);
+
+    CURLMcode rc = CURLM_OK;
+    if (CURLM_OK != (rc = glibcurl_add(s_curl))) {
+        Logger::error(getClassName(), "Failed in glibcurl_add", curl_multi_strerror(rc));
+        return false;
+    }
+
     return true;
 }
 
@@ -162,7 +187,7 @@ long HttpCall::getResponseCode()
     return responseCode;
 }
 
-size_t HttpCall::onReceiveBody(char* ptr, size_t size, size_t nmemb, void* userdata)
+size_t HttpCall::onReceiveText(char* ptr, size_t size, size_t nmemb, void* userdata)
 {
     HttpCall* self = static_cast<HttpCall*>(userdata);
     if (!self) {
@@ -178,7 +203,42 @@ size_t HttpCall::onReceiveBody(char* ptr, size_t size, size_t nmemb, void* userd
     return responsePayloadSize;
 }
 
+size_t HttpCall::onReceiveFile(void* ptr, size_t size, size_t nmemb, FILE* stream)
+{
+    size_t bytesRead = fwrite(ptr, size, nmemb, stream);
+    return bytesRead;
+}
+
 void HttpCall::appendHeader(const std::string& key, const std::string& val)
 {
     m_header = curl_slist_append(m_header, (key + ": " + val).c_str());
+}
+
+void HttpCall::cbGlibcurl(void* data)
+{
+    HttpCall* self = static_cast<HttpCall*>(data);
+    if (!self) {
+        Logger::error("HttpCall", "data is null");
+        return;
+    }
+
+    CURLMsg* msg;
+    int inQueue;
+    while (1) {
+        msg = curl_multi_info_read(glibcurl_handle(), &inQueue);
+        if (msg == 0) {
+            break;
+        }
+
+        if (msg->msg == CURLMSG_DONE)  {
+            Logger::info(self->getClassName(), "receive done");
+            glibcurl_remove(HttpCall::s_curl);
+
+            if (self->m_asyncCallback) {
+                self->m_asyncCallback(self);
+            }
+        } else {
+            Logger::warning(self->getClassName(), "Unknown CURLMsg code " + (msg->msg));
+        }
+    }
 }

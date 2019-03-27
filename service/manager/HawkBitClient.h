@@ -52,6 +52,7 @@ public:
     bool postComplete(shared_ptr<AbsAction> action);
     bool postProgress(shared_ptr<InstallAction> action, int of, int cnt);
 
+    void downloadCallback(HttpCall* httpCall);
     bool downloadApplication(SoftwareModule& module);
     bool downloadOS(SoftwareModule& module);
 

@@ -130,14 +130,32 @@ bool HawkBitClient::postProgress(shared_ptr<InstallAction> action, int of, int c
     return true;
 }
 
+void HawkBitClient::downloadCallback(HttpCall* call)
+{
+    cout << "end download" << endl;
+
+    fclose(call->getResponseFile());
+    start();
+    delete call;
+}
+
 bool HawkBitClient::downloadApplication(SoftwareModule& module)
 {
-    HttpCall call(MethodType_GET, module.getArtifacts().front().getDownloadHttp(), m_hawkBitToken);
+    string filename = "/tmp/" + module.getArtifacts().front().getFilename();
+    FILE* fp = fopen(filename.c_str(), "wb");
+    if (fp == NULL) {
+        Logger::error(getClassName(), "Failed to open file: " + string(strerror(errno)));
+        return false;
+    }
+
+    stop();
+
+    HttpCall* call = new HttpCall(MethodType_GET, module.getArtifacts().front().getDownloadHttp(), m_hawkBitToken);
+    call->setResponseFile(fp);
     cout << "start download" << endl;
     cout << module.getJson().stringify("    ") << endl;
-    call.performSync();
-    cout << "size - " << call.getResponsePayloadSize() << endl;
-    cout << "end download" << endl;
+    HttpCall::AsyncCallback callback = bind(&HawkBitClient::downloadCallback, this, placeholders::_1);
+    call->performAsync(callback);
     return true;
 }
 

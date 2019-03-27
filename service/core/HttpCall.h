@@ -37,8 +37,11 @@ enum MethodType {
 
 class HttpCall : public IClassName {
 public:
+    typedef function<void (HttpCall*)> AsyncCallback;
+
     static bool initialize();
     static void finalize();
+    static void cbGlibcurl(void* data);
 
     HttpCall(const MethodType& methodType, const string& url, const string& token);
     virtual ~HttpCall();
@@ -48,7 +51,7 @@ public:
     void setBody(pbnjson::JValue body);
 
     bool performSync();
-    bool performAsync();
+    bool performAsync(AsyncCallback callback);
 
     long getResponseCode();
 
@@ -62,10 +65,22 @@ public:
         return m_responsePayloadSize;
     }
 
-public:
-    static size_t onReceiveBody(char* contents, size_t size, size_t nmemb, void* userdata);
+    void setResponseFile(FILE* fp)
+    {
+        m_responseFile = fp;
+    }
+
+    FILE* getResponseFile()
+    {
+        return m_responseFile;
+    }
+
+private:
+    static size_t onReceiveText(char* contents, size_t size, size_t nmemb, void* userdata);
+    static size_t onReceiveFile(void* ptr, size_t size, size_t nmemb, FILE* stream);
 
     void appendHeader(const std::string& key, const std::string& val);
+    void preparePerform();
 
     static CURL* s_curl;
 
@@ -76,6 +91,9 @@ public:
     string m_requestPayload;
     string m_responsePayload;
     size_t m_responsePayloadSize;
+    FILE* m_responseFile;
+
+    AsyncCallback m_asyncCallback;
 };
 
 #endif /* CORE_HTTPCALL_H_ */
