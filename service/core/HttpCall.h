@@ -46,9 +46,21 @@ public:
     void setUrl(const std::string& url);
     void setMethod(MethodType method);
     void setBody(pbnjson::JValue body);
-    bool perform();
+
+    bool performSync();
+    bool performAsync();
+
     long getResponseCode();
-    stringstream& getResponse();
+
+    string& getResponsePayload()
+    {
+        return m_responsePayload;
+    }
+
+    size_t getResponsePayloadSize()
+    {
+        return m_responsePayloadSize;
+    }
 
 public:
     static size_t onReceiveBody(char* contents, size_t size, size_t nmemb, void* userdata);
@@ -56,11 +68,14 @@ public:
     void appendHeader(const std::string& key, const std::string& val);
 
     static CURL* s_curl;
-    string m_url;
+
     MethodType m_methodType;
+    string m_url;
     struct curl_slist* m_header;
-    string m_body;
-    stringstream m_response;
+
+    string m_requestPayload;
+    string m_responsePayload;
+    size_t m_responsePayloadSize;
 };
 
 #endif /* CORE_HTTPCALL_H_ */

@@ -11,8 +11,8 @@
  * LICENSE@@@
  */
 
-#ifndef INTERFACE_IMANAGEABLE_H_
-#define INTERFACE_IMANAGEABLE_H_
+#ifndef INTERFACE_IINITIALIZABLE_H_
+#define INTERFACE_IINITIALIZABLE_H_
 
 #include <iostream>
 #include <glib.h>
@@ -22,16 +22,9 @@
 
 using namespace std;
 
-template <class T>
-class IManageable : public IClassName {
+class IInitializable : public IClassName {
 public:
-    static T& getInstance()
-    {
-        static T _instance;
-        return _instance;
-    }
-
-    virtual ~IManageable() {};
+    virtual ~IInitializable() {};
 
     virtual bool initialize(GMainLoop* mainloop) final
     {
@@ -69,7 +62,7 @@ public:
     virtual bool onFinalization() = 0;
 
 protected:
-    IManageable()
+    IInitializable()
         : m_mainloop(nullptr)
         , m_isReady(false)
         , m_isInitalized(false)
@@ -93,4 +86,4 @@ private:
 };
 
 
-#endif /* INTERFACE_IMANAGEABLE_H_ */
+#endif /* INTERFACE_IINITIALIZABLE_H_ */

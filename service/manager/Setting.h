@@ -17,15 +17,16 @@
 #ifndef MANAGER_SETTING_H_
 #define MANAGER_SETTING_H_
 
+#include <interface/IInitializable.h>
 #include <iostream>
 #include <string>
 
-#include "interface/IManageable.h"
+#include "interface/ISingleton.h"
 
 using namespace std;
 
-class Setting : public IManageable<Setting> {
-friend class IManageable<Setting>;
+class Setting : public IInitializable, public ISingleton<Setting> {
+friend class ISingleton<Setting>;
 public:
     virtual ~Setting();
 

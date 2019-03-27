@@ -18,13 +18,17 @@
 #define MANAGER_POLICYMANAGER_H_
 
 #include <hardware/AbsHardware.h>
+#include <interface/IInitializable.h>
+#include <ls2/LS2Handler.h>
 #include "core/Action.h"
-#include "interface/IManageable.h"
+#include "interface/ISingleton.h"
 #include "manager/HawkBitClient.h"
-#include "manager/LS2Handler.h"
 
-class PolicyManager : public IManageable<PolicyManager>, public LS2HandlerListener, public HawkBitClientListener {
-friend IManageable<PolicyManager>;
+class PolicyManager : public ISingleton<PolicyManager>,
+                      public IInitializable,
+                      public LS2HandlerListener,
+                      public HawkBitClientListener {
+friend ISingleton<PolicyManager>;
 public:
     virtual ~PolicyManager();
 

@@ -23,8 +23,25 @@ public:
     ISerializable() {};
     virtual ~ISerializable() {};
 
-    virtual bool fromJson(const JValue& json) = 0;
-    virtual bool toJson(JValue& json) = 0;
+    virtual bool fromJson(const JValue& json)
+    {
+        m_json = json.duplicate();
+        return true;
+    }
+
+    virtual bool toJson(JValue& json)
+    {
+        json = m_json.duplicate();
+        return true;
+    }
+
+    JValue& getJson()
+    {
+        return m_json;
+    }
+
+private:
+    JValue m_json;
 
 };
 

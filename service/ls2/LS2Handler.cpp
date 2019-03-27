@@ -14,8 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "LS2Handler.h"
-
+#include <ls2/LS2Handler.h>
 #include <lunaservice.h>
 
 #include "util/Logger.h"

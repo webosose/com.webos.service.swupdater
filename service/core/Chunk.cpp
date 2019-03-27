@@ -16,6 +16,29 @@
 
 #include "Chunk.h"
 
+string Chunk::toString(enum ChunkType& type)
+{
+    switch(type){
+    case ChunkType_Unknown:
+        return "unknown";
+    case ChunkType_Application:
+        return "bApp";
+    default:
+        break;
+    }
+    return "unknown";
+}
+
+ChunkType Chunk::toEnum(const string& type)
+{
+    if (type == "unknown") {
+        return ChunkType_Unknown;
+    } else if (type == "bApp") {
+        return ChunkType_Application;
+    }
+    return ChunkType_Unknown;
+}
+
 Chunk::Chunk()
 {
 }
@@ -26,8 +49,9 @@ Chunk::~Chunk()
 
 bool Chunk::fromJson(const JValue& json)
 {
+    ISerializable::fromJson(json);
     if (json.hasKey("part") && json["part"].isString()) {
-        m_part = json["part"].asString();
+        m_type = toEnum(json["part"].asString());
     }
     if (json.hasKey("name") && json["name"].isString()) {
         m_name = json["name"].asString();
@@ -49,30 +73,5 @@ bool Chunk::fromJson(const JValue& json)
             m_artifacts.push_back(artifact);
         }
     }
-    return true;
-}
-
-bool Chunk::toJson(JValue& json)
-{
-    json.put("part", m_part);
-    json.put("name", m_name);
-    json.put("version", m_version);
-
-    JValue metadata = Array();
-    for (auto& kv : m_metadata) {
-        JValue metaItem = Object();
-        metaItem.put("key", kv.first);
-        metaItem.put("value", kv.second);
-        metadata.append(metaItem);
-    }
-    json.put("metadata", metadata);
-
-    JValue artifacts = Array();
-    for (Artifact& artifactObj : m_artifacts) {
-        JValue artifact = Object();
-        artifactObj.toJson(artifact);
-        artifacts.append(artifact);
-    }
-    json.put("artifacts", artifacts);
     return true;
 }

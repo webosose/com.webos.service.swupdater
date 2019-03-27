@@ -36,9 +36,9 @@ enum ActionType {
 
 enum ScheduleType {
     ScheduleType_UNKNOWN,
-    ScheduleType_ATTEMPT,
+    ScheduleType_ATTEMPT, // 'soft'
     ScheduleType_FORCED,
-    ScheduleType_SKIP,
+    ScheduleType_SKIP,    // ????
 };
 
 class Action : public ISerializable {
@@ -72,11 +72,6 @@ public:
         }
         return true;
     }
-    virtual bool toJson(JValue& json) override
-    {
-        json.put("id", m_id);
-        return true;
-    }
 
 protected:
     string m_id;
@@ -93,25 +88,28 @@ public:
     {
         return m_download;
     }
+
     ScheduleType getUpdateSchedule()
     {
         return m_update;
     }
+
     bool isMaintenanceWindowAvailable()
     {
         return m_maintenanceWindow == "available";
     }
+
     const string& getHistoryStatus()
     {
         return m_historyStatus;
     }
-    const list<Chunk>& getChunks()
+
+    list<Chunk>& getChunks()
     {
         return m_chunks;
     }
 
     virtual bool fromJson(const JValue& json) override;
-    virtual bool toJson(JValue& json) override;
 
 private:
     static string toString(enum ScheduleType& type);

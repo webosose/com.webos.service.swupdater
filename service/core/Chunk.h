@@ -28,14 +28,24 @@
 using namespace std;
 using namespace pbnjson;
 
+enum ChunkType {
+    ChunkType_Unknown,
+    ChunkType_Application,
+    ChunkType_OS,
+    ChunkType_Mixed
+};
+
 class Chunk : public ISerializable {
 public:
+    static string toString(enum ChunkType& type);
+    static ChunkType toEnum(const string& type);
+
     Chunk();
     virtual ~Chunk();
 
-    const string& getPart()
+    const enum ChunkType getType()
     {
-        return m_part;
+        return m_type;
     }
 
     const string& getName()
@@ -54,10 +64,9 @@ public:
     }
 
     virtual bool fromJson(const JValue& json) override;
-    virtual bool toJson(JValue& json) override;
 
 private:
-    string m_part;
+    enum ChunkType m_type;
     string m_name;
     string m_version;
     list<Artifact> m_artifacts;

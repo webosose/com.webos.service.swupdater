@@ -27,6 +27,7 @@ Artifact::~Artifact()
 
 bool Artifact::fromJson(const JValue& json)
 {
+    ISerializable::fromJson(json);
     if (json.hasKey("filename") && json["filename"].isString()) {
         m_filename = json["filename"].asString();
     }
@@ -71,24 +72,5 @@ bool Artifact::fromJson(const JValue& json)
             m_md5sumHttp = http["href"].asString();
         }
     }
-    return true;
-}
-
-bool Artifact::toJson(JValue& json)
-{
-    json.put("filename", m_filename);
-    json.put("size", m_size);
-
-    JValue hashes = Object();
-    hashes.put("sha1", m_sha1);
-    hashes.put("md5", m_md5);
-    json.put("hashes", hashes);
-
-    JValue _links = Object();
-    _links.put("download", m_downloadHttps);
-    _links.put("md5sum", m_md5sumHttps);
-    _links.put("download-http", m_downloadHttp);
-    _links.put("m5sum-http", m_md5sumHttp);
-    json.put("_links", _links);
     return true;
 }

@@ -43,6 +43,9 @@ void HttpCall::finalize()
 
 HttpCall::HttpCall(const MethodType& methodType, const string& url, const string& token)
     : m_header(NULL)
+    , m_requestPayload("")
+    , m_responsePayload("")
+    , m_responsePayloadSize(0)
 {
     setClassName("HttpCall");
 
@@ -96,18 +99,13 @@ void HttpCall::setMethod(MethodType method)
     }
 }
 
-void HttpCall::appendHeader(const std::string& key, const std::string& val)
-{
-    m_header = curl_slist_append(m_header, (key + ": " + val).c_str());
-}
-
 void HttpCall::setBody(pbnjson::JValue body)
 {
     if (!body.isNull())
-        m_body = body.stringify();
+        m_requestPayload = body.stringify();
 }
 
-bool HttpCall::perform()
+bool HttpCall::performSync()
 {
     CURLcode rc = CURLE_OK;
 
@@ -121,12 +119,12 @@ bool HttpCall::perform()
         Logger::error(getClassName(), "Failed in curl_easy_setopt(HEADER)", curl_easy_strerror(rc));
     }
 
-    if (m_body.length() > 0) { // or POST
-        if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_POSTFIELDSIZE, m_body.length()))) {
+    if (m_requestPayload.length() > 0) { // or POST
+        if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_POSTFIELDSIZE, m_requestPayload.length()))) {
             Logger::error(getClassName(), "Failed in curl_easy_setopt(POSTFIELDSIZE)", curl_easy_strerror(rc));
         }
 
-        if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_POSTFIELDS, m_body.c_str()))) {
+        if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_POSTFIELDS, m_requestPayload.c_str()))) {
             Logger::error(getClassName(), "Failed in curl_easy_setopt(POSTFIELDS)", curl_easy_strerror(rc));
         }
     }
@@ -147,18 +145,10 @@ bool HttpCall::perform()
     return true;
 }
 
-size_t HttpCall::onReceiveBody(char* ptr, size_t size, size_t nmemb, void* userdata)
+bool HttpCall::performAsync()
 {
-    HttpCall* self = static_cast<HttpCall*>(userdata);
-    if (!self) {
-        Logger::error(self->getClassName(), "data is null", __FUNCTION__);
-        return 0;
-    }
-
-    size_t bodySize = size * nmemb;
-    self->m_response << ptr;
-
-    return bodySize;
+    // TODO 명철선임님!!!!
+    return true;
 }
 
 long HttpCall::getResponseCode()
@@ -172,8 +162,23 @@ long HttpCall::getResponseCode()
     return responseCode;
 }
 
-std::stringstream& HttpCall::getResponse()
+size_t HttpCall::onReceiveBody(char* ptr, size_t size, size_t nmemb, void* userdata)
 {
-    return m_response;
+    HttpCall* self = static_cast<HttpCall*>(userdata);
+    if (!self) {
+        Logger::error(self->getClassName(), "data is null", __FUNCTION__);
+        return 0;
+    }
+
+    size_t responsePayloadSize = size * nmemb;
+
+    self->m_responsePayload.append(ptr);
+    self->m_responsePayloadSize += responsePayloadSize;
+
+    return responsePayloadSize;
 }
 
+void HttpCall::appendHeader(const std::string& key, const std::string& val)
+{
+    m_header = curl_slist_append(m_header, (key + ": " + val).c_str());
+}

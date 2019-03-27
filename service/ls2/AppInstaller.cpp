@@ -14,23 +14,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef HARDWARE_ABSHARDWARE_H_
-#define HARDWARE_ABSHARDWARE_H_
+#include "AppInstaller.h"
 
-#include <iostream>
+AppInstaller::AppInstaller()
+{
+}
 
-using namespace std;
+AppInstaller::~AppInstaller()
+{
+}
 
-class AbsHardware {
-public:
-    static AbsHardware& getHardware();
-
-    AbsHardware();
-    virtual ~AbsHardware();
-
-    virtual void setEnv(const string& key, const string& value) = 0;
-    virtual string getEnv(const string& key) = 0;
-
-};
-
-#endif /* HARDWARE_ABSHARDWARE_H_ */

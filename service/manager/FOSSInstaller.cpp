@@ -14,8 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include <ls2/LS2Handler.h>
 #include <manager/FOSSInstaller.h>
-#include <manager/LS2Handler.h>
 
 
 string FOSSInstaller::toString(RECOVERY_STATUS status)

@@ -23,7 +23,8 @@
 #include <luna-service2/lunaservice.hpp>
 #include <pbnjson.hpp>
 
-#include "interface/IManageable.h"
+#include "interface/IInitializable.h"
+#include "interface/ISingleton.h"
 
 using namespace std;
 using namespace LS;
@@ -41,8 +42,8 @@ public:
 
 };
 
-class LS2Handler : public Handle, public IManageable<LS2Handler> {
-friend class IManageable<LS2Handler>;
+class LS2Handler : public Handle, public IInitializable, public ISingleton<LS2Handler> {
+friend ISingleton<LS2Handler>;
 public:
     virtual ~LS2Handler();
 

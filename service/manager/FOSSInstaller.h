@@ -19,11 +19,11 @@
 
 #include <iostream>
 #include <glib.h>
+#include <interface/IInitializable.h>
 
 #include <pbnjson.hpp>
 #include <luna-service2/lunaservice.hpp>
 
-#include "interface/IManageable.h"
 #include "util/Process.h"
 #include "util/Socket.h"
 
@@ -71,8 +71,7 @@
 using namespace std;
 using namespace pbnjson;
 
-class FOSSInstaller : public IManageable<FOSSInstaller>, public SocketListener {
-friend IManageable<FOSSInstaller>;
+class FOSSInstaller : public IInitializable, public SocketListener {
 public:
     static string toString(RECOVERY_STATUS status);
 

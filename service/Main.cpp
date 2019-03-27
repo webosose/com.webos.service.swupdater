@@ -13,11 +13,11 @@
 
 #include <iostream>
 #include <glib.h>
+#include <ls2/LS2Handler.h>
 #include <pbnjson.hpp>
 
 #include "manager/FOSSInstaller.h"
 #include "manager/HawkBitClient.h"
-#include "manager/LS2Handler.h"
 #include "manager/PolicyManager.h"
 #include "manager/Setting.h"
 

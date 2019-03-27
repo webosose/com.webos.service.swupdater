@@ -14,23 +14,22 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef HARDWARE_ABSHARDWARE_H_
-#define HARDWARE_ABSHARDWARE_H_
+#ifndef LS2_APPINSTALLER_H_
+#define LS2_APPINSTALLER_H_
 
 #include <iostream>
 
+#include "interface/ISingleton.h"
+
 using namespace std;
 
-class AbsHardware {
+class AppInstaller : public ISingleton<AppInstaller> {
+friend ISingleton<AppInstaller>;
 public:
-    static AbsHardware& getHardware();
+    virtual ~AppInstaller();
 
-    AbsHardware();
-    virtual ~AbsHardware();
-
-    virtual void setEnv(const string& key, const string& value) = 0;
-    virtual string getEnv(const string& key) = 0;
-
+private:
+    AppInstaller();
 };
 
-#endif /* HARDWARE_ABSHARDWARE_H_ */
+#endif /* LS2_APPINSTALLER_H_ */

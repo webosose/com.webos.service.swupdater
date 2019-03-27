@@ -55,7 +55,7 @@ public:
         return m_downloadHttps;
     }
 
-    const string& getDownloadHttp()
+    const string& getDownloadHttp() const
     {
         return m_downloadHttp;
     }
@@ -72,7 +72,6 @@ public:
 
 
     virtual bool fromJson(const JValue& json) override;
-    virtual bool toJson(JValue& json) override;
 
 private:
     string m_filename;

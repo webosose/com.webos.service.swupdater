@@ -22,7 +22,8 @@
 #include "core/Action.h"
 #include "core/Feedback.h"
 #include "core/HttpCall.h"
-#include "interface/IManageable.h"
+#include "interface/IInitializable.h"
+#include "interface/ISingleton.h"
 
 using namespace pbnjson;
 
@@ -35,8 +36,8 @@ public:
     virtual void onInstallUpdate(ActionInstall& action) = 0;
 };
 
-class HawkBitClient : public IManageable<HawkBitClient> {
-friend IManageable<HawkBitClient>;
+class HawkBitClient : public IInitializable, public ISingleton<HawkBitClient> {
+friend ISingleton<HawkBitClient>;
 public:
     static guint poll(gpointer data);
 
@@ -51,6 +52,8 @@ public:
     }
 
     bool sendFeedback(Action& action, Feedback& feedback);
+
+    bool downloadApplication(Chunk& chunk);
 
 private:
     HawkBitClient();

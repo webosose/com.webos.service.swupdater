@@ -57,6 +57,7 @@ string ActionInstall::toString(enum ScheduleType& type)
 
 bool ActionInstall::fromJson(const JValue& json)
 {
+    ISerializable::fromJson(json);
     Action::fromJson(json);
     if (json.hasKey("actionHistory")) {
         JValue actionHistory = json["actionHistory"];
@@ -92,34 +93,5 @@ bool ActionInstall::fromJson(const JValue& json)
     if (deployment.hasKey("maintenanceWindow") && deployment["maintenanceWindow"].isString()) {
         m_maintenanceWindow = deployment["maintenanceWindow"].asString();
     }
-    return true;
-}
-
-bool ActionInstall::toJson(JValue& json)
-{
-    json.put("id", m_id);
-
-    JValue actionHistory = Object();
-    actionHistory.put("status", m_historyStatus);
-    JValue actionHistoryMessages = Array();
-    for (string message : m_historyMessages) {
-        actionHistoryMessages.append(message);
-    }
-    actionHistory.put("messages", actionHistoryMessages);
-    json.put("actionHistory", actionHistory);
-
-    JValue deployment = Object();
-    deployment.put("download", toString(m_download));
-    deployment.put("update", toString(m_update));
-    deployment.put("maintenanceWindow", m_maintenanceWindow);
-    JValue chunks = Array();
-    for (Chunk chunkObj : m_chunks) {
-        JValue chunk = Object();
-        chunkObj.toJson(chunk);
-        chunks.append(chunk);
-    }
-    deployment.put("chunks", chunks);
-    json.put("deployment", deployment);
-
     return true;
 }

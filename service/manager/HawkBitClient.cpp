@@ -92,10 +92,21 @@ bool HawkBitClient::sendFeedback(Action& action, Feedback& feedback)
     feedback.toJson(requestPayload);
     httpCall.setBody(requestPayload);
 
-    if (!httpCall.perform()) {
+    if (!httpCall.performSync()) {
         Logger::error(getClassName(), "Failed to post feedback");
         return false;
     }
+    return true;
+}
+
+bool HawkBitClient::downloadApplication(Chunk& chunk)
+{
+    HttpCall call(MethodType_GET, chunk.getArtifacts().front().getDownloadHttp(), m_hawkBitToken);
+    cout << "start download" << endl;
+    cout << chunk.getJson().stringify("    ") << endl;
+    call.performSync();
+    cout << "size - " << call.getResponsePayloadSize() << endl;
+    cout << "end download" << endl;
     return true;
 }
 
@@ -174,23 +185,28 @@ guint HawkBitClient::poll(gpointer data)
     Action action;
 
     Logger::info(self->getClassName(), "== POLLING START ==");
+    Logger::verbose(self->getClassName(), "checking hawkBit server request");
     if (!self->getRequest(responsePayload)) {
         Logger::error(self->getClassName(), "Failed to get request from hawkBit server");
         goto Done;
     }
 
+    cout << responsePayload.stringify("    ") << endl;
+    Logger::verbose(self->getClassName(), "Checking polling interval");
     self->checkPollingInterval(responsePayload);
     if (self->m_listener == nullptr) {
         Logger::error(self->getClassName(), "Listener is null");
         goto Done;
     }
 
+    Logger::verbose(self->getClassName(), "Checking 'link' from request");
     type = self->checkLink(responsePayload, link);
     if (link.empty() || type == ActionType_NONE) {
         Logger::error(self->getClassName(), "Action type is none");
         goto Done;
     }
 
+    Logger::verbose(self->getClassName(), "Getting 'action' from hawkBit server");
     if (!self->getAction(link, responsePayload)) {
         Logger::error(self->getClassName(), "Failed to get link");
         goto Done;
@@ -198,12 +214,14 @@ guint HawkBitClient::poll(gpointer data)
 
     switch (type) {
     case ActionType_CANCEL:
+        Logger::verbose(self->getClassName(), "Try to handle 'cancel' action");
         action.setType(type);
         action.fromJson(responsePayload);
         self->m_listener->onCancelUpdate(action);
         break;
 
     case ActionType_INSTALL:
+        Logger::verbose(self->getClassName(), "Try to handle 'install' action");
         actionInstall.fromJson(responsePayload);
         self->m_listener->onInstallUpdate(actionInstall);
         break;
@@ -221,23 +239,23 @@ bool HawkBitClient::getRequest(JValue& responsePayload)
 {
     HttpCall httpCall(MethodType_GET, m_hawkBitUrl, m_hawkBitToken);
 
-    if (!httpCall.perform()) {
+    if (!httpCall.performSync()) {
         Logger::error(getClassName(), "Failed to get request");
         return false;
     }
 
-    responsePayload = JDomParser::fromString(httpCall.getResponse().str());
+    responsePayload = JDomParser::fromString(httpCall.getResponsePayload());
     return true;
 }
 
 bool HawkBitClient::getAction(const string& link, JValue& responsePayload)
 {
     HttpCall httpCall(MethodType_GET, link, m_hawkBitToken);
-    if (!httpCall.perform()) {
+    if (!httpCall.performSync()) {
         Logger::error(getClassName(), "Failed to get action");
         return false;
     }
 
-    responsePayload = JDomParser::fromString(httpCall.getResponse().str());
+    responsePayload = JDomParser::fromString(httpCall.getResponsePayload());
     return true;
 }

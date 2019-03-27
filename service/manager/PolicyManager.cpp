@@ -77,15 +77,22 @@ void PolicyManager::onCancelUpdate(Action& action)
     // feedback
 }
 
-void PolicyManager::onInstallUpdate(ActionInstall& _action)
+void PolicyManager::onInstallUpdate(ActionInstall& action)
 {
-//    shared_ptr<ActionInstall> action = dynamic_pointer_cast<ActionInstall>(_action);
-//    JValue json = Object();
-//    action->toJson(json);
-//    Logger::verbose(getClassName(), "InstallAction", "\n" + json.stringify("  "));
+    JValue json = pbnjson::Object();
 
-    // install
+    if (action.getDownloadSchedule() == ScheduleType_ATTEMPT) {
+        Logger::info(getClassName(), "'Soft' update request");
+    } else if (action.getDownloadSchedule() == ScheduleType_FORCED) {
+        Logger::info(getClassName(), "'Forced' update request");
+        list<Chunk>& chunks = action.getChunks();
+        for (auto it = chunks.begin(); it != chunks.end(); ++it) {
+            HawkBitClient::getInstance().downloadApplication(*it);
+        }
+    } else {
+        Logger::warning(getClassName(), "Unknown download schedule type");
+        return;
+    }
 
     // feedback
-
 }
