@@ -1,0 +1,59 @@
+// Copyright (c) 2019 LG Electronics, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
+#include "Setting.h"
+
+#include <string.h>
+
+#include "util/Logger.h"
+
+Setting::Setting()
+    : m_logCurl(false)
+    , m_verbose(false)
+{
+}
+
+Setting::~Setting()
+{
+}
+
+bool Setting::onInitialization()
+{
+    char* env = std::getenv("LOG_CURL");
+    if (env && strcmp(env, "on") == 0) {
+        m_logCurl = true;
+    }
+
+    env = std::getenv("LOG_LEVEL");
+    if (env && strcmp(env, "verbose") == 0) {
+        Logger::getInstance().setLevel(LogLevel_VERBOSE);
+        m_verbose = true;
+    } else if (env && strcmp(env, "debug") == 0) {
+        Logger::getInstance().setLevel(LogLevel_DEBUG);
+    } else if (env && strcmp(env, "info") == 0) {
+        Logger::getInstance().setLevel(LogLevel_INFO);
+    } else if (env && strcmp(env, "warning") == 0) {
+        Logger::getInstance().setLevel(LogLevel_WARNING);
+    } else if (env && strcmp(env, "error") == 0) {
+        Logger::getInstance().setLevel(LogLevel_ERROR);
+    }
+    return true;
+}
+
+bool Setting::onFinalization()
+{
+    return true;
+}

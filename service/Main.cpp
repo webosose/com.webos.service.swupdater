@@ -19,6 +19,7 @@
 #include "manager/HawkBitClient.h"
 #include "manager/LS2Handler.h"
 #include "manager/PolicyManager.h"
+#include "manager/Setting.h"
 
 using namespace std;
 using namespace pbnjson;
@@ -38,6 +39,7 @@ int main()
     s_mainloop = g_main_loop_new(NULL, FALSE);
 
     // xxx: DON'T change initialization order.
+    Setting::getInstance().initialize(s_mainloop);
     LS2Handler::getInstance().initialize(s_mainloop);
     // FOSSInstaller::getInstance().initialize(s_mainloop);
     HawkBitClient::getInstance().initialize(s_mainloop);
@@ -50,6 +52,7 @@ int main()
     HawkBitClient::getInstance().finalize();
     // FOSSInstaller::getInstance().finalize();
     LS2Handler::getInstance().finalize();
+    Setting::getInstance().finalize();
 
     g_main_loop_unref(s_mainloop);
 

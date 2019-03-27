@@ -15,6 +15,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "HttpCall.h"
+
+#include "manager/Setting.h"
 #include "util/Logger.h"
 
 CURL* HttpCall::s_curl = nullptr;
@@ -108,8 +110,11 @@ void HttpCall::setBody(pbnjson::JValue body)
 bool HttpCall::perform()
 {
     CURLcode rc = CURLE_OK;
-    if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_VERBOSE, 1L))) {
-        Logger::error(getClassName(), "Failed in curl_easy_setopt(VERBOSE)", curl_easy_strerror(rc));
+
+    if (Setting::getInstance().getLogCurl()) {
+        if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_VERBOSE, 1L))) {
+            Logger::error(getClassName(), "Failed in curl_easy_setopt(VERBOSE)", curl_easy_strerror(rc));
+        }
     }
 
     if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_HTTPHEADER, m_header))) {
