@@ -41,6 +41,7 @@ string FOSSInstaller::toString(RECOVERY_STATUS status)
 }
 
 FOSSInstaller::FOSSInstaller()
+    : m_progress(0)
 {
     setClassName("FOSSInstaller");
 }

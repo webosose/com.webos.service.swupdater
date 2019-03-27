@@ -24,6 +24,7 @@
 #include <pbnjson.hpp>
 
 #include "interface/IInitializable.h"
+#include "interface/IListener.h"
 #include "interface/ISingleton.h"
 
 using namespace std;
@@ -42,7 +43,10 @@ public:
 
 };
 
-class LS2Handler : public Handle, public IInitializable, public ISingleton<LS2Handler> {
+class LS2Handler : public Handle,
+                   public IInitializable,
+                   public IListener<LS2HandlerListener>,
+                   public ISingleton<LS2Handler> {
 friend ISingleton<LS2Handler>;
 public:
     virtual ~LS2Handler();
@@ -54,11 +58,6 @@ public:
     void install(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
     void cancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
     void getStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
-
-    virtual void setListener(LS2HandlerListener* listener)
-    {
-        m_listener = listener;
-    }
 
 private:
     static bool onRequest(LSHandle* sh, LSMessage* msg, void* category_context);
@@ -73,7 +72,6 @@ private:
 
     queue<LS::Message> m_requests;
 
-    LS2HandlerListener* m_listener;
 };
 
 #endif /* _MANAGER_UPDATEMANAGER_H_ */

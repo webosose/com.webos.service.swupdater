@@ -19,10 +19,11 @@
 
 #include <pbnjson.hpp>
 
-#include "core/Action.h"
-#include "core/Feedback.h"
 #include "core/HttpCall.h"
+#include "core/action/CancelAction.h"
+#include "core/action/InstallAction.h"
 #include "interface/IInitializable.h"
+#include "interface/IListener.h"
 #include "interface/ISingleton.h"
 
 using namespace pbnjson;
@@ -32,11 +33,13 @@ public:
     HawkBitClientListener() {};
     virtual ~HawkBitClientListener() {};
 
-    virtual void onCancelUpdate(Action& action) = 0;
-    virtual void onInstallUpdate(ActionInstall& action) = 0;
+    virtual void onCancelUpdate(shared_ptr<CancelAction> action) = 0;
+    virtual void onInstallUpdate(shared_ptr<InstallAction> action) = 0;
 };
 
-class HawkBitClient : public IInitializable, public ISingleton<HawkBitClient> {
+class HawkBitClient : public IInitializable,
+                      public IListener<HawkBitClientListener>,
+                      public ISingleton<HawkBitClient> {
 friend ISingleton<HawkBitClient>;
 public:
     static guint poll(gpointer data);
@@ -46,14 +49,11 @@ public:
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    virtual void setListener(HawkBitClientListener *listener)
-    {
-        m_listener = listener;
-    }
+    bool postComplete(shared_ptr<AbsAction> action);
+    bool postProgress(shared_ptr<InstallAction> action, int of, int cnt);
 
-    bool sendFeedback(Action& action, Feedback& feedback);
-
-    bool downloadApplication(Chunk& chunk);
+    bool downloadApplication(SoftwareModule& module);
+    bool downloadOS(SoftwareModule& module);
 
 private:
     HawkBitClient();
@@ -81,7 +81,6 @@ private:
     GSource* m_pollingSrc;
     int m_pollingInterval;
 
-    HawkBitClientListener* m_listener;
 };
 
 #endif /* MANAGER_HAWKBITCLIENT_H_ */

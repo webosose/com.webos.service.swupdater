@@ -14,21 +14,21 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "Action.h"
+#include "core/action/InstallAction.h"
 
-ActionInstall::ActionInstall()
-    : Action()
+InstallAction::InstallAction()
+    : AbsAction()
     , m_download(ScheduleType_UNKNOWN)
     , m_update(ScheduleType_UNKNOWN)
 {
-    m_type = ActionType_INSTALL;
+    setType(ActionType_INSTALL);
 }
 
-ActionInstall::~ActionInstall()
+InstallAction::~InstallAction()
 {
 }
 
-ScheduleType ActionInstall::toEnum(const string& type)
+ScheduleType InstallAction::toEnum(const string& type)
 {
     if (type == "attempt")
         return ScheduleType_ATTEMPT;
@@ -40,7 +40,7 @@ ScheduleType ActionInstall::toEnum(const string& type)
     return ScheduleType_UNKNOWN;
 }
 
-string ActionInstall::toString(enum ScheduleType& type)
+string InstallAction::toString(enum ScheduleType& type)
 {
     switch (type) {
     case ScheduleType_SKIP:
@@ -55,10 +55,10 @@ string ActionInstall::toString(enum ScheduleType& type)
     return "unknown";
 }
 
-bool ActionInstall::fromJson(const JValue& json)
+bool InstallAction::fromJson(const JValue& json)
 {
     ISerializable::fromJson(json);
-    Action::fromJson(json);
+    AbsAction::fromJson(json);
     if (json.hasKey("actionHistory")) {
         JValue actionHistory = json["actionHistory"];
         if (actionHistory.hasKey("status") && actionHistory["status"].isString()) {
@@ -77,7 +77,7 @@ bool ActionInstall::fromJson(const JValue& json)
     JValue deployment = json["deployment"];
     if (deployment.hasKey("chunks") && deployment["chunks"].isArray()) {
         for (JValue chunkJson : deployment["chunks"].items()) {
-            Chunk chunk;
+            SoftwareModule chunk;
             chunk.fromJson(chunkJson);
             m_chunks.push_back(chunk);
         }

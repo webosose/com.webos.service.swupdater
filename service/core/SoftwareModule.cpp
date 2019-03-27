@@ -14,9 +14,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "Chunk.h"
+#include <core/SoftwareModule.h>
 
-string Chunk::toString(enum ChunkType& type)
+string SoftwareModule::toString(enum ChunkType& type)
 {
     switch(type){
     case ChunkType_Unknown:
@@ -29,7 +29,7 @@ string Chunk::toString(enum ChunkType& type)
     return "unknown";
 }
 
-ChunkType Chunk::toEnum(const string& type)
+ChunkType SoftwareModule::toEnum(const string& type)
 {
     if (type == "unknown") {
         return ChunkType_Unknown;
@@ -39,15 +39,18 @@ ChunkType Chunk::toEnum(const string& type)
     return ChunkType_Unknown;
 }
 
-Chunk::Chunk()
+SoftwareModule::SoftwareModule()
+    : m_type(ChunkType_Unknown)
+    , m_name("")
+    , m_version("")
 {
 }
 
-Chunk::~Chunk()
+SoftwareModule::~SoftwareModule()
 {
 }
 
-bool Chunk::fromJson(const JValue& json)
+bool SoftwareModule::fromJson(const JValue& json)
 {
     ISerializable::fromJson(json);
     if (json.hasKey("part") && json["part"].isString()) {

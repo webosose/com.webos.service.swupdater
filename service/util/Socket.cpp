@@ -24,7 +24,7 @@
 
 #include "util/Logger.h"
 
-char* SOCKET_PROGRESS_PATH = "";
+const char* SOCKET_PROGRESS_PATH = "";
 
 string Socket::getMacAddress(const string& ifaceName)
 {
@@ -67,7 +67,7 @@ gboolean Socket::onRead(GIOChannel* channel, GIOCondition condition, gpointer da
         return G_SOURCE_REMOVE;
     }
 
-    self->m_socketListener->onRead(channel);
+    self->m_listener->onRead(channel);
     // g_io_add_watch(channel, (GIOCondition)(G_IO_IN | G_IO_HUP), (GIOFunc)Socket::onRead, self);
     return G_SOURCE_CONTINUE;
 }
@@ -75,7 +75,6 @@ gboolean Socket::onRead(GIOChannel* channel, GIOCondition condition, gpointer da
 Socket::Socket()
     : m_socket(NULL)
     , m_socketAddress(NULL)
-    , m_socketListener(NULL)
 {
     m_socket = g_socket_new(G_SOCKET_FAMILY_UNIX, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_DEFAULT, NULL);
     m_socketAddress = g_unix_socket_address_new(SOCKET_PROGRESS_PATH);
@@ -96,9 +95,4 @@ Socket::~Socket()
 bool Socket::isConnected()
 {
     return g_socket_is_connected(m_socket);
-}
-
-void Socket::setListener(SocketListener* listener)
-{
-    m_socketListener = listener;
 }

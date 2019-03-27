@@ -15,10 +15,10 @@
 #include <glib.h>
 #include <ls2/LS2Handler.h>
 #include <pbnjson.hpp>
+#include <PolicyManager.h>
 
 #include "manager/FOSSInstaller.h"
 #include "manager/HawkBitClient.h"
-#include "manager/PolicyManager.h"
 #include "manager/Setting.h"
 
 using namespace std;
@@ -45,7 +45,9 @@ int main()
     HawkBitClient::getInstance().initialize(s_mainloop);
     PolicyManager::getInstance().initialize(s_mainloop);
 
+    Logger::verbose("Main", "Start g_mainloop");
     g_main_loop_run(s_mainloop);
+    Logger::verbose("Main", "Stop g_mainloop");
 
     // xxx: DON'T change finalize order.
     PolicyManager::getInstance().finalize();

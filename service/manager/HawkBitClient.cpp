@@ -22,6 +22,7 @@
 #include "core/HttpCall.h"
 #include "util/Logger.h"
 #include "util/Socket.h"
+#include "util/Time.h"
 
 const string HawkBitClient::HAWKBIT_TENANT = "hawkbit_tenant";
 const string HawkBitClient::HAWKBIT_URL = "hawkbit_url";
@@ -33,7 +34,6 @@ const int HawkBitClient::POLLING_INTERVAL_DEFAULT = 15;
 HawkBitClient::HawkBitClient()
     : m_pollingSrc(nullptr)
     , m_pollingInterval(-1)
-    , m_listener(nullptr)
 {
     setClassName("HawkBitClient");
 }
@@ -77,19 +77,25 @@ bool HawkBitClient::onFinalization()
     return true;
 }
 
-bool HawkBitClient::sendFeedback(Action& action, Feedback& feedback)
+bool HawkBitClient::postComplete(shared_ptr<AbsAction> action)
 {
+    JValue requestPayload = pbnjson::Object();
+
+    requestPayload.put("id", action->getId());
+    requestPayload.put("time", Time::getUtcTime());
+    requestPayload.put("status", pbnjson::Object());
+    requestPayload["status"].put("execution", "closed");
+    requestPayload["status"].put("result", pbnjson::Object());
+    requestPayload["status"]["result"].put("finished", "success");
+
     string url;
-    if (action.getType() == ActionType_INSTALL) {
-        url = m_hawkBitUrl + "/deploymentBase/" + feedback.getActionId() + "/feedback";
+    if (action->getType() == ActionType_INSTALL) {
+        url = m_hawkBitUrl + "/deploymentBase/" + action->getId() + "/feedback";
     } else {
-        url = m_hawkBitUrl + "/cancelAction/" + feedback.getActionId() + "/feedback";
+        url = m_hawkBitUrl + "/cancelAction/" + action->getId() + "/feedback";
     }
 
     HttpCall httpCall(MethodType_POST, url, m_hawkBitToken);
-    JValue requestPayload = pbnjson::Object();
-
-    feedback.toJson(requestPayload);
     httpCall.setBody(requestPayload);
 
     if (!httpCall.performSync()) {
@@ -99,14 +105,44 @@ bool HawkBitClient::sendFeedback(Action& action, Feedback& feedback)
     return true;
 }
 
-bool HawkBitClient::downloadApplication(Chunk& chunk)
+bool HawkBitClient::postProgress(shared_ptr<InstallAction> action, int of, int cnt)
 {
-    HttpCall call(MethodType_GET, chunk.getArtifacts().front().getDownloadHttp(), m_hawkBitToken);
+    JValue requestPayload = pbnjson::Object();
+
+    requestPayload.put("id", action->getId());
+    requestPayload.put("time", Time::getUtcTime());
+    requestPayload.put("status", pbnjson::Object());
+    requestPayload["status"].put("execution", "proceeding");
+    requestPayload["status"].put("result", pbnjson::Object());
+    requestPayload["status"]["result"].put("finished", "none");
+    requestPayload["status"]["result"].put("progress", pbnjson::Object());
+    requestPayload["status"]["result"]["progress"].put("of", of);
+    requestPayload["status"]["result"]["progress"].put("cnt", cnt);
+
+    string url = m_hawkBitUrl + "/deploymentBase/" + action->getId() + "/feedback";
+    HttpCall httpCall(MethodType_POST, url, m_hawkBitToken);
+    httpCall.setBody(requestPayload);
+
+    if (!httpCall.performSync()) {
+        Logger::error(getClassName(), "Failed to post feedback");
+        return false;
+    }
+    return true;
+}
+
+bool HawkBitClient::downloadApplication(SoftwareModule& module)
+{
+    HttpCall call(MethodType_GET, module.getArtifacts().front().getDownloadHttp(), m_hawkBitToken);
     cout << "start download" << endl;
-    cout << chunk.getJson().stringify("    ") << endl;
+    cout << module.getJson().stringify("    ") << endl;
     call.performSync();
     cout << "size - " << call.getResponsePayloadSize() << endl;
     cout << "end download" << endl;
+    return true;
+}
+
+bool HawkBitClient::downloadOS(SoftwareModule& module)
+{
     return true;
 }
 
@@ -179,10 +215,10 @@ guint HawkBitClient::poll(gpointer data)
 {
     HawkBitClient* self = (HawkBitClient*) data;
     enum ActionType type = ActionType_NONE;
-    ActionInstall actionInstall;
+    InstallAction actionInstall;
     JValue responsePayload;
     string link = "";
-    Action action;
+    shared_ptr<AbsAction> action;
 
     Logger::info(self->getClassName(), "== POLLING START ==");
     Logger::verbose(self->getClassName(), "checking hawkBit server request");
@@ -191,7 +227,6 @@ guint HawkBitClient::poll(gpointer data)
         goto Done;
     }
 
-    cout << responsePayload.stringify("    ") << endl;
     Logger::verbose(self->getClassName(), "Checking polling interval");
     self->checkPollingInterval(responsePayload);
     if (self->m_listener == nullptr) {
@@ -214,20 +249,19 @@ guint HawkBitClient::poll(gpointer data)
 
     switch (type) {
     case ActionType_CANCEL:
-        Logger::verbose(self->getClassName(), "Try to handle 'cancel' action");
-        action.setType(type);
-        action.fromJson(responsePayload);
-        self->m_listener->onCancelUpdate(action);
+        action = make_shared<CancelAction>();
+        action->fromJson(responsePayload);
+        self->m_listener->onCancelUpdate(dynamic_pointer_cast<CancelAction>(action));
         break;
 
     case ActionType_INSTALL:
-        Logger::verbose(self->getClassName(), "Try to handle 'install' action");
-        actionInstall.fromJson(responsePayload);
-        self->m_listener->onInstallUpdate(actionInstall);
+        action = make_shared<InstallAction>();
+        action->fromJson(responsePayload);
+        self->m_listener->onInstallUpdate(dynamic_pointer_cast<InstallAction>(action));
         break;
 
     default:
-        break;
+        goto Done;
     }
 
 Done:

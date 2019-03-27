@@ -14,8 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_CHUNK_H_
-#define CORE_CHUNK_H_
+#ifndef CORE_SOFTWAREMODULE_H_
+#define CORE_SOFTWAREMODULE_H_
 
 #include <iostream>
 #include <list>
@@ -35,13 +35,13 @@ enum ChunkType {
     ChunkType_Mixed
 };
 
-class Chunk : public ISerializable {
+class SoftwareModule : public ISerializable {
 public:
     static string toString(enum ChunkType& type);
     static ChunkType toEnum(const string& type);
 
-    Chunk();
-    virtual ~Chunk();
+    SoftwareModule();
+    virtual ~SoftwareModule();
 
     const enum ChunkType getType()
     {
@@ -74,4 +74,4 @@ private:
 };
 
 
-#endif /* CORE_CHUNK_H_ */
+#endif /* CORE_SOFTWAREMODULE_H_ */

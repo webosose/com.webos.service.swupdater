@@ -14,15 +14,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_ACTION_H_
-#define CORE_ACTION_H_
+#ifndef CORE_ACTION_ABSACTION_H_
+#define CORE_ACTION_ABSACTION_H_
 
-#include <list>
-#include <map>
 #include <pbnjson.hpp>
 #include <string>
 
-#include "Chunk.h"
 #include "interface/ISerializable.h"
 
 using namespace pbnjson;
@@ -34,21 +31,14 @@ enum ActionType {
     ActionType_CANCEL,
 };
 
-enum ScheduleType {
-    ScheduleType_UNKNOWN,
-    ScheduleType_ATTEMPT, // 'soft'
-    ScheduleType_FORCED,
-    ScheduleType_SKIP,    // ????
-};
-
-class Action : public ISerializable {
+class AbsAction : public ISerializable {
 public:
-    Action()
+    AbsAction()
     {
         m_type = ActionType_NONE;
     }
 
-    virtual ~Action() {}
+    virtual ~AbsAction() {}
 
     virtual const string& getId()
     {
@@ -73,54 +63,10 @@ public:
         return true;
     }
 
-protected:
+private:
     string m_id;
     ActionType m_type;
 
 };
 
-class ActionInstall : public Action {
-public:
-    ActionInstall();
-    virtual ~ActionInstall();
-
-    ScheduleType getDownloadSchedule()
-    {
-        return m_download;
-    }
-
-    ScheduleType getUpdateSchedule()
-    {
-        return m_update;
-    }
-
-    bool isMaintenanceWindowAvailable()
-    {
-        return m_maintenanceWindow == "available";
-    }
-
-    const string& getHistoryStatus()
-    {
-        return m_historyStatus;
-    }
-
-    list<Chunk>& getChunks()
-    {
-        return m_chunks;
-    }
-
-    virtual bool fromJson(const JValue& json) override;
-
-private:
-    static string toString(enum ScheduleType& type);
-    static ScheduleType toEnum(const string& type);
-
-    ScheduleType m_download;
-    ScheduleType m_update;
-    string m_maintenanceWindow;
-    string m_historyStatus;
-    list<string> m_historyMessages;
-    list<Chunk> m_chunks;
-};
-
-#endif /* CORE_ACTION_H_ */
+#endif /* CORE_ACTION_ABSACTION_H_ */

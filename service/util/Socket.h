@@ -21,6 +21,8 @@
 #include <glib.h>
 #include <gio/gunixsocketaddress.h>
 
+#include "interface/IListener.h"
+
 using namespace std;
 
 class SocketListener {
@@ -31,7 +33,7 @@ public:
     virtual void onRead(GIOChannel* channel) = 0;
 };
 
-class Socket {
+class Socket : public IListener<SocketListener> {
 public:
     static string getMacAddress(const string& ifaceName);
 
@@ -39,14 +41,12 @@ public:
     virtual ~Socket();
 
     bool isConnected();
-    void setListener(SocketListener* listener);
 
 private:
     static gboolean onRead(GIOChannel* channel, GIOCondition condition, gpointer data);
 
     GSocket* m_socket;
     GSocketAddress* m_socketAddress;
-    SocketListener* m_socketListener;
 
 };
 

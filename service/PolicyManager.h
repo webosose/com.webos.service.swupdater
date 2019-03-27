@@ -14,27 +14,32 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef MANAGER_POLICYMANAGER_H_
-#define MANAGER_POLICYMANAGER_H_
+#ifndef POLICYMANAGER_H_
+#define POLICYMANAGER_H_
 
-#include <hardware/AbsHardware.h>
-#include <interface/IInitializable.h>
-#include <ls2/LS2Handler.h>
-#include "core/Action.h"
+#include <core/action/AbsAction.h>
+#include "hardware/AbsHardware.h"
+#include "interface/IInitializable.h"
 #include "interface/ISingleton.h"
+#include "ls2/AppInstaller.h"
+#include "ls2/LS2Handler.h"
 #include "manager/HawkBitClient.h"
 
 class PolicyManager : public ISingleton<PolicyManager>,
                       public IInitializable,
+                      public AppInstallerListener,
                       public LS2HandlerListener,
                       public HawkBitClientListener {
 friend ISingleton<PolicyManager>;
 public:
     virtual ~PolicyManager();
 
-    // IManageable
+    // IInitializable
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
+
+    // AppInstallerListener
+    virtual void onInstallSubscription(const string& id, const string& status) override;
 
     // LS2HandlerListener
     virtual bool onCheck(JValue& responsePayload/**/) override;
@@ -43,12 +48,14 @@ public:
     virtual bool onGetStatus(JValue& responsePayload/**/) override;
 
     // HawkBitClientListener
-    virtual void onCancelUpdate(Action& action) override;
-    virtual void onInstallUpdate(ActionInstall& action) override;
+    virtual void onCancelUpdate(shared_ptr<CancelAction> action) override;
+    virtual void onInstallUpdate(shared_ptr<InstallAction> action) override;
 
 private:
     PolicyManager();
 
+    shared_ptr<AbsAction> m_currentAction;
+
 };
 
-#endif /* MANAGER_POLICYMANAGER_H_ */
+#endif /* POLICYMANAGER_H_ */

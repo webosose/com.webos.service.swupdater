@@ -18,18 +18,43 @@
 #define LS2_APPINSTALLER_H_
 
 #include <iostream>
+#include <pbnjson.hpp>
+#include <luna-service2/lunaservice.hpp>
 
+#include "interface/IInitializable.h"
+#include "interface/IListener.h"
 #include "interface/ISingleton.h"
 
 using namespace std;
+using namespace pbnjson;
 
-class AppInstaller : public ISingleton<AppInstaller> {
+class AppInstallerListener {
+public:
+    AppInstallerListener() {}
+    virtual ~AppInstallerListener() {}
+
+    virtual void onInstallSubscription(const string& id, const string& status) = 0;
+
+};
+
+class AppInstaller : public IInitializable,
+                     public IListener<AppInstallerListener>,
+                     public ISingleton<AppInstaller> {
 friend ISingleton<AppInstaller>;
 public:
     virtual ~AppInstaller();
 
+    virtual bool onInitialization() override;
+    virtual bool onFinalization() override;
+
+    static bool _install(LSHandle* sh, LSMessage* reply, void* ctx);
+    bool install(const string& id, const string& ipkUrl);
+
 private:
     AppInstaller();
+
+    LS::Call m_install;
+
 };
 
 #endif /* LS2_APPINSTALLER_H_ */

@@ -14,9 +14,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <ls2/LS2Handler.h>
+#include "LS2Handler.h"
+
 #include <lunaservice.h>
 
+#include "ls2/AppInstaller.h"
 #include "util/Logger.h"
 
 const string LS2Handler::NAME = "com.webos.service.swupdater";
@@ -72,7 +74,6 @@ bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
 
 LS2Handler::LS2Handler()
     : Handle(LS::registerService(NAME.c_str()))
-    , m_listener(nullptr)
 {
     setClassName("LS2Handler");
     this->registerCategory("/", METHODS, NULL, NULL);
@@ -90,6 +91,7 @@ bool LS2Handler::onInitialization()
 
 bool LS2Handler::onFinalization()
 {
+    AppInstaller::getInstance().finalize();
     detach();
     return true;
 }
