@@ -14,40 +14,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef MANAGER_SETTING_H_
-#define MANAGER_SETTING_H_
+#ifndef CORE_CANCEL_CANCELACTION_H_
+#define CORE_CANCEL_CANCELACTION_H_
 
-#include <interface/IInitializable.h>
-#include <iostream>
-#include <string>
+#include <core/AbsAction.h>
 
-#include "interface/ISingleton.h"
-
-using namespace std;
-
-class Setting : public IInitializable, public ISingleton<Setting> {
-friend class ISingleton<Setting>;
+class CancelAction : public AbsAction {
 public:
-    virtual ~Setting();
-
-    virtual bool onInitialization() override;
-    virtual bool onFinalization() override;
-
-    virtual bool getLogCurl()
-    {
-        return m_logCurl;
-    }
-
-    virtual bool verbose()
-    {
-        return m_verbose;
-    }
-
-private:
-    Setting();
-
-    bool m_logCurl;
-    bool m_verbose;
+    CancelAction();
+    virtual ~CancelAction();
 };
-
-#endif /* MANAGER_SETTING_H_ */
+#endif /* CORE_CANCEL_CANCELACTION_H_ */

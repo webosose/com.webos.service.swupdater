@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "core/action/CancelAction.h"
+#include <core/cancel/CancelAction.h>
 
 CancelAction::CancelAction()
 {

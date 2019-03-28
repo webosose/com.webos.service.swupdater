@@ -14,10 +14,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "HttpCall.h"
-
-#include "manager/Setting.h"
-#include "util/glibcurl.h"
+#include <external/glibcurl.h>
+#include <hawkbit/HttpCall.h>
+#include <Setting.h>
 #include "util/Logger.h"
 
 CURL* HttpCall::s_curl = nullptr;
@@ -63,6 +62,33 @@ HttpCall::~HttpCall()
     }
 }
 
+bool HttpCall::performSync()
+{
+    preparePerform();
+
+    CURLcode rc = CURLE_OK;
+    if (CURLE_OK != (rc = curl_easy_perform(s_curl))) {
+        Logger::error(getClassName(), "Failed in curl_easy_perform", curl_easy_strerror(rc));
+        return false;
+    }
+
+    return true;
+}
+
+bool HttpCall::performAsync(HttpCallListener* listener)
+{
+    preparePerform();
+    setListener(listener);
+    glibcurl_set_callback(&HttpCall::onGlibcurl, this);
+
+    CURLMcode rc = CURLM_OK;
+    if (CURLM_OK != (rc = glibcurl_add(s_curl))) {
+        Logger::error(getClassName(), "Failed in glibcurl_add", curl_multi_strerror(rc));
+        return false;
+    }
+
+    return true;
+}
 
 void HttpCall::setUrl(const std::string& url)
 {
@@ -147,35 +173,6 @@ void HttpCall::preparePerform()
     }
 }
 
-bool HttpCall::performSync()
-{
-    preparePerform();
-
-    CURLcode rc = CURLE_OK;
-    if (CURLE_OK != (rc = curl_easy_perform(s_curl))) {
-        Logger::error(getClassName(), "Failed in curl_easy_perform", curl_easy_strerror(rc));
-        return false;
-    }
-
-    return true;
-}
-
-bool HttpCall::performAsync(AsyncCallback callback)
-{
-    preparePerform();
-
-    m_asyncCallback = callback;
-    glibcurl_set_callback(&HttpCall::cbGlibcurl, this);
-
-    CURLMcode rc = CURLM_OK;
-    if (CURLM_OK != (rc = glibcurl_add(s_curl))) {
-        Logger::error(getClassName(), "Failed in glibcurl_add", curl_multi_strerror(rc));
-        return false;
-    }
-
-    return true;
-}
-
 long HttpCall::getResponseCode()
 {
     long responseCode = 0;
@@ -214,7 +211,7 @@ void HttpCall::appendHeader(const std::string& key, const std::string& val)
     m_header = curl_slist_append(m_header, (key + ": " + val).c_str());
 }
 
-void HttpCall::cbGlibcurl(void* data)
+void HttpCall::onGlibcurl(void* data)
 {
     HttpCall* self = static_cast<HttpCall*>(data);
     if (!self) {
@@ -224,7 +221,7 @@ void HttpCall::cbGlibcurl(void* data)
 
     CURLMsg* msg;
     int inQueue;
-    while (1) {
+    while (true) {
         msg = curl_multi_info_read(glibcurl_handle(), &inQueue);
         if (msg == 0) {
             break;
@@ -234,8 +231,8 @@ void HttpCall::cbGlibcurl(void* data)
             Logger::info(self->getClassName(), "receive done");
             glibcurl_remove(HttpCall::s_curl);
 
-            if (self->m_asyncCallback) {
-                self->m_asyncCallback(self);
+            if (self->m_listener) {
+                self->m_listener->onCompleteHttpCall(*self);
             }
         } else {
             Logger::warning(self->getClassName(), "Unknown CURLMsg code " + (msg->msg));

@@ -14,8 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_ACTION_ABSACTION_H_
-#define CORE_ACTION_ABSACTION_H_
+#ifndef CORE_ABSACTION_H_
+#define CORE_ABSACTION_H_
 
 #include <pbnjson.hpp>
 #include <string>
@@ -69,4 +69,4 @@ private:
 
 };
 
-#endif /* CORE_ACTION_ABSACTION_H_ */
+#endif /* CORE_ABSACTION_H_ */

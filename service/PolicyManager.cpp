@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <core/action/AbsAction.h>
+#include <core/AbsAction.h>
 #include <PolicyManager.h>
 #include "ls2/AppInstaller.h"
 #include "util/Logger.h"

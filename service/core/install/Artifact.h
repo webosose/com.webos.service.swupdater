@@ -14,64 +14,75 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_SOFTWAREMODULE_H_
-#define CORE_SOFTWAREMODULE_H_
+#ifndef CORE_INSTALL_ARTIFACT_H_
+#define CORE_INSTALL_ARTIFACT_H_
 
 #include <iostream>
-#include <list>
-#include <map>
 #include <pbnjson.hpp>
 
-#include "core/Artifact.h"
 #include "interface/ISerializable.h"
 
 using namespace std;
 using namespace pbnjson;
 
-enum ChunkType {
-    ChunkType_Unknown,
-    ChunkType_Application,
-    ChunkType_OS,
-    ChunkType_Mixed
-};
-
-class SoftwareModule : public ISerializable {
+class Artifact : public ISerializable {
 public:
-    static string toString(enum ChunkType& type);
-    static ChunkType toEnum(const string& type);
+    Artifact();
+    virtual ~Artifact();
 
-    SoftwareModule();
-    virtual ~SoftwareModule();
-
-    const enum ChunkType getType()
+    const string& getFilename() const
     {
-        return m_type;
+        return m_filename;
     }
 
-    const string& getName()
+    const string& getSha1()
     {
-        return m_name;
+        return m_sha1;
     }
 
-    const string& getVersion()
+    const string& getMd5()
     {
-        return m_version;
+        return m_md5;
     }
 
-    const list<Artifact>& getArtifacts()
+    int getSize()
     {
-        return m_artifacts;
+        return m_size;
+    }
+
+    const string& getDownloadHttps()
+    {
+        return m_downloadHttps;
+    }
+
+    const string& getDownloadHttp() const
+    {
+        return m_downloadHttp;
+    }
+
+    const string& getMd5sumHttps()
+    {
+        return m_md5sumHttps;
+    }
+
+    const string& getMd5sumHttp()
+    {
+        return m_md5sumHttp;
     }
 
     virtual bool fromJson(const JValue& json) override;
 
 private:
-    enum ChunkType m_type;
-    string m_name;
-    string m_version;
-    list<Artifact> m_artifacts;
-    map<string, string> m_metadata;
+    string m_filename;
+    string m_sha1;
+    string m_md5;
+
+    int m_size;
+
+    string m_downloadHttps;
+    string m_md5sumHttps;
+    string m_downloadHttp;
+    string m_md5sumHttp;
 };
 
-
-#endif /* CORE_SOFTWAREMODULE_H_ */
+#endif /* CORE_INSTALL_ARTIFACT_H_ */

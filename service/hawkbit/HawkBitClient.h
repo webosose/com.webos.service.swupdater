@@ -14,14 +14,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef MANAGER_HAWKBITCLIENT_H_
-#define MANAGER_HAWKBITCLIENT_H_
+#ifndef HAWKBIT_HAWKBITCLIENT_H_
+#define HAWKBIT_HAWKBITCLIENT_H_
 
+#include <core/cancel/CancelAction.h>
+#include <core/install/InstallAction.h>
+#include <hawkbit/HttpCall.h>
 #include <pbnjson.hpp>
 
-#include "core/HttpCall.h"
-#include "core/action/CancelAction.h"
-#include "core/action/InstallAction.h"
 #include "interface/IInitializable.h"
 #include "interface/IListener.h"
 #include "interface/ISingleton.h"
@@ -53,6 +53,8 @@ public:
     bool postProgress(shared_ptr<InstallAction> action, int of, int cnt);
 
     void downloadCallback(HttpCall* httpCall);
+
+
     bool downloadApplication(SoftwareModule& module);
     bool downloadOS(SoftwareModule& module);
 
@@ -84,4 +86,4 @@ private:
 
 };
 
-#endif /* MANAGER_HAWKBITCLIENT_H_ */
+#endif /* HAWKBIT_HAWKBITCLIENT_H_ */

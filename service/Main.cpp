@@ -13,13 +13,13 @@
 
 #include <iostream>
 #include <glib.h>
+#include <hawkbit/HawkBitClient.h>
 #include <ls2/LS2Handler.h>
 #include <pbnjson.hpp>
 #include <PolicyManager.h>
+#include <Setting.h>
 
-#include "manager/FOSSInstaller.h"
-#include "manager/HawkBitClient.h"
-#include "manager/Setting.h"
+#include <updater/FOSSInstaller.h>
 
 using namespace std;
 using namespace pbnjson;

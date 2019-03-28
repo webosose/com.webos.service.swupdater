@@ -14,8 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef MANAGER_FOSSINSTALLER_H_
-#define MANAGER_FOSSINSTALLER_H_
+#ifndef UPDATER_FOSSINSTALLER_H_
+#define UPDATER_FOSSINSTALLER_H_
 
 #include <iostream>
 #include <glib.h>
@@ -95,4 +95,4 @@ private:
     int m_progress;
 };
 
-#endif /* MANAGER_FOSSINSTALLER_H_ */
+#endif /* UPDATER_FOSSINSTALLER_H_ */

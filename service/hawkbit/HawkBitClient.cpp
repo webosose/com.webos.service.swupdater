@@ -14,12 +14,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "HawkBitClient.h"
-
 #include <curl/curl.h>
 #include <glib.h>
 #include <hardware/AbsHardware.h>
-#include "core/HttpCall.h"
+#include <hawkbit/HawkBitClient.h>
+#include <hawkbit/HttpCall.h>
 #include "util/Logger.h"
 #include "util/Socket.h"
 #include "util/Time.h"
@@ -154,8 +153,7 @@ bool HawkBitClient::downloadApplication(SoftwareModule& module)
     call->setResponseFile(fp);
     cout << "start download" << endl;
     cout << module.getJson().stringify("    ") << endl;
-    HttpCall::AsyncCallback callback = bind(&HawkBitClient::downloadCallback, this, placeholders::_1);
-    call->performAsync(callback);
+    //call->performAsync(this);
     return true;
 }
 

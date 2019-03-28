@@ -14,10 +14,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_ARTIFACT_H_
-#define CORE_ARTIFACT_H_
+#ifndef CORE_INSTALL_SOFTWAREMODULE_H_
+#define CORE_INSTALL_SOFTWAREMODULE_H_
 
+#include <core/install/Artifact.h>
 #include <iostream>
+#include <list>
+#include <map>
 #include <pbnjson.hpp>
 
 #include "interface/ISerializable.h"
@@ -25,65 +28,50 @@
 using namespace std;
 using namespace pbnjson;
 
-class Artifact : public ISerializable {
+enum ChunkType {
+    ChunkType_Unknown,
+    ChunkType_Application,
+    ChunkType_OS,
+    ChunkType_Mixed
+};
+
+class SoftwareModule : public ISerializable {
 public:
-    Artifact();
-    virtual ~Artifact();
+    static string toString(enum ChunkType& type);
+    static ChunkType toEnum(const string& type);
 
-    const string& getFilename() const
+    SoftwareModule();
+    virtual ~SoftwareModule();
+
+    const enum ChunkType getType()
     {
-        return m_filename;
+        return m_type;
     }
 
-    const string& getSha1()
+    const string& getName()
     {
-        return m_sha1;
+        return m_name;
     }
 
-    const string& getMd5()
+    const string& getVersion()
     {
-        return m_md5;
+        return m_version;
     }
 
-    int getSize()
+    const list<Artifact>& getArtifacts()
     {
-        return m_size;
+        return m_artifacts;
     }
-
-    const string& getDownloadHttps()
-    {
-        return m_downloadHttps;
-    }
-
-    const string& getDownloadHttp() const
-    {
-        return m_downloadHttp;
-    }
-
-    const string& getMd5sumHttps()
-    {
-        return m_md5sumHttps;
-    }
-
-    const string& getMd5sumHttp()
-    {
-        return m_md5sumHttp;
-    }
-
 
     virtual bool fromJson(const JValue& json) override;
 
 private:
-    string m_filename;
-    string m_sha1;
-    string m_md5;
-
-    int m_size;
-
-    string m_downloadHttps;
-    string m_md5sumHttps;
-    string m_downloadHttp;
-    string m_md5sumHttp;
+    enum ChunkType m_type;
+    string m_name;
+    string m_version;
+    list<Artifact> m_artifacts;
+    map<string, string> m_metadata;
 };
 
-#endif /* CORE_ARTIFACT_H_ */
+
+#endif /* CORE_INSTALL_SOFTWAREMODULE_H_ */

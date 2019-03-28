@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <core/SoftwareModule.h>
+#include <core/install/SoftwareModule.h>
 
 string SoftwareModule::toString(enum ChunkType& type)
 {

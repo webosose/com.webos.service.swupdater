@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "core/action/InstallAction.h"
+#include <core/install/InstallAction.h>
 
 InstallAction::InstallAction()
     : AbsAction()

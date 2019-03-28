@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "Artifact.h"
+#include <core/install/Artifact.h>
 
 Artifact::Artifact()
     : m_size(0)

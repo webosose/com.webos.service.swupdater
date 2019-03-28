@@ -24,35 +24,15 @@
 
 */
 
-// Copyright (c) 2019 LG Electronics, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 #include <glib.h>
-#include "glibcurl.h"
+#include <glibcurl.h>
 
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <assert.h>
 
 /* #define D(_args) fprintf _args; */
 #define D(_args)
-
-#define DD(_args)
-
 
 /* #if 1 */
 #ifdef G_OS_WIN32
@@ -103,11 +83,6 @@ void glibcurl_init() {
   /* Create source object for curl file descriptors, and hook it into the
      default main context. */
   GSource* src = g_source_new(&curlFuncs, sizeof(CurlGSource));
-  if (!src)
-  {
-    LOG_DEBUG("Failed to create new glib source in %s", __FUNCTION__);
-    return;
-  }
   curlSrc = (CurlGSource*)src;
   g_source_attach(&curlSrc->source, NULL);
 
@@ -123,12 +98,6 @@ void glibcurl_init() {
   /* Init libcurl */
   curl_global_init(CURL_GLOBAL_ALL);
   curlSrc->multiHandle = curl_multi_init();
-
-  if (!curlSrc->cond || !curlSrc->mutex || !curlSrc->multiHandle)
-  {
-    LOG_DEBUG("Failed to initialize glib objects or curl interface in %s", __FUNCTION__);
-    return;
-  }
 }
 /*______________________________________________________________________*/
 
@@ -327,7 +296,7 @@ void finalize(GSource* source) {
 #else /* !G_OS_WIN32 */
 
 /* Number of highest allowed fd */
-#define GLIBCURL_FDMAX 1023
+#define GLIBCURL_FDMAX 127
 
 /* Timeout for the fds passed to glib's poll() call, in millisecs.
    curl_multi_fdset(3) says we should call curl_multi_perform() at regular
@@ -362,16 +331,6 @@ typedef struct CurlGSource_ {
 /* Global state: Our CurlGSource object */
 static CurlGSource* curlSrc = 0;
 
-// Number of easy handles currently active
-static int s_numEasyHandles = 0;
-
-// Current timeout value to wait in poll
-static int s_currTimeout = 0;
-
-// Time when last dispatch was made
-static struct timespec s_timeAtLastDispatch;
-
-
 /* The "methods" of CurlGSource */
 static gboolean prepare(GSource* source, gint* timeout);
 static gboolean check(GSource* source);
@@ -401,14 +360,9 @@ void glibcurl_init() {
   /* Init libcurl */
   curl_global_init(CURL_GLOBAL_ALL);
   curlSrc->multiHandle = curl_multi_init();
-  g_source_set_priority(&curlSrc->source, G_PRIORITY_DEFAULT_IDLE);
+
   D((stderr, "events: R=%x W=%x X=%x\n", GLIBCURL_READ, GLIBCURL_WRITE,
      GLIBCURL_EXC));
-
-  s_numEasyHandles = 0;
-  s_currTimeout = 0;
-  s_timeAtLastDispatch.tv_sec = 0;
-  s_timeAtLastDispatch.tv_nsec = 0;
 }
 /*______________________________________________________________________*/
 
@@ -420,21 +374,14 @@ CURLM* glibcurl_handle() {
 CURLMcode glibcurl_add(CURL *easy_handle) {
   assert(curlSrc->multiHandle != 0);
   curlSrc->callPerform = -1;
-  s_numEasyHandles++;
-  CURLMcode ret = curl_multi_add_handle(curlSrc->multiHandle, easy_handle);
-  g_main_context_wakeup(g_main_context_default());
-  return ret;
+  return curl_multi_add_handle(curlSrc->multiHandle, easy_handle);
 }
 /*______________________________________________________________________*/
 
 CURLMcode glibcurl_remove(CURL *easy_handle) {
   assert(curlSrc != 0);
   assert(curlSrc->multiHandle != 0);
-  assert(s_numEasyHandles > 0);
-  s_numEasyHandles--;
-  CURLMcode ret = curl_multi_remove_handle(curlSrc->multiHandle, easy_handle);
-  g_main_context_wakeup(g_main_context_default());
-  return ret;
+  return curl_multi_remove_handle(curlSrc->multiHandle, easy_handle);
 }
 /*______________________________________________________________________*/
 
@@ -444,9 +391,6 @@ CURLMcode glibcurl_remove(CURL *easy_handle) {
    function to be called anyway. */
 void glibcurl_start() {
   curlSrc->callPerform = -1;
-
-  // Wake up event loop if it is suspended in a poll
-  g_main_context_wakeup(g_main_context_default());
 }
 /*______________________________________________________________________*/
 
@@ -465,7 +409,7 @@ void glibcurl_cleanup() {
   curlSrc->multiHandle = 0;
   curl_global_cleanup();
 
-  g_source_destroy(&curlSrc->source);
+/*   g_source_destroy(&curlSrc->source); */
   g_source_unref(&curlSrc->source);
   curlSrc = 0;
 }
@@ -481,9 +425,6 @@ static void registerUnregisterFds() {
   /* What fds does libcurl want us to poll? */
   curl_multi_fdset(curlSrc->multiHandle, &curlSrc->fdRead,
                    &curlSrc->fdWrite, &curlSrc->fdExc, &curlSrc->fdMax);
-  if ((curlSrc->fdMax < -1) || (curlSrc->fdMax > GLIBCURL_FDMAX)) {
-//      LOG_WARNING_PAIRS_ONLY (LOGID_GCURL_FDMAX_WARNING, 1, PMLOGKFV ("fdMax", "%d", curlSrc->fdMax));
-  }
   /*fprintf(stderr, "registerUnregisterFds: fdMax=%d\n", curlSrc->fdMax);*/
   assert(curlSrc->fdMax >= -1 && curlSrc->fdMax <= GLIBCURL_FDMAX);
 
@@ -500,7 +441,7 @@ static void registerUnregisterFds() {
     /* List of events unchanged => no (de)registering */
     if (events == curlSrc->lastPollFd[fd].events) continue;
 
-    DD((stdout, "registerUnregisterFds: fd %d: old events %x, "
+    D((stderr, "registerUnregisterFds: fd %d: old events %x, "
        "new events %x\n", fd, curlSrc->lastPollFd[fd].events, events));
 
     /* fd is already a lastPollFd, but event type has changed => do nothing.
@@ -537,30 +478,9 @@ gboolean prepare(GSource* source, gint* timeout) {
 
   registerUnregisterFds();
 
-  // Handle has been added. we are ready
-  if (curlSrc->callPerform == -1) {
-      s_currTimeout = *timeout = 0;
-      return TRUE;
-  }
-
-  long curlTimeout = 0;
-  curl_multi_timeout(curlSrc->multiHandle, &curlTimeout);
-
-  // Curl tells us it is ready
-  if (curlTimeout == 0) {
-      s_currTimeout = *timeout = 0;
-      return TRUE;
-  }
-
-  // Curl says wait forever. do it only when if we don't have pending
-  // connections
-  if (curlTimeout < 0) {
-      s_currTimeout = *timeout = (s_numEasyHandles > 0) ? GLIBCURL_TIMEOUT : -1;
-      return FALSE;
-  }
-
-  s_currTimeout = *timeout = MIN(GLIBCURL_TIMEOUT, curlTimeout);
-  return FALSE;
+  *timeout = GLIBCURL_TIMEOUT;
+/*   return FALSE; */
+  return curlSrc->callPerform == -1 ? TRUE : FALSE;
 }
 /*______________________________________________________________________*/
 
@@ -572,13 +492,9 @@ gboolean prepare(GSource* source, gint* timeout) {
 gboolean check(GSource* source) {
   int fd, somethingHappened = 0;
 
+  if (curlSrc->multiHandle == 0) return FALSE;
+
   assert(source == &curlSrc->source);
-
-  if (curlSrc->multiHandle == 0 || s_numEasyHandles <= 0) {
-      curlSrc->callPerform = 0;
-      return FALSE;
-  }
-
   FD_ZERO(&curlSrc->fdRead);
   FD_ZERO(&curlSrc->fdWrite);
   FD_ZERO(&curlSrc->fdExc);
@@ -586,6 +502,7 @@ gboolean check(GSource* source) {
     gushort revents = curlSrc->lastPollFd[fd].revents;
     if (revents == 0) continue;
     somethingHappened = 1;
+/*     D((stderr, "[fd%d] ", fd)); */
     if (revents & (G_IO_IN | G_IO_PRI))
       FD_SET((unsigned)fd, &curlSrc->fdRead);
     if (revents & G_IO_OUT)
@@ -593,29 +510,11 @@ gboolean check(GSource* source) {
     if (revents & (G_IO_ERR | G_IO_HUP))
       FD_SET((unsigned)fd, &curlSrc->fdExc);
   }
+/*   D((stderr, "check: fdMax %d\n", curlSrc->fdMax)); */
 
 /*   return TRUE; */
 /*   return FALSE; */
-
-  if (curlSrc->callPerform == -1) {
-      return TRUE;
-  }
-
-  if (somethingHappened != 0) {
-      return TRUE;
-  }
-
-  struct timespec currTime;
-  clock_gettime(CLOCK_MONOTONIC, &currTime);
-
-  // Curl wants us to call it regularly even if there is no data available
-  if (((currTime.tv_sec - s_timeAtLastDispatch.tv_sec) * 1000 +
-       (currTime.tv_nsec - s_timeAtLastDispatch.tv_nsec) / 1000000) >=
-      s_currTimeout) {
-      return TRUE;
-  }
-
-  return FALSE;
+  return curlSrc->callPerform == -1 || somethingHappened != 0 ? TRUE : FALSE;
 }
 /*______________________________________________________________________*/
 
@@ -625,9 +524,6 @@ gboolean dispatch(GSource* source, GSourceFunc callback,
 
   assert(source == &curlSrc->source);
   assert(curlSrc->multiHandle != 0);
-
-  clock_gettime(CLOCK_MONOTONIC, &s_timeAtLastDispatch);
-
   do {
     x = curl_multi_perform(curlSrc->multiHandle, &curlSrc->callPerform);
 /*     D((stderr, "dispatched %d\n", x)); */

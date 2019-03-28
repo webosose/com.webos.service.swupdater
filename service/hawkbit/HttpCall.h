@@ -14,8 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_HTTPCALL_H_
-#define CORE_HTTPCALL_H_
+#ifndef HAWKBIT_HTTPCALL_H_
+#define HAWKBIT_HTTPCALL_H_
 
 #include <algorithm>
 #include <curl/curl.h>
@@ -24,6 +24,7 @@
 #include <string>
 
 #include "interface/IClassName.h"
+#include "interface/IListener.h"
 
 using namespace pbnjson;
 using namespace std;
@@ -35,23 +36,31 @@ enum MethodType {
     MethodType_DELETE,
 };
 
-class HttpCall : public IClassName {
-public:
-    typedef function<void (HttpCall*)> AsyncCallback;
+class HttpCall;
 
+class HttpCallListener {
+public:
+    HttpCallListener() {}
+    virtual ~HttpCallListener() {}
+
+    virtual void onCompleteHttpCall(HttpCall& call) = 0;
+};
+
+class HttpCall : public IClassName,
+                 public IListener<HttpCallListener> {
+public:
     static bool initialize();
     static void finalize();
-    static void cbGlibcurl(void* data);
 
     HttpCall(const MethodType& methodType, const string& url, const string& token);
     virtual ~HttpCall();
 
+    bool performSync();
+    bool performAsync(HttpCallListener* listener);
+
     void setUrl(const std::string& url);
     void setMethod(MethodType method);
     void setBody(pbnjson::JValue body);
-
-    bool performSync();
-    bool performAsync(AsyncCallback callback);
 
     long getResponseCode();
 
@@ -76,6 +85,7 @@ public:
     }
 
 private:
+    static void onGlibcurl(void* data);
     static size_t onReceiveText(char* contents, size_t size, size_t nmemb, void* userdata);
     static size_t onReceiveFile(void* ptr, size_t size, size_t nmemb, FILE* stream);
 
@@ -93,7 +103,6 @@ private:
     size_t m_responsePayloadSize;
     FILE* m_responseFile;
 
-    AsyncCallback m_asyncCallback;
 };
 
-#endif /* CORE_HTTPCALL_H_ */
+#endif /* HAWKBIT_HTTPCALL_H_ */

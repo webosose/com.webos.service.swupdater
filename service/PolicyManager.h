@@ -17,13 +17,13 @@
 #ifndef POLICYMANAGER_H_
 #define POLICYMANAGER_H_
 
-#include <core/action/AbsAction.h>
+#include <core/AbsAction.h>
+#include <hawkbit/HawkBitClient.h>
 #include "hardware/AbsHardware.h"
 #include "interface/IInitializable.h"
 #include "interface/ISingleton.h"
 #include "ls2/AppInstaller.h"
 #include "ls2/LS2Handler.h"
-#include "manager/HawkBitClient.h"
 
 class PolicyManager : public ISingleton<PolicyManager>,
                       public IInitializable,

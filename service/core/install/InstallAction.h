@@ -14,15 +14,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_ACTION_INSTALLACTION_H_
-#define CORE_ACTION_INSTALLACTION_H_
+#ifndef CORE_INSTALL_INSTALLACTION_H_
+#define CORE_INSTALL_INSTALLACTION_H_
 
-#include "AbsAction.h"
-
+#include <core/AbsAction.h>
+#include <core/install/SoftwareModule.h>
 #include <list>
 #include <map>
 
-#include "core/SoftwareModule.h"
 
 enum ScheduleType {
     ScheduleType_UNKNOWN,
@@ -75,4 +74,4 @@ private:
     list<SoftwareModule> m_chunks;
 };
 
-#endif /* CORE_ACTION_INSTALLACTION_H_ */
+#endif /* CORE_INSTALL_INSTALLACTION_H_ */
