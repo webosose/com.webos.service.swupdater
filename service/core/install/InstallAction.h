@@ -17,61 +17,44 @@
 #ifndef CORE_INSTALL_INSTALLACTION_H_
 #define CORE_INSTALL_INSTALLACTION_H_
 
-#include <core/AbsAction.h>
-#include <core/install/SoftwareModule.h>
+#include <iostream>
 #include <list>
 #include <map>
 
+#include "core/AbsAction.h"
+#include "core/install/SoftwareModule.h"
+#include "interface/IListener.h"
 
-enum ScheduleType {
-    ScheduleType_UNKNOWN,
-    ScheduleType_ATTEMPT, // 'soft'
-    ScheduleType_FORCED,
-    ScheduleType_SKIP,    // ????
-};
+using namespace std;
 
 class InstallAction : public AbsAction {
 public:
     InstallAction();
     virtual ~InstallAction();
 
-    ScheduleType getDownloadSchedule()
+    // AbsAction
+    virtual bool fromJson(const JValue& json) override;
+
+    const string& getDownload()
     {
         return m_download;
     }
 
-    ScheduleType getUpdateSchedule()
+    const string& getUpdate()
     {
         return m_update;
     }
 
-    bool isMaintenanceWindowAvailable()
+    list<shared_ptr<SoftwareModule>>& getSoftwareModules()
     {
-        return m_maintenanceWindow == "available";
+        return m_softwareModules;
     }
-
-    const string& getHistoryStatus()
-    {
-        return m_historyStatus;
-    }
-
-    list<SoftwareModule>& getChunks()
-    {
-        return m_chunks;
-    }
-
-    virtual bool fromJson(const JValue& json) override;
 
 private:
-    static string toString(enum ScheduleType& type);
-    static ScheduleType toEnum(const string& type);
+    string m_download;
+    string m_update;
 
-    ScheduleType m_download;
-    ScheduleType m_update;
-    string m_maintenanceWindow;
-    string m_historyStatus;
-    list<string> m_historyMessages;
-    list<SoftwareModule> m_chunks;
+    list<shared_ptr<SoftwareModule>> m_softwareModules;
 };
 
 #endif /* CORE_INSTALL_INSTALLACTION_H_ */

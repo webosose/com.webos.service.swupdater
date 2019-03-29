@@ -57,6 +57,8 @@ public:
 
     virtual bool fromJson(const JValue& json) override
     {
+        ISerializable::fromJson(json);
+
         if (json.hasKey("id") && json["id"].isString()) {
             m_id = json["id"].asString();
         }

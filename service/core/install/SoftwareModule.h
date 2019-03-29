@@ -24,26 +24,44 @@
 #include <pbnjson.hpp>
 
 #include "interface/ISerializable.h"
+#include "interface/ISingleton.h"
+#include "interface/IListener.h"
 
 using namespace std;
 using namespace pbnjson;
 
-enum ChunkType {
-    ChunkType_Unknown,
-    ChunkType_Application,
-    ChunkType_OS,
-    ChunkType_Mixed
+enum SoftwareModuleType {
+    SoftwareModuleType_Unknown,
+    SoftwareModuleType_Application,
+    SoftwareModuleType_OS,
+    SoftwareModuleType_Mixed
 };
 
-class SoftwareModule : public ISerializable {
-public:
-    static string toString(enum ChunkType& type);
-    static ChunkType toEnum(const string& type);
+class SoftwareModule;
 
-    SoftwareModule();
+class SoftwareModuleListener {
+public:
+    SoftwareModuleListener() {};
+    virtual ~SoftwareModuleListener() {};
+};
+
+class SoftwareModule : public ISerializable,
+                       public IListener<SoftwareModuleListener> {
+public:
+    static string toString(enum SoftwareModuleType& type);
+    static SoftwareModuleType toEnum(const string& type);
+
+    static shared_ptr<SoftwareModule> createSoftwareModule(JValue& json);
+
     virtual ~SoftwareModule();
 
-    const enum ChunkType getType()
+    virtual bool download() = 0;
+    virtual bool install() = 0;
+
+    // ISerializable
+    virtual bool fromJson(const JValue& json) override;
+
+    const enum SoftwareModuleType getType()
     {
         return m_type;
     }
@@ -63,14 +81,14 @@ public:
         return m_artifacts;
     }
 
-    virtual bool fromJson(const JValue& json) override;
+protected:
+    SoftwareModule();
 
-private:
-    enum ChunkType m_type;
+    enum SoftwareModuleType m_type;
     string m_name;
     string m_version;
     list<Artifact> m_artifacts;
-    map<string, string> m_metadata;
+
 };
 
 

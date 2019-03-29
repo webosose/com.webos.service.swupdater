@@ -19,6 +19,7 @@
 #include <lunaservice.h>
 
 #include "ls2/AppInstaller.h"
+#include "ls2/NotificationManager.h"
 #include "util/Logger.h"
 
 const string LS2Handler::NAME = "com.webos.service.swupdater";
@@ -86,11 +87,14 @@ LS2Handler::~LS2Handler()
 bool LS2Handler::onInitialization()
 {
     attachToLoop(m_mainloop);
+    AppInstaller::getInstance().initialize(m_mainloop);
+    NotificationManager::getInstance().initialize(m_mainloop);
     return true;
 }
 
 bool LS2Handler::onFinalization()
 {
+    NotificationManager::getInstance().finalize();
     AppInstaller::getInstance().finalize();
     detach();
     return true;

@@ -54,7 +54,7 @@ public:
 private:
     PolicyManager();
 
-    shared_ptr<AbsAction> m_currentAction;
+    shared_ptr<InstallAction> m_currentAction;
 
 };
 

@@ -20,15 +20,42 @@
 #include <iostream>
 #include <pbnjson.hpp>
 
+#include "core/HttpCall.h"
+#include "interface/IClassName.h"
+#include "interface/IListener.h"
 #include "interface/ISerializable.h"
 
 using namespace std;
 using namespace pbnjson;
 
-class Artifact : public ISerializable {
+class Artifact;
+
+class ArtifactListener {
 public:
-    Artifact();
+    ArtifactListener() {};
+    virtual ~ArtifactListener() {};
+
+    virtual void onSuccessDownload(Artifact& actifact) = 0;
+    virtual void onProgressDownload(Artifact& actifact) = 0;
+    virtual void onErrorDownload(Artifact& actifact) = 0;
+
+};
+
+class Artifact : public IClassName,
+                 public IListener<ArtifactListener>,
+                 public ISerializable,
+                 public HttpCallListener {
+public:
+    Artifact(const JValue& json);
     virtual ~Artifact();
+
+    bool download();
+    void onCompleteDownload(HttpCall& call) override;
+
+    const int getSize()
+    {
+        return m_size;
+    }
 
     const string& getFilename() const
     {
@@ -45,44 +72,32 @@ public:
         return m_md5;
     }
 
-    int getSize()
+    const string& getMd5Sum()
     {
-        return m_size;
+        return m_md5sum;
     }
 
-    const string& getDownloadHttps()
+    const string& getDownload() const
     {
-        return m_downloadHttps;
+        return m_download;
     }
-
-    const string& getDownloadHttp() const
-    {
-        return m_downloadHttp;
-    }
-
-    const string& getMd5sumHttps()
-    {
-        return m_md5sumHttps;
-    }
-
-    const string& getMd5sumHttp()
-    {
-        return m_md5sumHttp;
-    }
-
-    virtual bool fromJson(const JValue& json) override;
 
 private:
+    // ISerializable
+    virtual bool fromJson(const JValue& json) override;
+
+    int m_size;
     string m_filename;
+
+    // hash value
     string m_sha1;
     string m_md5;
 
-    int m_size;
+    // download link
+    string m_md5sum;
+    string m_download;
 
-    string m_downloadHttps;
-    string m_md5sumHttps;
-    string m_downloadHttp;
-    string m_md5sumHttp;
+    shared_ptr<HttpCall> m_httpCall;
 };
 
 #endif /* CORE_INSTALL_ARTIFACT_H_ */

@@ -18,8 +18,8 @@
 #define HAWKBIT_HAWKBITCLIENT_H_
 
 #include <core/cancel/CancelAction.h>
+#include <core/HttpCall.h>
 #include <core/install/InstallAction.h>
-#include <hawkbit/HttpCall.h>
 #include <pbnjson.hpp>
 
 #include "interface/IInitializable.h"

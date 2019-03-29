@@ -15,13 +15,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <core/install/SoftwareModule.h>
+#include <core/install/ApplicationSoftwareModule.h>
 
-string SoftwareModule::toString(enum ChunkType& type)
+string SoftwareModule::toString(enum SoftwareModuleType& type)
 {
     switch(type){
-    case ChunkType_Unknown:
+    case SoftwareModuleType_Unknown:
         return "unknown";
-    case ChunkType_Application:
+    case SoftwareModuleType_Application:
         return "bApp";
     default:
         break;
@@ -29,18 +30,33 @@ string SoftwareModule::toString(enum ChunkType& type)
     return "unknown";
 }
 
-ChunkType SoftwareModule::toEnum(const string& type)
+SoftwareModuleType SoftwareModule::toEnum(const string& type)
 {
     if (type == "unknown") {
-        return ChunkType_Unknown;
+        return SoftwareModuleType_Unknown;
     } else if (type == "bApp") {
-        return ChunkType_Application;
+        return SoftwareModuleType_Application;
     }
-    return ChunkType_Unknown;
+    return SoftwareModuleType_Unknown;
+}
+
+shared_ptr<SoftwareModule> SoftwareModule::createSoftwareModule(JValue& json)
+{
+    shared_ptr<SoftwareModule> softwareModule = nullptr;
+
+    if (!json.hasKey("part"))
+        return nullptr;
+
+    if (SoftwareModule::toEnum(json["part"].asString()) == SoftwareModuleType_Application) {
+        softwareModule = make_shared<ApplicationSoftwareModule>();
+        softwareModule->fromJson(json);
+    }
+
+    return softwareModule;
 }
 
 SoftwareModule::SoftwareModule()
-    : m_type(ChunkType_Unknown)
+    : m_type(SoftwareModuleType_Unknown)
     , m_name("")
     , m_version("")
 {
@@ -53,6 +69,7 @@ SoftwareModule::~SoftwareModule()
 bool SoftwareModule::fromJson(const JValue& json)
 {
     ISerializable::fromJson(json);
+
     if (json.hasKey("part") && json["part"].isString()) {
         m_type = toEnum(json["part"].asString());
     }
@@ -62,18 +79,9 @@ bool SoftwareModule::fromJson(const JValue& json)
     if (json.hasKey("version") && json["version"].isString()) {
         m_version = json["version"].asString();
     }
-    if (json.hasKey("metadata") && json["metadata"].isArray()) {
-        for (JValue metadata : json["metadata"].items()) {
-            string key = metadata["key"].asString();
-            string value = metadata["value"].asString();
-            m_metadata[key] = value;
-        }
-    }
     if (json.hasKey("artifacts") && json["artifacts"].isArray()) {
-        for (JValue artifactJson : json["artifacts"].items()) {
-            Artifact artifact;
-            artifact.fromJson(artifactJson);
-            m_artifacts.push_back(artifact);
+        for (JValue artifact : json["artifacts"].items()) {
+            m_artifacts.emplace_back(artifact);
         }
     }
     return true;

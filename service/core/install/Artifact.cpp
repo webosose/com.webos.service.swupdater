@@ -14,63 +14,49 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <core/install/Artifact.h>
+#include "core/install/Artifact.h"
+#include "util/JValueUtil.h"
 
-Artifact::Artifact()
-    : m_size(0)
+Artifact::Artifact(const JValue& json)
 {
+    setClassName("Artifact");
+    fromJson(json);
+    download();
 }
 
 Artifact::~Artifact()
 {
 }
 
+bool Artifact::download()
+{
+    m_httpCall = make_shared<HttpCall>(MethodType_GET, m_download);
+    m_httpCall->setListener(this);
+    m_httpCall->setFilename("/tmp/test.ipk");
+    return m_httpCall->download();
+}
+
+void Artifact::onCompleteDownload(HttpCall& call)
+{
+    Logger::verbose(getClassName(), std::string(__FUNCTION__) + " is called");
+}
+
 bool Artifact::fromJson(const JValue& json)
 {
     ISerializable::fromJson(json);
-    if (json.hasKey("filename") && json["filename"].isString()) {
-        m_filename = json["filename"].asString();
-    }
-    if (json.hasKey("size") && json["size"].isNumber()) {
-        m_size = json["size"].asNumber<int>();
-    }
-    if (json.hasKey("hashes")) {
-        JValue hashes = json["hashes"];
-        if (hashes.hasKey("sha1") && hashes["sha1"].isString()) {
-            m_sha1 = hashes["sha1"].asString();
-        }
-        if (hashes.hasKey("md5") && hashes["md5"].isString()) {
-            m_md5 = hashes["md5"].asString();
-        }
+
+    JValueUtil::getValue(json, "size", m_size);
+    JValueUtil::getValue(json, "filename", m_filename);
+    JValueUtil::getValue(json, "hashes", "sha1", m_sha1);
+    JValueUtil::getValue(json, "hashes", "md5", m_md5);
+
+    JValueUtil::getValue(json, "_links", "md5sum", "href", m_md5sum);
+    JValueUtil::getValue(json, "_links", "download", "href", m_download);
+
+    if (m_md5sum.empty()) {
+        JValueUtil::getValue(json, "_links", "md5sum-http", "href", m_md5sum);
+        JValueUtil::getValue(json, "_links", "download-http", "href", m_download);
     }
 
-    if (!json.hasKey("_links")) {
-        return false;
-    }
-    JValue _links = json["_links"];
-    if (_links.hasKey("download")) {
-        JValue http = _links["download"];
-        if (http.hasKey("href") && http["href"].isString()) {
-            m_downloadHttps = http["href"].asString();
-        }
-    }
-    if (_links.hasKey("download-http")) {
-        JValue http = _links["download-http"];
-        if (http.hasKey("href") && http["href"].isString()) {
-            m_downloadHttp = http["href"].asString();
-        }
-    }
-    if (_links.hasKey("md5sum")) {
-        JValue http = _links["md5sum"];
-        if (http.hasKey("href") && http["href"].isString()) {
-            m_md5sumHttps = http["href"].asString();
-        }
-    }
-    if (_links.hasKey("md5sum-http")) {
-        JValue http = _links["md5sum-http"];
-        if (http.hasKey("href") && http["href"].isString()) {
-            m_md5sumHttp = http["href"].asString();
-        }
-    }
     return true;
 }

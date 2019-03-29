@@ -46,8 +46,6 @@ bool PolicyManager::onFinalization()
 
 void PolicyManager::onInstallSubscription(const string& id, const string& status)
 {
-    cout << "id - " << id << endl;
-    cout << "status - " << status << endl;
 }
 
 bool PolicyManager::onCheck(JValue& responsePayload/**/)
@@ -109,7 +107,8 @@ void PolicyManager::onInstallUpdate(shared_ptr<InstallAction> action)
     Logger::info(getClassName(), "New *Install* action starts");
     m_currentAction = action;
 
-    HawkBitClient::getInstance().postProgress(action, 50, 50);
+    if (m_currentAction->getDownload() == "forced") {
+    }
 
     JValue json = pbnjson::Object();
 //    if (action.getDownloadSchedule() == ScheduleType_ATTEMPT) {

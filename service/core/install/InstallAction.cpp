@@ -18,8 +18,8 @@
 
 InstallAction::InstallAction()
     : AbsAction()
-    , m_download(ScheduleType_UNKNOWN)
-    , m_update(ScheduleType_UNKNOWN)
+    , m_download("")
+    , m_update("")
 {
     setType(ActionType_INSTALL);
 }
@@ -28,70 +28,25 @@ InstallAction::~InstallAction()
 {
 }
 
-ScheduleType InstallAction::toEnum(const string& type)
-{
-    if (type == "attempt")
-        return ScheduleType_ATTEMPT;
-    if (type == "forced")
-        return ScheduleType_FORCED;
-    if (type == "skip")
-        return ScheduleType_SKIP;
-
-    return ScheduleType_UNKNOWN;
-}
-
-string InstallAction::toString(enum ScheduleType& type)
-{
-    switch (type) {
-    case ScheduleType_SKIP:
-        return "skip";
-    case ScheduleType_ATTEMPT:
-        return "attempt";
-    case ScheduleType_FORCED:
-        return "forced";
-    case ScheduleType_UNKNOWN:
-        return "unknown";
-    }
-    return "unknown";
-}
-
 bool InstallAction::fromJson(const JValue& json)
 {
-    ISerializable::fromJson(json);
     AbsAction::fromJson(json);
-    if (json.hasKey("actionHistory")) {
-        JValue actionHistory = json["actionHistory"];
-        if (actionHistory.hasKey("status") && actionHistory["status"].isString()) {
-            m_historyStatus = actionHistory["status"].asString();
-        }
-        if (actionHistory.hasKey("messages") && actionHistory["messages"].isArray()) {
-            for (JValue message : actionHistory["messages"].items()) {
-                m_historyMessages.push_back(message.asString());
-            }
-        }
-    }
 
     if (!json.hasKey("deployment")) {
         return false;
     }
     JValue deployment = json["deployment"];
+
+    m_download = deployment["download"].asString();
+    m_update = deployment["update"].asString();
+
     if (deployment.hasKey("chunks") && deployment["chunks"].isArray()) {
-        for (JValue chunkJson : deployment["chunks"].items()) {
-            SoftwareModule chunk;
-            chunk.fromJson(chunkJson);
-            m_chunks.push_back(chunk);
+        for (JValue chunk : deployment["chunks"].items()) {
+            shared_ptr<SoftwareModule> softwareModule = SoftwareModule::createSoftwareModule(chunk);
+            if (softwareModule) {
+                m_softwareModules.push_back(softwareModule);
+            }
         }
-    }
-    if (deployment.hasKey("download") && deployment["download"].isString()) {
-        string download = deployment["download"].asString();
-        m_download = toEnum(download);
-    }
-    if (deployment.hasKey("update") && deployment["update"].isString()) {
-        string update = deployment["update"].asString();
-        m_update = toEnum(update);
-    }
-    if (deployment.hasKey("maintenanceWindow") && deployment["maintenanceWindow"].isString()) {
-        m_maintenanceWindow = deployment["maintenanceWindow"].asString();
     }
     return true;
 }

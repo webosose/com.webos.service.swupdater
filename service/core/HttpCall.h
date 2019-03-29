@@ -14,17 +14,18 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef HAWKBIT_HTTPCALL_H_
-#define HAWKBIT_HTTPCALL_H_
+#ifndef CORE_HTTPCALL_H_
+#define CORE_HTTPCALL_H_
 
 #include <algorithm>
-#include <curl/curl.h>
-#include <pbnjson.hpp>
 #include <sstream>
 #include <string>
+#include <curl/curl.h>
+#include <pbnjson.hpp>
 
 #include "interface/IClassName.h"
 #include "interface/IListener.h"
+#include "util/Logger.h"
 
 using namespace pbnjson;
 using namespace std;
@@ -43,26 +44,45 @@ public:
     HttpCallListener() {}
     virtual ~HttpCallListener() {}
 
-    virtual void onCompleteHttpCall(HttpCall& call) = 0;
+    virtual void onCompleteDownload(HttpCall& call) = 0;
 };
 
 class HttpCall : public IClassName,
                  public IListener<HttpCallListener> {
 public:
-    static bool initialize();
+    static bool initialize(string& token);
+    static bool isInitialize();
     static void finalize();
 
-    HttpCall(const MethodType& methodType, const string& url, const string& token);
+    HttpCall(const MethodType& methodType, const string& url);
     virtual ~HttpCall();
 
-    bool performSync();
-    bool performAsync(HttpCallListener* listener);
+    bool perform();
+    bool download();
 
     void setUrl(const std::string& url);
     void setMethod(MethodType method);
-    void setBody(pbnjson::JValue body);
+    void setBody(JValue& body)
+    {
+        if (!body.isNull())
+            m_requestPayload = body.stringify();
+    }
 
-    long getResponseCode();
+    void setFilename(const string& filename)
+    {
+        m_filename = filename;
+    }
+
+    long getResponseCode()
+    {
+        long responseCode = 0;
+
+        CURLcode rc = CURLE_OK;
+        if (CURLE_OK != (rc = curl_easy_getinfo(s_curl, CURLINFO_RESPONSE_CODE, &responseCode))) {
+            Logger::error(getClassName(), "Failed in curl_easy_getinfo(RESPONSE_CODE)", curl_easy_strerror(rc));
+        }
+        return responseCode;
+    }
 
     string& getResponsePayload()
     {
@@ -71,38 +91,40 @@ public:
 
     size_t getResponsePayloadSize()
     {
-        return m_responsePayloadSize;
+        return m_size;
     }
 
     void setResponseFile(FILE* fp)
     {
-        m_responseFile = fp;
+        m_file = fp;
     }
 
     FILE* getResponseFile()
     {
-        return m_responseFile;
+        return m_file;
     }
 
 private:
-    static void onGlibcurl(void* data);
-    static size_t onReceiveText(char* contents, size_t size, size_t nmemb, void* userdata);
-    static size_t onReceiveFile(void* ptr, size_t size, size_t nmemb, FILE* stream);
+    static void onReceiveAsyncEvent(void* userdata);
+    static size_t onReceiveData(char* contents, size_t size, size_t nmemb, void* userdata);
 
+    void prepare();
     void appendHeader(const std::string& key, const std::string& val);
-    void preparePerform();
 
     static CURL* s_curl;
+    static string s_token;
 
     MethodType m_methodType;
     string m_url;
     struct curl_slist* m_header;
-
     string m_requestPayload;
+
     string m_responsePayload;
-    size_t m_responsePayloadSize;
-    FILE* m_responseFile;
+    size_t m_size;
+
+    string m_filename;
+    FILE* m_file;
 
 };
 
-#endif /* HAWKBIT_HTTPCALL_H_ */
+#endif /* CORE_HTTPCALL_H_ */
