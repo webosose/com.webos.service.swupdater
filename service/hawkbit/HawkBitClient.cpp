@@ -18,6 +18,7 @@
 #include <glib.h>
 
 #include "core/HttpCall.h"
+#include "external/glibcurl.h"
 #include "hardware/AbsHardware.h"
 #include "hawkbit/HawkBitClient.h"
 #include "util/JValueUtil.h"
@@ -28,13 +29,12 @@
 const string HawkBitClient::HAWKBIT_TENANT = "hawkbit_tenant";
 const string HawkBitClient::HAWKBIT_URL = "hawkbit_url";
 const string HawkBitClient::HAWKBIT_ID = "hawkbit_id";
-const string HawkBitClient::HAWKBIT_TOKEN = "hawkbit_token";
 
-const int HawkBitClient::POLLING_INTERVAL_DEFAULT = 15;
+const int HawkBitClient::SLEEP_DEFAULT = 15;
 
 HawkBitClient::HawkBitClient()
     : m_pollingSrc(nullptr)
-    , m_pollingInterval(-1)
+    , m_sleep(-1)
 {
     setClassName("HawkBitClient");
 }
@@ -45,6 +45,8 @@ HawkBitClient::~HawkBitClient()
 
 bool HawkBitClient::onInitialization()
 {
+    glibcurl_init();
+
     // hawkBit configuration
     string hawkBitUrl = AbsHardware::getHardware().getEnv(HAWKBIT_URL);
     string hawkBitTenant = AbsHardware::getHardware().getEnv(HAWKBIT_TENANT);
@@ -55,26 +57,72 @@ bool HawkBitClient::onInitialization()
         AbsHardware::getHardware().setEnv(HAWKBIT_ID, hawkBitId);
     }
 
-    m_hawkBitToken = AbsHardware::getHardware().getEnv(HAWKBIT_TOKEN);
     m_hawkBitUrl = hawkBitUrl + "/" + hawkBitTenant + "/controller/v1/" + hawkBitId;
 
-    if (hawkBitUrl.empty() || hawkBitTenant.empty() || m_hawkBitToken.empty()) {
+    if (hawkBitUrl.empty() || hawkBitTenant.empty()) {
         Logger::error(getClassName(), "HawkBit connection info could not be found");
         return false;
     }
 
-    if (!HttpCall::initialize(m_hawkBitToken)) {
-        return false;
-    }
-
-    start(POLLING_INTERVAL_DEFAULT);
+    start(SLEEP_DEFAULT);
     return true;
 }
 
 bool HawkBitClient::onFinalization()
 {
     stop();
-    HttpCall::finalize();
+    glibcurl_cleanup();
+    return true;
+}
+
+bool HawkBitClient::canceled()
+{
+    /*
+     * This is send by the target as confirmation of a cancellation request by the update server.
+     */
+    return true;
+}
+
+bool HawkBitClient::rejected()
+{
+    /*
+     * This is send by the target in case an update of a cancellation is rejected,
+     * i.e. cannot be fulfilled at this point in time.
+     * Note: the target should send a CLOSED->ERROR if it believes it will not be able to proceed the action at all.
+     */
+    return true;
+}
+
+bool HawkBitClient::closed()
+{
+    /*
+     * Target completes the action either with status.result.finished SUCCESS or FAILURE as result.
+     * Note: DDI defines also a status NONE which will not be interpreted by the update server and handled like SUCCESS.
+     */
+    return true;
+}
+
+bool HawkBitClient::proceeding()
+{
+    /*
+     * This can be used by the target to inform that it is working on the action.
+     */
+    return true;
+}
+
+bool HawkBitClient::scheduled()
+{
+    /*
+     *  This can be used by the target to inform that it scheduled on the action.
+     */
+    return true;
+}
+
+bool HawkBitClient::resumed()
+{
+    /*
+     * This can be used by the target to inform that it continued to work on the action.
+     */
     return true;
 }
 
@@ -106,7 +154,7 @@ bool HawkBitClient::postComplete(shared_ptr<AbsAction> action)
     return true;
 }
 
-bool HawkBitClient::postProgress(shared_ptr<InstallAction> action, int of, int cnt)
+bool HawkBitClient::postProgress(shared_ptr<DeploymentAction> action, int of, int cnt)
 {
     JValue requestPayload = pbnjson::Object();
 
@@ -131,50 +179,21 @@ bool HawkBitClient::postProgress(shared_ptr<InstallAction> action, int of, int c
     return true;
 }
 
-void HawkBitClient::downloadCallback(HttpCall* call)
+void HawkBitClient::start(int sleep)
 {
-    fclose(call->getResponseFile());
-    start();
-    delete call;
-}
-
-bool HawkBitClient::downloadApplication(SoftwareModule& module)
-{
-    string filename = "/tmp/" + module.getArtifacts().front().getFilename();
-    FILE* fp = fopen(filename.c_str(), "wb");
-    if (fp == NULL) {
-        Logger::error(getClassName(), "Failed to open file: " + string(strerror(errno)));
-        return false;
+    if (sleep == 0) {
+        sleep = SLEEP_DEFAULT;
     }
-
-    stop();
-
-    HttpCall* call = new HttpCall(MethodType_GET, module.getArtifacts().front().getDownload());
-    call->setResponseFile(fp);
-    //call->performAsync(this);
-    return true;
-}
-
-bool HawkBitClient::downloadOS(SoftwareModule& module)
-{
-    return true;
-}
-
-void HawkBitClient::start(int seconds)
-{
-    if (seconds == 0) {
-        seconds = POLLING_INTERVAL_DEFAULT;
-    }
-    if (isStarted() && seconds == m_pollingInterval) {
+    if (isStarted() && sleep == m_sleep) {
         return;
     }
     stop();
 
-    m_pollingSrc = g_timeout_source_new_seconds(seconds);
+    m_pollingSrc = g_timeout_source_new_seconds(sleep);
     g_source_set_callback(m_pollingSrc, (GSourceFunc)&HawkBitClient::poll, this, NULL);
     g_source_attach(m_pollingSrc, g_main_context_default());
     g_source_unref(m_pollingSrc);
-    m_pollingInterval = seconds;
+    m_sleep = sleep;
 }
 
 bool HawkBitClient::isStarted()
@@ -190,115 +209,120 @@ void HawkBitClient::stop()
     }
 }
 
-void HawkBitClient::checkPollingInterval(const JValue& responsePayload)
+bool HawkBitClient::getBase(JValue& responsePayload, const string& url)
 {
-    // TODO: this should be removed after demo
-    return;
+    HttpCall httpCall(MethodType_GET, url);
 
-    string sleep;
-    if (JValueUtil::getValue(responsePayload, "config", "polling", "sleep", sleep)) {
-        Logger::info(getClassName(), "config.polling.sleep", sleep);
-        int hours, minutes, seconds;
-        sscanf(sleep.c_str(), "%d:%d:%d", &hours, &minutes, &seconds);
-        int pollingInterval = hours * 3600 + minutes * 60 + seconds;
-        start(pollingInterval);
+    Logger::info(getClassName(), "RestAPI", "GET Base");
+    if (!httpCall.perform()) {
+        Logger::error(getClassName(), "Failed to perform HttpCall");
+        return false;
     }
+
+    long responseCode = httpCall.getResponseCode();
+    if (responseCode != 200L) {
+        Logger::error(getClassName(), HttpCall::toString(responseCode));
+        return false;
+    }
+
+    responsePayload = JDomParser::fromString(httpCall.getResponsePayload());
+    return true;
 }
 
-enum ActionType HawkBitClient::checkLink(const JValue& responsePayload, string& link)
+bool HawkBitClient::getCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id)
 {
-    enum ActionType type = ActionType_NONE;
+    const string url = m_hawkBitUrl + "/cancelAction/" + id;
+    HttpCall httpCall(MethodType_GET, url);
 
-    if (!responsePayload.hasKey("_links"))
-        return type;
+    Logger::info(getClassName(), "RestAPI", "GET Cancellation Action");
+    return true;
+}
 
-    if (JValueUtil::getValue(responsePayload, "_links", "cancelAction", "href", link)) {
-        type = ActionType_CANCEL;
-    } else if (JValueUtil::getValue(responsePayload, "_links", "deploymentBase", "href", link)) {
-        type = ActionType_INSTALL;
-    }
-    return type;
+bool HawkBitClient::postCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id)
+{
+    const string url = m_hawkBitUrl + "/cancelAction/" + id + "/feedback";
+    HttpCall httpCall(MethodType_POST, url);
+
+    Logger::info(getClassName(), "RestAPI", "POST Cancellation Action");
+    return true;
+}
+
+bool HawkBitClient::putConfigData(JValue& requestPayload, JValue& responsePayload)
+{
+    const string url = m_hawkBitUrl + "/configData";
+    HttpCall httpCall(MethodType_PUT, url);
+
+    Logger::info(getClassName(), "RestAPI", "PUT ConfigData");
+    return true;
+}
+
+bool HawkBitClient::getDeploymentAction(JValue& requestPayload, JValue& responsePayload, string& id)
+{
+    const string url = m_hawkBitUrl + "/deploymentBase/" + id;
+    HttpCall httpCall(MethodType_GET, url);
+
+    Logger::info(getClassName(), "RestAPI", "GET Deployment Action");
+    return true;
+}
+
+bool HawkBitClient::postDeploymentAction(JValue& requestPayload, JValue& responsePayload, string& id)
+{
+    const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
+    HttpCall httpCall(MethodType_POST, url);
+
+    Logger::info(getClassName(), "RestAPI", "POST Deployment Action");
+
+    return true;
+}
+
+bool HawkBitClient::getSoftwaremodules(JValue& requestPayload, JValue& responsePayload, string& id)
+{
+    const string url = m_hawkBitUrl + "/softwaremodules/" + id + "/artifacts";
+    HttpCall httpCall(MethodType_GET, url);
+
+    Logger::info(getClassName(), "RestAPI", "GET Softwaremodules");
+    return true;
 }
 
 guint HawkBitClient::poll(gpointer data)
 {
     HawkBitClient* self = (HawkBitClient*) data;
-    enum ActionType type = ActionType_NONE;
-    InstallAction actionInstall;
-    JValue responsePayload;
-    string link = "";
     shared_ptr<AbsAction> action;
+    JValue responsePayload;
+    string sleep = "";
+    string href = "";
 
     Logger::info(self->getClassName(), "== POLLING START ==");
-    Logger::verbose(self->getClassName(), "checking hawkBit server request");
-    if (!self->getRequest(responsePayload)) {
-        Logger::error(self->getClassName(), "Failed to get request from hawkBit server");
+    if (!self->getBase(responsePayload, self->m_hawkBitUrl)) {
         goto Done;
     }
 
-    Logger::verbose(self->getClassName(), "Checking polling interval");
-    self->checkPollingInterval(responsePayload);
-    if (self->m_listener == nullptr) {
-        Logger::error(self->getClassName(), "Listener is null");
-        goto Done;
+    if (JValueUtil::getValue(responsePayload, "config", "polling", "sleep", sleep)) {
+        if (self->m_sleep != Time::toSeconds(sleep)) {
+            // TODO
+        }
     }
 
-    Logger::verbose(self->getClassName(), "Checking 'link' from request");
-    type = self->checkLink(responsePayload, link);
-    if (link.empty() || type == ActionType_NONE) {
-        Logger::error(self->getClassName(), "Action type is none");
-        goto Done;
+    if (JValueUtil::getValue(responsePayload, "_links", "deploymentBase", "href", href)) {
+        if (!self->getBase(responsePayload, href)) {
+            goto Done;
+        }
+        if (self->m_listener)self-> m_listener->onInstallationAction(responsePayload);
     }
-
-    Logger::verbose(self->getClassName(), "Getting 'action' from hawkBit server");
-    if (!self->getAction(link, responsePayload)) {
-        Logger::error(self->getClassName(), "Failed to get link");
-        goto Done;
+    if (JValueUtil::getValue(responsePayload, "_links", "cancelAction", "href", href)) {
+        if (!self->getBase(responsePayload, href)) {
+            goto Done;
+        }
+        if (self->m_listener) self->m_listener->onCancellationAction(responsePayload);
     }
-
-    switch (type) {
-    case ActionType_CANCEL:
-        action = make_shared<CancelAction>();
-        action->fromJson(responsePayload);
-        self->m_listener->onCancelUpdate(dynamic_pointer_cast<CancelAction>(action));
-        break;
-
-    case ActionType_INSTALL:
-        action = make_shared<InstallAction>();
-        action->fromJson(responsePayload);
-        self->m_listener->onInstallUpdate(dynamic_pointer_cast<InstallAction>(action));
-        break;
-
-    default:
-        goto Done;
+    if (JValueUtil::getValue(responsePayload, "_links", "configData", "href", href)) {
+        if (!self->getBase(responsePayload, href)) {
+            goto Done;
+        }
+        if (self->m_listener) self->m_listener->onConfigData(responsePayload);
     }
 
 Done:
     Logger::info(self->getClassName(), "== POLLING END ==");
     return G_SOURCE_CONTINUE;
-}
-
-bool HawkBitClient::getRequest(JValue& responsePayload)
-{
-    HttpCall httpCall(MethodType_GET, m_hawkBitUrl);
-
-    if (!httpCall.perform()) {
-        Logger::error(getClassName(), "Failed to get request");
-        return false;
-    }
-
-    responsePayload = JDomParser::fromString(httpCall.getResponsePayload());
-    return true;
-}
-
-bool HawkBitClient::getAction(const string& link, JValue& responsePayload)
-{
-    HttpCall httpCall(MethodType_GET, link);
-    if (!httpCall.perform()) {
-        Logger::error(getClassName(), "Failed to get action");
-        return false;
-    }
-
-    responsePayload = JDomParser::fromString(httpCall.getResponsePayload());
-    return true;
 }

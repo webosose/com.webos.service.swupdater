@@ -17,12 +17,14 @@
 #ifndef CORE_INSTALL_SOFTWAREMODULE_H_
 #define CORE_INSTALL_SOFTWAREMODULE_H_
 
-#include <core/install/Artifact.h>
 #include <iostream>
 #include <list>
 #include <map>
 #include <pbnjson.hpp>
 
+#include "core/install/Artifact.h"
+#include "interface/IClassName.h"
+#include "interface/IInstallable.h"
 #include "interface/ISerializable.h"
 #include "interface/ISingleton.h"
 #include "interface/IListener.h"
@@ -39,27 +41,27 @@ enum SoftwareModuleType {
 
 class SoftwareModule;
 
-class SoftwareModuleListener {
+class SoftwareModule : public IClassName,
+                       public ISerializable,
+                       public IInstallable {
 public:
-    SoftwareModuleListener() {};
-    virtual ~SoftwareModuleListener() {};
-};
+    static shared_ptr<SoftwareModule> createSoftwareModule(JValue& json);
 
-class SoftwareModule : public ISerializable,
-                       public IListener<SoftwareModuleListener> {
-public:
     static string toString(enum SoftwareModuleType& type);
     static SoftwareModuleType toEnum(const string& type);
 
-    static shared_ptr<SoftwareModule> createSoftwareModule(JValue& json);
-
+    SoftwareModule();
     virtual ~SoftwareModule();
 
-    virtual bool download() = 0;
-    virtual bool install() = 0;
+    // IInstallable
+    virtual bool onReadyDownloading() override;
+    virtual bool onStartDownloading() override;
+    virtual bool onReadyInstallation() override;
+    virtual bool onStartInstallation() override;
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
+    virtual bool toJson(JValue& json) override;
 
     const enum SoftwareModuleType getType()
     {
@@ -76,14 +78,7 @@ public:
         return m_version;
     }
 
-    const list<Artifact>& getArtifacts()
-    {
-        return m_artifacts;
-    }
-
 protected:
-    SoftwareModule();
-
     enum SoftwareModuleType m_type;
     string m_name;
     string m_version;

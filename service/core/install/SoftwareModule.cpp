@@ -14,16 +14,42 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <core/install/SoftwareModule.h>
-#include <core/install/ApplicationSoftwareModule.h>
+#include "core/install/SoftwareModule.h"
+
+#include "core/install/AppSoftwareModule.h"
+#include "core/install/OSSoftwareModule.h"
+#include "util/JValueUtil.h"
+
+shared_ptr<SoftwareModule> SoftwareModule::createSoftwareModule(JValue& json)
+{
+    shared_ptr<SoftwareModule> softwareModule = nullptr;
+
+    if (!json.hasKey("part"))
+        return nullptr;
+
+    if (SoftwareModule::toEnum(json["part"].asString()) == SoftwareModuleType_Application) {
+        softwareModule = make_shared<AppSoftwareModule>();
+        softwareModule->fromJson(json);
+    } else if (SoftwareModule::toEnum(json["part"].asString()) == SoftwareModuleType_OS) {
+        softwareModule = make_shared<OSSoftwareModule>();
+        softwareModule->fromJson(json);
+    }
+
+    return softwareModule;
+}
 
 string SoftwareModule::toString(enum SoftwareModuleType& type)
 {
     switch(type){
     case SoftwareModuleType_Unknown:
         return "unknown";
+
     case SoftwareModuleType_Application:
-        return "bApp";
+        return "application";
+
+    case SoftwareModuleType_OS:
+        return "os";
+
     default:
         break;
     }
@@ -40,49 +66,83 @@ SoftwareModuleType SoftwareModule::toEnum(const string& type)
     return SoftwareModuleType_Unknown;
 }
 
-shared_ptr<SoftwareModule> SoftwareModule::createSoftwareModule(JValue& json)
-{
-    shared_ptr<SoftwareModule> softwareModule = nullptr;
-
-    if (!json.hasKey("part"))
-        return nullptr;
-
-    if (SoftwareModule::toEnum(json["part"].asString()) == SoftwareModuleType_Application) {
-        softwareModule = make_shared<ApplicationSoftwareModule>();
-        softwareModule->fromJson(json);
-    }
-
-    return softwareModule;
-}
-
 SoftwareModule::SoftwareModule()
     : m_type(SoftwareModuleType_Unknown)
     , m_name("")
     , m_version("")
 {
+    setClassName("SoftwareModule");
 }
 
 SoftwareModule::~SoftwareModule()
 {
 }
 
+bool SoftwareModule::onReadyDownloading()
+{
+    for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
+        it->readyDownloading();
+    }
+    return true;
+}
+
+bool SoftwareModule::onStartDownloading()
+{
+    for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
+        it->startDownloading();
+    }
+    return true;
+}
+
+bool SoftwareModule::onReadyInstallation()
+{
+    for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
+        it->readyInstallation();
+    }
+    return true;
+}
+
+bool SoftwareModule::onStartInstallation()
+{
+    for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
+        it->setListener(this);
+        it->startInstallation();
+    }
+    return true;
+}
+
 bool SoftwareModule::fromJson(const JValue& json)
 {
     ISerializable::fromJson(json);
 
-    if (json.hasKey("part") && json["part"].isString()) {
-        m_type = toEnum(json["part"].asString());
+    string part;
+    JValueUtil::getValue(json, "part", part);
+    if (!part.empty()) {
+        m_type = toEnum(part);
     }
-    if (json.hasKey("name") && json["name"].isString()) {
-        m_name = json["name"].asString();
-    }
-    if (json.hasKey("version") && json["version"].isString()) {
-        m_version = json["version"].asString();
-    }
+    JValueUtil::getValue(json, "name", m_name);
+    JValueUtil::getValue(json, "version", m_version);
     if (json.hasKey("artifacts") && json["artifacts"].isArray()) {
         for (JValue artifact : json["artifacts"].items()) {
             m_artifacts.emplace_back(artifact);
+            m_artifacts.back().setListener(this);
         }
     }
+    return true;
+}
+
+bool SoftwareModule::toJson(JValue& json)
+{
+    json.put("type", toString(m_type));
+    json.put("name", m_name);
+    json.put("m_version", m_version);
+
+    JValue artifacts = pbnjson::Array();
+    for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
+        JValue artifact = pbnjson::Object();
+        it->toJson(artifact);
+        artifacts.append(artifact);
+    }
+    json.put("artifacts", artifacts);
     return true;
 }

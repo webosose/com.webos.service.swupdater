@@ -14,9 +14,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <core/AbsAction.h>
-#include <PolicyManager.h>
+#include "core/AbsAction.h"
+#include "PolicyManager.h"
 #include "ls2/AppInstaller.h"
+#include "util/JValueUtil.h"
 #include "util/Logger.h"
 
 PolicyManager::PolicyManager()
@@ -41,17 +42,67 @@ bool PolicyManager::onInitialization()
 
 bool PolicyManager::onFinalization()
 {
+    AppInstaller::getInstance().setListener(nullptr);
+    LS2Handler::getInstance().setListener(nullptr);
+    HawkBitClient::getInstance().setListener(nullptr);
+
     return true;
+}
+
+void PolicyManager::onCompletedChildDownloading(IInstallable* installable)
+{
+    Logger::verbose(getClassName(), __FUNCTION__);
+    JValue postPayload = pbnjson::Object();
+    m_currentDeploymentAction->toJson(postPayload);
+    cout << postPayload.stringify("    ") << endl;
+}
+
+void PolicyManager::onFailedChildDownloading(IInstallable* installable)
+{
+    Logger::verbose(getClassName(), __FUNCTION__);
+    JValue postPayload = pbnjson::Object();
+    m_currentDeploymentAction->toJson(postPayload);
+    cout << postPayload.stringify("    ") << endl;
+}
+
+void PolicyManager::onProgressChildDownloading(IInstallable* installable)
+{
+    Logger::verbose(getClassName(), __FUNCTION__);
+    JValue postPayload = pbnjson::Object();
+    m_currentDeploymentAction->toJson(postPayload);
+    cout << postPayload.stringify("    ") << endl;
+}
+
+void PolicyManager::onCompletedChildInstallation(IInstallable* installable)
+{
+    Logger::verbose(getClassName(), __FUNCTION__);
+    JValue postPayload = pbnjson::Object();
+    m_currentDeploymentAction->toJson(postPayload);
+    cout << postPayload.stringify("    ") << endl;
+}
+
+void PolicyManager::onFailedChildInstallation(IInstallable* installable)
+{
+    Logger::verbose(getClassName(), __FUNCTION__);
+    JValue postPayload = pbnjson::Object();
+    m_currentDeploymentAction->toJson(postPayload);
+    cout << postPayload.stringify("    ") << endl;
+}
+
+void PolicyManager::onProgressChildInstallation(IInstallable* installable)
+{
+    Logger::verbose(getClassName(), __FUNCTION__);
+    JValue postPayload = pbnjson::Object();
+    m_currentDeploymentAction->toJson(postPayload);
+    cout << postPayload.stringify("    ") << endl;
 }
 
 void PolicyManager::onInstallSubscription(const string& id, const string& status)
 {
 }
 
-bool PolicyManager::onCheck(JValue& responsePayload/**/)
+bool PolicyManager::onCheck(JValue& responsePayload)
 {
-    // HawkBitClient::getInstance().poll();
-    // TODO API에 해당하는 인자전달이 필요함.
     return true;
 }
 
@@ -70,61 +121,38 @@ bool PolicyManager::onGetStatus(JValue& responsePayload/**/)
     return true;
 }
 
-void PolicyManager::onCancelUpdate(shared_ptr<CancelAction> action)
+void PolicyManager::onCancellationAction(JValue& responsePayload)
 {
-    if (!m_currentAction) {
-        Logger::info(getClassName(), "New *cancel* action arrived without *install* action. (ex: reboot, restart)");
-        HawkBitClient::getInstance().postComplete(action);
-        return;
-    }
-
-    if (m_currentAction->getId() == action->getId()) {
-        Logger::info(getClassName(), "*install* action is canceled.");
-        HawkBitClient::getInstance().postComplete(action);
-    } else {
-        Logger::error(getClassName(), "New *cancel* action without *install* action");
-    }
-//    JValue json = Object();
-//    action->toJson(json);
-//    Logger::verbose(getClassName(), "CancelAction", "\n" + json.stringify("  "));
-
-    // cancel
-
-    // feedback
 }
 
-void PolicyManager::onInstallUpdate(shared_ptr<InstallAction> action)
+void PolicyManager::onInstallationAction(JValue& responsePayload)
 {
-    if (m_currentAction) {
-        if (m_currentAction->getId() == action->getId()) {
-            Logger::info(getClassName(), "*install* action is still in progress");
+    string id;
+
+    if (!JValueUtil::getValue(responsePayload, "id", id)) {
+        Logger::error(getClassName(), "'id' does not exist");
+        return;
+    }
+    if (m_currentDeploymentAction) {
+        if (m_currentDeploymentAction->getId() == id) {
+            Logger::info(getClassName(), "Deployment is still in progress");
         } else {
-            Logger::error(getClassName(), "New *Install* action without *cancel* action");
+            Logger::error(getClassName(), "Unknown error");
         }
         return;
     }
-
-    Logger::info(getClassName(), "New *Install* action starts");
-    m_currentAction = action;
-
-    if (m_currentAction->getDownload() == "forced") {
+    m_currentDeploymentAction = make_shared<DeploymentAction>(responsePayload);
+    m_currentDeploymentAction->setListener(this);
+    m_currentDeploymentAction->readyDownloading();
+    m_currentDeploymentAction->readyInstallation();
+    if (m_currentDeploymentAction->isForceDownload()) {
+        m_currentDeploymentAction->startDownloading();
     }
+    if (m_currentDeploymentAction->isForceUpdate()) {
+        m_currentDeploymentAction->startInstallation();
+    }
+}
 
-    JValue json = pbnjson::Object();
-//    if (action.getDownloadSchedule() == ScheduleType_ATTEMPT) {
-//        Logger::info(getClassName(), "'Soft' update request");
-//    } else if (action.getDownloadSchedule() == ScheduleType_FORCED) {
-//        Logger::info(getClassName(), "'Forced' update request");
-//        list<SoftwareModule>& chunks = action.getChunks();
-//        for (auto it = chunks.begin(); it != chunks.end(); ++it) {
-//            // TODO should download 'ipk' first
-//            // HawkBitClient::getInstance().downloadApplication(*it);
-//            AppInstaller::getInstance().install(it->getName(), "/home/root/com.test.app.hello_2.0.0_all.ipk");
-//        }
-//    } else {
-//        Logger::warning(getClassName(), "Unknown download schedule type");
-//        return;
-//    }
-
-    // feedback
+void PolicyManager::onConfigData(JValue& responsePayload)
+{
 }

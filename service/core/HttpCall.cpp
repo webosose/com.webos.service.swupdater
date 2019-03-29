@@ -14,35 +14,26 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <core/HttpCall.h>
-#include <external/glibcurl.h>
-#include <Setting.h>
+#include "core/HttpCall.h"
 
-CURL* HttpCall::s_curl = nullptr;
-string HttpCall::s_token = "";
+#include "external/glibcurl.h"
+#include "hardware/AbsHardware.h"
+#include "Setting.h"
 
-bool HttpCall::initialize(string& token)
+string HttpCall::toString(long responseCode)
 {
-    s_token = token;
-    glibcurl_init();
-
-    s_curl = curl_easy_init();
-    if (s_curl == nullptr)
-        return false;
-    return true;
-}
-
-bool HttpCall::isInitialize()
-{
-    if (s_token.empty() || s_curl == nullptr)
-        return false;
-    return true;
-}
-
-void HttpCall::finalize()
-{
-    curl_easy_cleanup(s_curl);
-    glibcurl_cleanup();
+    switch(responseCode) {
+    case 200L:  return "Ok";
+    case 400L:  return "Bad Request";
+    case 401L:  return "Unauthorized";
+    case 403L:  return "Forbidden";
+    case 405L:  return "Method Not Allowed";
+    case 406L:  return "Not Acceptable";
+    case 429L:  return "Too Many Request";
+    default:
+        break;
+    }
+    return "Unknown";
 }
 
 HttpCall::HttpCall(const MethodType& methodType, const string& url)
@@ -52,19 +43,23 @@ HttpCall::HttpCall(const MethodType& methodType, const string& url)
     , m_size(0)
     , m_file(NULL)
 {
+    m_curl = curl_easy_init();
+
     setClassName("HttpCall");
-    setUrl(url);
+    setName("HttpCall");
     setMethod(methodType);
+    setUrl(url);
 
     appendHeader("Accept", "application/hal+json");
     appendHeader("Content-Type", "application/json;charset=UTF-8");
-    appendHeader("Authorization", "GatewayToken " + s_token);
+    appendHeader("Authorization", "GatewayToken " + AbsHardware::getHardware().getEnv("hawkbit_token"));
 
     Logger::verbose(getClassName(), "Ready HttpCall for " + (!url.empty() ? url : "null"));
 }
 
 HttpCall::~HttpCall()
 {
+    curl_easy_cleanup(m_curl);
     if (m_header) {
         curl_slist_free_all(m_header);
     }
@@ -79,8 +74,7 @@ bool HttpCall::perform()
     prepare();
 
     CURLcode rc = CURLE_OK;
-    Logger::verbose(getClassName(), "Perform httpcall");
-    if (CURLE_OK != (rc = curl_easy_perform(s_curl))) {
+    if (CURLE_OK != (rc = curl_easy_perform(m_curl))) {
         Logger::error(getClassName(), "Failed in curl_easy_perform", curl_easy_strerror(rc));
         return false;
     }
@@ -88,7 +82,7 @@ bool HttpCall::perform()
     return true;
 }
 
-bool HttpCall::download()
+bool HttpCall::onStartDownloading()
 {
     if (m_filename.empty()) {
         Logger::error(getClassName(), "'filename' is empty");
@@ -104,10 +98,8 @@ bool HttpCall::download()
     Logger::verbose(getClassName(), "Opened file - " + m_filename);
 
     glibcurl_set_callback(&HttpCall::onReceiveAsyncEvent, this);
-
-    Logger::verbose(getClassName(), "Download httpcall");
     CURLMcode rc = CURLM_OK;
-    if (CURLM_OK != (rc = glibcurl_add(s_curl))) {
+    if (CURLM_OK != (rc = glibcurl_add(m_curl))) {
         Logger::error(getClassName(), "Failed in glibcurl_add", curl_multi_strerror(rc));
         return false;
     }
@@ -119,7 +111,7 @@ bool HttpCall::download()
 void HttpCall::setUrl(const std::string& url)
 {
     CURLcode rc = CURLE_OK;
-    if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_URL, url.c_str()))) {
+    if (CURLE_OK != (rc = curl_easy_setopt(m_curl, CURLOPT_URL, url.c_str()))) {
         Logger::error(getClassName(), "Failed in curl_easy_setopt(URL)", curl_easy_strerror(rc));
     }
 }
@@ -129,19 +121,19 @@ void HttpCall::setMethod(MethodType method)
     CURLcode rc = CURLE_OK;
     switch (method) {
     case MethodType_GET:
-        rc = curl_easy_setopt(s_curl, CURLOPT_HTTPGET, 1L);
+        rc = curl_easy_setopt(m_curl, CURLOPT_HTTPGET, 1L);
         break;
 
     case MethodType_POST:
-        rc = curl_easy_setopt(s_curl, CURLOPT_POST, 1L);
+        rc = curl_easy_setopt(m_curl, CURLOPT_POST, 1L);
         break;
 
     case MethodType_PUT:
-        rc = curl_easy_setopt(s_curl, CURLOPT_PUT, 1L);
+        rc = curl_easy_setopt(m_curl, CURLOPT_PUT, 1L);
         break;
 
     case MethodType_DELETE:
-        rc = curl_easy_setopt(s_curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+        rc = curl_easy_setopt(m_curl, CURLOPT_CUSTOMREQUEST, "DELETE");
         break;
     }
 
@@ -157,7 +149,6 @@ void HttpCall::onReceiveAsyncEvent(void* userdata)
         Logger::error(self->getClassName(), "userdata is null");
         return;
     }
-    Logger::verbose(self->getClassName(), __FUNCTION__);
 
     CURLMsg* curlMsg = nullptr;
     int size;
@@ -172,11 +163,11 @@ void HttpCall::onReceiveAsyncEvent(void* userdata)
             continue;
         }
 
-        glibcurl_remove(HttpCall::s_curl);
+        glibcurl_remove(self->m_curl);
         Logger::verbose(self->getClassName(), "Complete download - " + self->m_filename);
 
         if (self->m_listener) {
-            self->m_listener->onCompleteDownload(*self);
+            self->completeDownloading();
         }
     }
 }
@@ -188,18 +179,19 @@ size_t HttpCall::onReceiveData(char* ptr, size_t size, size_t nmemb, void* userd
         Logger::error(self->getClassName(), "userdata is null");
         return 0;
     }
-    Logger::verbose(self->getClassName(), __FUNCTION__);
 
     size_t dataSize;
     if (self->m_file) {
         dataSize = fwrite(ptr, size, nmemb, self->m_file);
-        Logger::verbose(self->getClassName(), "Save received data to file - " + to_string(dataSize));
     } else {
         dataSize = size * nmemb;
         self->m_responsePayload.append(ptr);
-        Logger::verbose(self->getClassName(), "Save received data to payload - " + to_string(dataSize));
     }
     self->m_size += dataSize;
+
+    if (self->m_listener) {
+        self->m_listener->onProgressChildDownloading(self);
+    }
     return dataSize;
 }
 
@@ -208,30 +200,30 @@ void HttpCall::prepare()
     CURLcode rc = CURLE_OK;
 
     if (Setting::getInstance().getLogCurl()) {
-        if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_VERBOSE, 1L))) {
+        if (CURLE_OK != (rc = curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L))) {
             Logger::error(getClassName(), "Failed in curl_easy_setopt(VERBOSE)", curl_easy_strerror(rc));
         }
     }
 
-    if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_HTTPHEADER, m_header))) {
+    if (CURLE_OK != (rc = curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, m_header))) {
         Logger::error(getClassName(), "Failed in curl_easy_setopt(HEADER)", curl_easy_strerror(rc));
     }
 
     if (m_requestPayload.length() > 0) {
-        if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_POSTFIELDSIZE, m_requestPayload.length()))) {
+        if (CURLE_OK != (rc = curl_easy_setopt(m_curl, CURLOPT_POSTFIELDSIZE, m_requestPayload.length()))) {
             Logger::error(getClassName(), "Failed in curl_easy_setopt(POSTFIELDSIZE)", curl_easy_strerror(rc));
         }
 
-        if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_POSTFIELDS, m_requestPayload.c_str()))) {
+        if (CURLE_OK != (rc = curl_easy_setopt(m_curl, CURLOPT_POSTFIELDS, m_requestPayload.c_str()))) {
             Logger::error(getClassName(), "Failed in curl_easy_setopt(POSTFIELDS)", curl_easy_strerror(rc));
         }
     }
 
-    if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_WRITEFUNCTION, &HttpCall::onReceiveData))) {
+    if (CURLE_OK != (rc = curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, &HttpCall::onReceiveData))) {
         Logger::error(getClassName(), "Failed in curl_easy_setopt(WRITEFUNCTION", curl_easy_strerror(rc));
     }
 
-    if (CURLE_OK != (rc = curl_easy_setopt(s_curl, CURLOPT_WRITEDATA, this))) {
+    if (CURLE_OK != (rc = curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, this))) {
         Logger::error(getClassName(), "Failed in curl_easy_setopt(WRITEDATA)", curl_easy_strerror(rc));
     }
     Logger::verbose(getClassName(), "Ready for transmission");

@@ -44,10 +44,10 @@ string Time::getUtcTime()
     return buff;
 }
 
-Time::Time()
+int Time::toSeconds(string& str)
 {
-}
-
-Time::~Time()
-{
+    int hours, minutes, seconds, total = 0;
+    sscanf(str.c_str(), "%d:%d:%d", &hours, &minutes, &seconds);
+    total = hours * 3600 + minutes * 60 + seconds;
+    return total;
 }

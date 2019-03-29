@@ -24,7 +24,7 @@
 #include <pbnjson.hpp>
 
 #include "interface/IClassName.h"
-#include "interface/IListener.h"
+#include "interface/IInstallable.h"
 #include "util/Logger.h"
 
 using namespace pbnjson;
@@ -39,26 +39,18 @@ enum MethodType {
 
 class HttpCall;
 
-class HttpCallListener {
-public:
-    HttpCallListener() {}
-    virtual ~HttpCallListener() {}
-
-    virtual void onCompleteDownload(HttpCall& call) = 0;
-};
-
 class HttpCall : public IClassName,
-                 public IListener<HttpCallListener> {
+                 public IInstallable {
 public:
-    static bool initialize(string& token);
-    static bool isInitialize();
-    static void finalize();
+    static string toString(long responseCode);
 
     HttpCall(const MethodType& methodType, const string& url);
     virtual ~HttpCall();
 
     bool perform();
-    bool download();
+
+    // IInstallable
+    virtual bool onStartDownloading() override;
 
     void setUrl(const std::string& url);
     void setMethod(MethodType method);
@@ -77,8 +69,8 @@ public:
     {
         long responseCode = 0;
 
-        CURLcode rc = CURLE_OK;
-        if (CURLE_OK != (rc = curl_easy_getinfo(s_curl, CURLINFO_RESPONSE_CODE, &responseCode))) {
+        CURLcode rc = curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &responseCode);
+        if (rc != CURLE_OK) {
             Logger::error(getClassName(), "Failed in curl_easy_getinfo(RESPONSE_CODE)", curl_easy_strerror(rc));
         }
         return responseCode;
@@ -89,7 +81,7 @@ public:
         return m_responsePayload;
     }
 
-    size_t getResponsePayloadSize()
+    size_t getResponseSize()
     {
         return m_size;
     }
@@ -111,9 +103,7 @@ private:
     void prepare();
     void appendHeader(const std::string& key, const std::string& val);
 
-    static CURL* s_curl;
-    static string s_token;
-
+    CURL* m_curl;
     MethodType m_methodType;
     string m_url;
     struct curl_slist* m_header;

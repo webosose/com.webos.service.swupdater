@@ -14,21 +14,15 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef UTIL_TIME_H_
-#define UTIL_TIME_H_
+#ifndef CORE_INSTALL_OSSOFTWAREMODULE_H_
+#define CORE_INSTALL_OSSOFTWAREMODULE_H_
 
-#include <string>
+#include "SoftwareModule.h"
 
-using namespace std;
-
-class Time {
+class OSSoftwareModule : public SoftwareModule {
 public:
-    static long getSystemTime();
-    static string getUtcTime();
-    static int toSeconds(string& str);
-
-    Time() {}
-    virtual ~Time() {}
+    OSSoftwareModule();
+    virtual ~OSSoftwareModule();
 };
 
-#endif /* UTIL_TIME_H_ */
+#endif /* CORE_INSTALL_OSSOFTWAREMODULE_H_ */

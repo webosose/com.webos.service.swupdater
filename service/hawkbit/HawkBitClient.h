@@ -17,11 +17,11 @@
 #ifndef HAWKBIT_HAWKBITCLIENT_H_
 #define HAWKBIT_HAWKBITCLIENT_H_
 
-#include <core/cancel/CancelAction.h>
-#include <core/HttpCall.h>
-#include <core/install/InstallAction.h>
 #include <pbnjson.hpp>
 
+#include "core/HttpCall.h"
+#include "core/cancel/CancellationAction.h"
+#include "core/install/DeploymentAction.h"
 #include "interface/IInitializable.h"
 #include "interface/IListener.h"
 #include "interface/ISingleton.h"
@@ -33,8 +33,9 @@ public:
     HawkBitClientListener() {};
     virtual ~HawkBitClientListener() {};
 
-    virtual void onCancelUpdate(shared_ptr<CancelAction> action) = 0;
-    virtual void onInstallUpdate(shared_ptr<InstallAction> action) = 0;
+    virtual void onCancellationAction(JValue& responsePayload) = 0;
+    virtual void onInstallationAction(JValue& responsePayload) = 0;
+    virtual void onConfigData(JValue& responsePayload) = 0;
 };
 
 class HawkBitClient : public IInitializable,
@@ -46,17 +47,20 @@ public:
 
     virtual ~HawkBitClient();
 
+    // IInitializable
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
+    // See : https://www.eclipse.org/hawkbit/apis/ddi_api/
+    bool canceled();
+    bool rejected();
+    bool closed();
+    bool proceeding();
+    bool scheduled();
+    bool resumed();
+
     bool postComplete(shared_ptr<AbsAction> action);
-    bool postProgress(shared_ptr<InstallAction> action, int of, int cnt);
-
-    void downloadCallback(HttpCall* httpCall);
-
-
-    bool downloadApplication(SoftwareModule& module);
-    bool downloadOS(SoftwareModule& module);
+    bool postProgress(shared_ptr<DeploymentAction> action, int of, int cnt);
 
 private:
     HawkBitClient();
@@ -65,24 +69,25 @@ private:
     bool isStarted();
     void stop();
 
-    void checkPollingInterval(const pbnjson::JValue& responsePayload);
-    enum ActionType checkLink(const JValue& responsePayload, string& link);
-
-    bool getRequest(JValue& responsePayload);
-    bool getAction(const string& link, JValue& responsePayload);
+    // HackBit communication APIs
+    bool getBase(JValue& responsePayload, const string& url);
+    bool getCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id);
+    bool postCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id);
+    bool putConfigData(JValue& requestPayload, JValue& responsePayload);
+    bool getDeploymentAction(JValue& requestPayload, JValue& responsePayload, string& id);
+    bool postDeploymentAction(JValue& requestPayload, JValue& responsePayload, string& id);
+    bool getSoftwaremodules(JValue& requestPayload, JValue& responsePayload, string& id);
 
     static const string HAWKBIT_TENANT;
     static const string HAWKBIT_URL;
     static const string HAWKBIT_ID;
-    static const string HAWKBIT_TOKEN;
 
-    static const int POLLING_INTERVAL_DEFAULT;
+    static const int SLEEP_DEFAULT;
 
     string m_hawkBitUrl;
-    string m_hawkBitToken;
 
     GSource* m_pollingSrc;
-    int m_pollingInterval;
+    int m_sleep;
 
 };
 

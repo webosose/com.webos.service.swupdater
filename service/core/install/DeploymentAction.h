@@ -14,8 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_INSTALL_INSTALLACTION_H_
-#define CORE_INSTALL_INSTALLACTION_H_
+#ifndef CORE_INSTALL_DEPLOYMENTACTION_H_
+#define CORE_INSTALL_DEPLOYMENTACTION_H_
 
 #include <iostream>
 #include <list>
@@ -23,38 +23,41 @@
 
 #include "core/AbsAction.h"
 #include "core/install/SoftwareModule.h"
-#include "interface/IListener.h"
+#include "interface/IInstallable.h"
 
 using namespace std;
 
-class InstallAction : public AbsAction {
+class DeploymentAction : public AbsAction,
+                         public IInstallable {
 public:
-    InstallAction();
-    virtual ~InstallAction();
+    DeploymentAction(JValue& json);
+    virtual ~DeploymentAction();
 
-    // AbsAction
+    // IInstallable
+    virtual bool onReadyDownloading() override;
+    virtual bool onReadyInstallation() override;
+    virtual bool onStartDownloading() override;
+    virtual bool onStartInstallation() override;
+
+    const bool isForceDownload()
+    {
+        return m_isForceDownload;
+    }
+
+    const bool isForceUpdate()
+    {
+        return m_isForceUpdate;
+    }
+
+    // ISerializable
     virtual bool fromJson(const JValue& json) override;
-
-    const string& getDownload()
-    {
-        return m_download;
-    }
-
-    const string& getUpdate()
-    {
-        return m_update;
-    }
-
-    list<shared_ptr<SoftwareModule>>& getSoftwareModules()
-    {
-        return m_softwareModules;
-    }
+    virtual bool toJson(JValue& json) override;
 
 private:
-    string m_download;
-    string m_update;
+    bool m_isForceDownload;
+    bool m_isForceUpdate;
 
     list<shared_ptr<SoftwareModule>> m_softwareModules;
 };
 
-#endif /* CORE_INSTALL_INSTALLACTION_H_ */
+#endif /* CORE_INSTALL_DEPLOYMENTACTION_H_ */

@@ -22,6 +22,7 @@
 
 #include "core/HttpCall.h"
 #include "interface/IClassName.h"
+#include "interface/IInstallable.h"
 #include "interface/IListener.h"
 #include "interface/ISerializable.h"
 
@@ -30,64 +31,26 @@ using namespace pbnjson;
 
 class Artifact;
 
-class ArtifactListener {
-public:
-    ArtifactListener() {};
-    virtual ~ArtifactListener() {};
-
-    virtual void onSuccessDownload(Artifact& actifact) = 0;
-    virtual void onProgressDownload(Artifact& actifact) = 0;
-    virtual void onErrorDownload(Artifact& actifact) = 0;
-
-};
-
 class Artifact : public IClassName,
-                 public IListener<ArtifactListener>,
-                 public ISerializable,
-                 public HttpCallListener {
+                 public IInstallable,
+                 public ISerializable {
 public:
     Artifact(const JValue& json);
     virtual ~Artifact();
 
-    bool download();
-    void onCompleteDownload(HttpCall& call) override;
+    // IInstallable
+    virtual void onProgressChildDownloading(IInstallable* installable) override;
+    virtual bool onReadyDownloading() override;
+    virtual bool onStartDownloading() override;
 
-    const int getSize()
-    {
-        return m_size;
-    }
-
-    const string& getFilename() const
-    {
-        return m_filename;
-    }
-
-    const string& getSha1()
-    {
-        return m_sha1;
-    }
-
-    const string& getMd5()
-    {
-        return m_md5;
-    }
-
-    const string& getMd5Sum()
-    {
-        return m_md5sum;
-    }
-
-    const string& getDownload() const
-    {
-        return m_download;
-    }
-
-private:
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
+    virtual bool toJson(JValue& json) override;
 
-    int m_size;
+private:
     string m_filename;
+    int m_total;
+    int m_size;
 
     // hash value
     string m_sha1;

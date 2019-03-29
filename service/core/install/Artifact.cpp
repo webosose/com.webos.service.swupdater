@@ -20,32 +20,40 @@
 Artifact::Artifact(const JValue& json)
 {
     setClassName("Artifact");
+    setName("Artifact");
     fromJson(json);
-    download();
 }
 
 Artifact::~Artifact()
 {
+    m_httpCall = nullptr;
 }
 
-bool Artifact::download()
+void Artifact::onProgressChildDownloading(IInstallable* installable)
+{
+    HttpCall* call = (HttpCall*) installable;
+    m_size = call->getResponseSize();
+    IInstallable::onProgressChildDownloading(installable);
+}
+
+bool Artifact::onReadyDownloading()
 {
     m_httpCall = make_shared<HttpCall>(MethodType_GET, m_download);
     m_httpCall->setListener(this);
-    m_httpCall->setFilename("/tmp/test.ipk");
-    return m_httpCall->download();
+    m_httpCall->setFilename("/tmp/" + m_filename);
+    return m_httpCall->readyDownloading();
 }
 
-void Artifact::onCompleteDownload(HttpCall& call)
+bool Artifact::onStartDownloading()
 {
-    Logger::verbose(getClassName(), std::string(__FUNCTION__) + " is called");
+    return m_httpCall->startDownloading();
 }
 
 bool Artifact::fromJson(const JValue& json)
 {
     ISerializable::fromJson(json);
 
-    JValueUtil::getValue(json, "size", m_size);
+    JValueUtil::getValue(json, "size", m_total);
     JValueUtil::getValue(json, "filename", m_filename);
     JValueUtil::getValue(json, "hashes", "sha1", m_sha1);
     JValueUtil::getValue(json, "hashes", "md5", m_md5);
@@ -58,5 +66,14 @@ bool Artifact::fromJson(const JValue& json)
         JValueUtil::getValue(json, "_links", "download-http", "href", m_download);
     }
 
+    return true;
+}
+
+bool Artifact::toJson(JValue& json)
+{
+    json.put("filename", m_filename);
+    json.put("total", m_total);
+    json.put("size", m_size);
+    json.put("status", getStatus());
     return true;
 }

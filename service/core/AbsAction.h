@@ -20,6 +20,7 @@
 #include <pbnjson.hpp>
 #include <string>
 
+#include "interface/IClassName.h"
 #include "interface/ISerializable.h"
 
 using namespace pbnjson;
@@ -31,10 +32,12 @@ enum ActionType {
     ActionType_CANCEL,
 };
 
-class AbsAction : public ISerializable {
+class AbsAction : public IClassName,
+                  public ISerializable {
 public:
     AbsAction()
     {
+        setClassName("AbsAction");
         m_type = ActionType_NONE;
     }
 
@@ -62,6 +65,12 @@ public:
         if (json.hasKey("id") && json["id"].isString()) {
             m_id = json["id"].asString();
         }
+        return true;
+    }
+
+    virtual bool toJson(JValue& json) override
+    {
+        json.put("id", m_id);
         return true;
     }
 

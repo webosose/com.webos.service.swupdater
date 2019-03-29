@@ -14,18 +14,15 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_INSTALL_APPLICATIONSOFTWAREMODULE_H_
-#define CORE_INSTALL_APPLICATIONSOFTWAREMODULE_H_
+#include <core/install/AppSoftwareModule.h>
+#include "util/Logger.h"
 
-#include "SoftwareModule.h"
+AppSoftwareModule::AppSoftwareModule()
+{
+    setClassName("ApplicationSoftwareModule");
+    setName("ApplicationSoftwareModule");
+}
 
-class ApplicationSoftwareModule : public SoftwareModule {
-public:
-    ApplicationSoftwareModule();
-    virtual ~ApplicationSoftwareModule();
-
-    virtual bool download() override;
-    virtual bool install() override;
-};
-
-#endif /* CORE_INSTALL_APPLICATIONSOFTWAREMODULE_H_ */
+AppSoftwareModule::~AppSoftwareModule()
+{
+}

@@ -14,14 +14,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_CANCEL_CANCELACTION_H_
-#define CORE_CANCEL_CANCELACTION_H_
+#include <core/cancel/CancellationAction.h>
 
-#include <core/AbsAction.h>
+CancellationAction::CancellationAction()
+{
+    setType(ActionType_CANCEL);
+}
 
-class CancelAction : public AbsAction {
-public:
-    CancelAction();
-    virtual ~CancelAction();
-};
-#endif /* CORE_CANCEL_CANCELACTION_H_ */
+CancellationAction::~CancellationAction()
+{
+
+}
