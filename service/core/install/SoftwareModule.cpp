@@ -18,6 +18,7 @@
 
 #include "core/install/AppSoftwareModule.h"
 #include "core/install/OSSoftwareModule.h"
+#include "PolicyManager.h"
 #include "util/JValueUtil.h"
 
 shared_ptr<SoftwareModule> SoftwareModule::createSoftwareModule(JValue& json)
@@ -78,37 +79,40 @@ SoftwareModule::~SoftwareModule()
 {
 }
 
-bool SoftwareModule::onReadyDownloading()
+bool SoftwareModule::ready()
 {
     for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
-        it->readyDownloading();
+        if (!it->ready()) {
+            return false;
+        }
     }
-    return true;
+    return IInstaller::ready();
 }
 
-bool SoftwareModule::onStartDownloading()
+bool SoftwareModule::start()
 {
     for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
-        it->startDownloading();
+        if (!it->start()) {
+            return false;
+        }
     }
-    return true;
+    return IInstaller::start();
 }
 
-bool SoftwareModule::onReadyInstallation()
+void SoftwareModule::onStateChange(IInstaller *installer, enum InstallerState prev, enum InstallerState cur)
 {
-    for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
-        it->readyInstallation();
-    }
-    return true;
-}
+    enum InstallerState state = InstallerState_NONE;
 
-bool SoftwareModule::onStartInstallation()
-{
     for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
-        it->setListener(this);
-        it->startInstallation();
+        if (it->getState() > state) {
+            state = it->getState();
+        }
     }
-    return true;
+
+    if (state != getState()) {
+        this->changeStatus(state);
+        PolicyManager::getInstance().onChangeStatus();
+    }
 }
 
 bool SoftwareModule::fromJson(const JValue& json)
@@ -136,6 +140,7 @@ bool SoftwareModule::toJson(JValue& json)
     json.put("type", toString(m_type));
     json.put("name", m_name);
     json.put("m_version", m_version);
+    json.put("state", IInstaller::toString(getState()));
 
     JValue artifacts = pbnjson::Array();
     for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {

@@ -21,10 +21,11 @@
 #include <sstream>
 #include <string>
 #include <curl/curl.h>
+#include <interface/IInstaller.h>
 #include <pbnjson.hpp>
 
 #include "interface/IClassName.h"
-#include "interface/IInstallable.h"
+#include "interface/IListener.h"
 #include "util/Logger.h"
 
 using namespace pbnjson;
@@ -39,8 +40,20 @@ enum MethodType {
 
 class HttpCall;
 
+class HttpCallListener {
+public:
+    HttpCallListener() {}
+    virtual ~HttpCallListener() {}
+
+    virtual void onStartedDownload(HttpCall* call) = 0;
+    virtual void onProgressDownload(HttpCall* call) = 0;
+    virtual void onCompletedDownload(HttpCall* call) = 0;
+    virtual void onFailedDownload(HttpCall* call) = 0;
+
+};
+
 class HttpCall : public IClassName,
-                 public IInstallable {
+                 public IListener<HttpCallListener> {
 public:
     static string toString(long responseCode);
 
@@ -48,21 +61,24 @@ public:
     virtual ~HttpCall();
 
     bool perform();
-
-    // IInstallable
-    virtual bool onStartDownloading() override;
+    bool download();
 
     void setUrl(const std::string& url);
     void setMethod(MethodType method);
     void setBody(JValue& body)
     {
         if (!body.isNull())
-            m_requestPayload = body.stringify();
+            m_body = body.stringify();
     }
 
     void setFilename(const string& filename)
     {
         m_filename = filename;
+    }
+
+    const string& getFilename()
+    {
+        return m_filename;
     }
 
     long getResponseCode()
@@ -78,22 +94,12 @@ public:
 
     string& getResponsePayload()
     {
-        return m_responsePayload;
+        return m_payload;
     }
 
     size_t getResponseSize()
     {
         return m_size;
-    }
-
-    void setResponseFile(FILE* fp)
-    {
-        m_file = fp;
-    }
-
-    FILE* getResponseFile()
-    {
-        return m_file;
     }
 
 private:
@@ -103,16 +109,17 @@ private:
     void prepare();
     void appendHeader(const std::string& key, const std::string& val);
 
+    // request
     CURL* m_curl;
     MethodType m_methodType;
     string m_url;
     struct curl_slist* m_header;
-    string m_requestPayload;
+    string m_body;
 
-    string m_responsePayload;
-    size_t m_size;
-
+    // response
+    string m_payload;
     string m_filename;
+    size_t m_size;
     FILE* m_file;
 
 };

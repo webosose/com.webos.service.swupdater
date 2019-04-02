@@ -17,27 +17,30 @@
 #ifndef CORE_INSTALL_DEPLOYMENTACTION_H_
 #define CORE_INSTALL_DEPLOYMENTACTION_H_
 
+#include <interface/IInstaller.h>
 #include <iostream>
 #include <list>
 #include <map>
 
 #include "core/AbsAction.h"
 #include "core/install/SoftwareModule.h"
-#include "interface/IInstallable.h"
 
 using namespace std;
 
 class DeploymentAction : public AbsAction,
-                         public IInstallable {
+                         public IInstaller {
 public:
     DeploymentAction(JValue& json);
     virtual ~DeploymentAction();
 
-    // IInstallable
-    virtual bool onReadyDownloading() override;
-    virtual bool onReadyInstallation() override;
-    virtual bool onStartDownloading() override;
-    virtual bool onStartInstallation() override;
+    // IInstaller
+    virtual bool ready() override;
+    virtual bool start() override;
+    virtual void onStateChange(IInstaller *installer, enum InstallerState prev, enum InstallerState cur) override;
+
+    // ISerializable
+    virtual bool fromJson(const JValue& json) override;
+    virtual bool toJson(JValue& json) override;
 
     const bool isForceDownload()
     {
@@ -48,10 +51,6 @@ public:
     {
         return m_isForceUpdate;
     }
-
-    // ISerializable
-    virtual bool fromJson(const JValue& json) override;
-    virtual bool toJson(JValue& json) override;
 
 private:
     bool m_isForceDownload;

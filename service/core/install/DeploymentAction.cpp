@@ -15,6 +15,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "core/install/DeploymentAction.h"
+#include "PolicyManager.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
 
@@ -32,41 +33,40 @@ DeploymentAction::DeploymentAction(JValue& json)
 
 DeploymentAction::~DeploymentAction()
 {
-    for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
-        (*it)->startInstallation();
-    }
 }
 
-bool DeploymentAction::onReadyDownloading()
+bool DeploymentAction::ready()
 {
     for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
-        (*it)->readyDownloading();
+        if (!(*it)->ready())
+            return false;
     }
-    return true;
+    return IInstaller::ready();
 }
 
-bool DeploymentAction::onReadyInstallation()
+bool DeploymentAction::start()
 {
     for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
-        (*it)->readyInstallation();
+        if (!(*it)->start())
+            return false;
     }
-    return true;
+    return IInstaller::start();
 }
 
-bool DeploymentAction::onStartDownloading()
+void DeploymentAction::onStateChange(IInstaller *installer, enum InstallerState prev, enum InstallerState cur)
 {
-    for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
-        (*it)->startDownloading();
-    }
-    return true;
-}
+    enum InstallerState state = InstallerState_NONE;
 
-bool DeploymentAction::onStartInstallation()
-{
     for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
-        (*it)->startInstallation();
+        if ((*it)->getState() > state) {
+            state = (*it)->getState();
+        }
     }
-    return true;
+
+    if (state != getState()) {
+        this->changeStatus(state);
+        PolicyManager::getInstance().onChangeStatus();
+    }
 }
 
 bool DeploymentAction::fromJson(const JValue& json)
@@ -86,8 +86,8 @@ bool DeploymentAction::fromJson(const JValue& json)
     for (JValue chunk : json["deployment"]["chunks"].items()) {
         shared_ptr<SoftwareModule> softwareModule = SoftwareModule::createSoftwareModule(chunk);
         if (softwareModule) {
-            softwareModule->setListener(this);
             m_softwareModules.push_back(softwareModule);
+            m_softwareModules.back()->setListener(this);
         }
     }
     return true;
@@ -96,7 +96,7 @@ bool DeploymentAction::fromJson(const JValue& json)
 bool DeploymentAction::toJson(JValue& json)
 {
     AbsAction::toJson(json);
-    json.put("status", this->getStatus());
+    json.put("state", IInstaller::toString(getState()));
 
     JValue softwareModules = pbnjson::Array();
     for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {

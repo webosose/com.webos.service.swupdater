@@ -56,23 +56,13 @@ webos_add_compiler_flags(ALL ${PMLOG_CFLAGS_OTHER})
 
 # Environment
 set(BIN_NAME swupdater)
-file(GLOB_RECURSE SRC ${PROJECT_SOURCE_DIR}/src/*.cpp)
+file(GLOB_RECURSE SRC_CPP ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+file(GLOB_RECURSE SRC_C ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
 
-#if (NOT INCLUDE_WEBOS)
-#    file(GLOB_RECURSE REMOVE_SRC ${PROJECT_SOURCE_DIR}/src/service/webos/*.cpp)
-#    list(REMOVE_ITEM SRC ${REMOVE_SRC})
-#endif()
-
-# Compile
-#if (INCLUDE_WEBOS)
-    webos_add_compiler_flags(ALL CXX -std=c++0x)
-#else()
-#    webos_add_compiler_flags(ALL CXX -std=c++0x)
-#endif()
-
-include_directories(${PROJECT_SOURCE_DIR}/include)
-include_directories(${PROJECT_SOURCE_DIR}/src)
-add_executable(${BIN_NAME} ${SRC})
+webos_add_compiler_flags(ALL CXX -std=c++0x)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external)
+add_executable(${BIN_NAME} ${SRC_CPP} ${SRC_C})
 
 # Link
 set(LIBS
@@ -85,7 +75,6 @@ set(LIBS
     ${PMLOG_LDFLAGS}
     ${PBNJSON_C_LDFLAGS}
     ${PBNJSON_CPP_LDFLAGS}
-#    -lswupdate
 )
 target_link_libraries(${BIN_NAME} ${LIBS})
 

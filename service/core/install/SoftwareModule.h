@@ -17,6 +17,7 @@
 #ifndef CORE_INSTALL_SOFTWAREMODULE_H_
 #define CORE_INSTALL_SOFTWAREMODULE_H_
 
+#include <interface/IInstaller.h>
 #include <iostream>
 #include <list>
 #include <map>
@@ -24,7 +25,6 @@
 
 #include "core/install/Artifact.h"
 #include "interface/IClassName.h"
-#include "interface/IInstallable.h"
 #include "interface/ISerializable.h"
 #include "interface/ISingleton.h"
 #include "interface/IListener.h"
@@ -43,7 +43,7 @@ class SoftwareModule;
 
 class SoftwareModule : public IClassName,
                        public ISerializable,
-                       public IInstallable {
+                       public IInstaller {
 public:
     static shared_ptr<SoftwareModule> createSoftwareModule(JValue& json);
 
@@ -53,11 +53,10 @@ public:
     SoftwareModule();
     virtual ~SoftwareModule();
 
-    // IInstallable
-    virtual bool onReadyDownloading() override;
-    virtual bool onStartDownloading() override;
-    virtual bool onReadyInstallation() override;
-    virtual bool onStartInstallation() override;
+    // IInstaller
+    virtual bool ready() override;
+    virtual bool start() override;
+    virtual void onStateChange(IInstaller *installer, enum InstallerState prev, enum InstallerState cur) override;
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
@@ -82,6 +81,7 @@ protected:
     enum SoftwareModuleType m_type;
     string m_name;
     string m_version;
+
     list<Artifact> m_artifacts;
 
 };

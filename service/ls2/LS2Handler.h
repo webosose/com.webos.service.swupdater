@@ -36,10 +36,15 @@ public:
     LS2HandlerListener() {};
     virtual ~LS2HandlerListener() {};
 
-    virtual bool onCheck(JValue& responsePayload/**/) = 0;
-    virtual bool onInstall(JValue& responsePayload/**/) = 0;
-    virtual bool onCancel(JValue& responsePayload/**/) = 0;
-    virtual bool onGetStatus(JValue& responsePayload/**/) = 0;
+    virtual bool onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual bool onStartDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual bool onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual bool onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual bool onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual bool onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual bool onPauseInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual bool onResumeInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual bool onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
 
 };
 
@@ -54,8 +59,8 @@ public:
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    void check(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
-    void install(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
+    void install_start(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
+    void install_pause(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
     void cancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
     void getStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
 
@@ -68,7 +73,9 @@ private:
     LS2Handler();
 
     static const string NAME;
-    static const LSMethod METHODS[];
+    static const LSMethod ROOT_METHODS[];
+    static const LSMethod INSTALL_METHODS[];
+    static const LSMethod DOWNLOAD_METHODS[];
 
     queue<LS::Message> m_requests;
 

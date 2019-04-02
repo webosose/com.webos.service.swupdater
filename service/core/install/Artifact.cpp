@@ -16,6 +16,7 @@
 
 #include "core/install/Artifact.h"
 #include "util/JValueUtil.h"
+#include "PolicyManager.h"
 
 Artifact::Artifact(const JValue& json)
 {
@@ -29,24 +30,46 @@ Artifact::~Artifact()
     m_httpCall = nullptr;
 }
 
-void Artifact::onProgressChildDownloading(IInstallable* installable)
-{
-    HttpCall* call = (HttpCall*) installable;
-    m_size = call->getResponseSize();
-    IInstallable::onProgressChildDownloading(installable);
-}
-
-bool Artifact::onReadyDownloading()
+bool Artifact::ready()
 {
     m_httpCall = make_shared<HttpCall>(MethodType_GET, m_download);
-    m_httpCall->setListener(this);
     m_httpCall->setFilename("/tmp/" + m_filename);
-    return m_httpCall->readyDownloading();
+    m_httpCall->setListener(this);
+    return IInstaller::ready();
 }
 
-bool Artifact::onStartDownloading()
+bool Artifact::start()
 {
-    return m_httpCall->startDownloading();
+    m_httpCall->download();
+    return IInstaller::start();
+}
+
+void Artifact::onStartedDownload(HttpCall* call)
+{
+    Logger::info(getClassName(), "Start downloading - " + call->getFilename());
+    m_size = call->getResponseSize();
+    PolicyManager::getInstance().onChangeStatus();
+}
+
+void Artifact::onProgressDownload(HttpCall* call)
+{
+    Logger::info(getClassName(), "Progress downloading - " + call->getFilename());
+    m_size = call->getResponseSize();
+    PolicyManager::getInstance().onChangeStatus();
+}
+
+void Artifact::onCompletedDownload(HttpCall* call)
+{
+    Logger::info(getClassName(), "Complete downloading - " + call->getFilename());
+    m_size = call->getResponseSize();
+    complete();
+}
+
+void Artifact::onFailedDownload(HttpCall* call)
+{
+    Logger::info(getClassName(), "Fail downloading - " + call->getFilename());
+    m_size = 0;
+    fail();
 }
 
 bool Artifact::fromJson(const JValue& json)
@@ -74,6 +97,6 @@ bool Artifact::toJson(JValue& json)
     json.put("filename", m_filename);
     json.put("total", m_total);
     json.put("size", m_size);
-    json.put("status", getStatus());
+    json.put("state", IInstaller::toString(getState()));
     return true;
 }

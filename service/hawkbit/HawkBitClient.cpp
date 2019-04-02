@@ -213,7 +213,7 @@ bool HawkBitClient::getBase(JValue& responsePayload, const string& url)
 {
     HttpCall httpCall(MethodType_GET, url);
 
-    Logger::info(getClassName(), "RestAPI", "GET Base");
+    Logger::verbose(getClassName(), "RestAPI", "GET " + url);
     if (!httpCall.perform()) {
         Logger::error(getClassName(), "Failed to perform HttpCall");
         return false;

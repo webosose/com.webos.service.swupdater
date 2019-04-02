@@ -38,15 +38,14 @@ string HttpCall::toString(long responseCode)
 
 HttpCall::HttpCall(const MethodType& methodType, const string& url)
     : m_header(NULL)
-    , m_requestPayload("")
-    , m_responsePayload("")
+    , m_body("")
+    , m_payload("")
     , m_size(0)
     , m_file(NULL)
 {
     m_curl = curl_easy_init();
 
     setClassName("HttpCall");
-    setName("HttpCall");
     setMethod(methodType);
     setUrl(url);
 
@@ -82,7 +81,7 @@ bool HttpCall::perform()
     return true;
 }
 
-bool HttpCall::onStartDownloading()
+bool HttpCall::download()
 {
     if (m_filename.empty()) {
         Logger::error(getClassName(), "'filename' is empty");
@@ -95,7 +94,6 @@ bool HttpCall::onStartDownloading()
         Logger::error(getClassName(), "Failed to open file: " + string(strerror(errno)));
         return false;
     }
-    Logger::verbose(getClassName(), "Opened file - " + m_filename);
 
     glibcurl_set_callback(&HttpCall::onReceiveAsyncEvent, this);
     CURLMcode rc = CURLM_OK;
@@ -104,7 +102,7 @@ bool HttpCall::onStartDownloading()
         return false;
     }
 
-    Logger::verbose(getClassName(), "Start download -  " + m_filename);
+    if (m_listener) m_listener->onStartedDownload(this);
     return true;
 }
 
@@ -164,11 +162,7 @@ void HttpCall::onReceiveAsyncEvent(void* userdata)
         }
 
         glibcurl_remove(self->m_curl);
-        Logger::verbose(self->getClassName(), "Complete download - " + self->m_filename);
-
-        if (self->m_listener) {
-            self->completeDownloading();
-        }
+        if (self->m_listener) self->m_listener->onCompletedDownload(self);
     }
 }
 
@@ -185,13 +179,11 @@ size_t HttpCall::onReceiveData(char* ptr, size_t size, size_t nmemb, void* userd
         dataSize = fwrite(ptr, size, nmemb, self->m_file);
     } else {
         dataSize = size * nmemb;
-        self->m_responsePayload.append(ptr);
+        self->m_payload.append(ptr);
     }
     self->m_size += dataSize;
 
-    if (self->m_listener) {
-        self->m_listener->onProgressChildDownloading(self);
-    }
+    if (self->m_listener) self->m_listener->onProgressDownload(self);
     return dataSize;
 }
 
@@ -209,12 +201,12 @@ void HttpCall::prepare()
         Logger::error(getClassName(), "Failed in curl_easy_setopt(HEADER)", curl_easy_strerror(rc));
     }
 
-    if (m_requestPayload.length() > 0) {
-        if (CURLE_OK != (rc = curl_easy_setopt(m_curl, CURLOPT_POSTFIELDSIZE, m_requestPayload.length()))) {
+    if (m_body.length() > 0) {
+        if (CURLE_OK != (rc = curl_easy_setopt(m_curl, CURLOPT_POSTFIELDSIZE, m_body.length()))) {
             Logger::error(getClassName(), "Failed in curl_easy_setopt(POSTFIELDSIZE)", curl_easy_strerror(rc));
         }
 
-        if (CURLE_OK != (rc = curl_easy_setopt(m_curl, CURLOPT_POSTFIELDS, m_requestPayload.c_str()))) {
+        if (CURLE_OK != (rc = curl_easy_setopt(m_curl, CURLOPT_POSTFIELDS, m_body.c_str()))) {
             Logger::error(getClassName(), "Failed in curl_easy_setopt(POSTFIELDS)", curl_easy_strerror(rc));
         }
     }
@@ -226,7 +218,6 @@ void HttpCall::prepare()
     if (CURLE_OK != (rc = curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, this))) {
         Logger::error(getClassName(), "Failed in curl_easy_setopt(WRITEDATA)", curl_easy_strerror(rc));
     }
-    Logger::verbose(getClassName(), "Ready for transmission");
 }
 
 void HttpCall::appendHeader(const std::string& key, const std::string& val)

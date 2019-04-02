@@ -17,18 +17,17 @@
 #ifndef POLICYMANAGER_H_
 #define POLICYMANAGER_H_
 
+#include <interface/IInstaller.h>
 #include "core/AbsAction.h"
 #include "hawkbit/HawkBitClient.h"
 #include "hardware/AbsHardware.h"
 #include "interface/IInitializable.h"
-#include "interface/IInstallable.h"
 #include "interface/ISingleton.h"
 #include "ls2/AppInstaller.h"
 #include "ls2/LS2Handler.h"
 
 class PolicyManager : public ISingleton<PolicyManager>,
                       public IInitializable,
-                      public IInstallable,
                       public AppInstallerListener,
                       public LS2HandlerListener,
                       public HawkBitClientListener {
@@ -41,21 +40,21 @@ public:
     virtual bool onFinalization() override;
 
     // IInstallable
-    virtual void onCompletedChildDownloading(IInstallable* installable) override;
-    virtual void onFailedChildDownloading(IInstallable* installable) override;
-    virtual void onProgressChildDownloading(IInstallable* installable) override;
-    virtual void onCompletedChildInstallation(IInstallable* installable) override;
-    virtual void onFailedChildInstallation(IInstallable* installable) override;
-    virtual void onProgressChildInstallation(IInstallable* installable) override;
+    virtual void onChangeStatus();
 
     // AppInstallerListener
     virtual void onInstallSubscription(const string& id, const string& status) override;
 
     // LS2HandlerListener
-    virtual bool onCheck(JValue& responsePayload) override;
-    virtual bool onInstall(JValue& responsePayload) override;
-    virtual bool onCancel(JValue& responsePayload) override;
-    virtual bool onGetStatus(JValue& responsePayload) override;
+    virtual bool onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual bool onStartDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual bool onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual bool onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual bool onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual bool onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual bool onPauseInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual bool onResumeInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual bool onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
 
     // HawkBitClientListener
     virtual void onCancellationAction(JValue& responsePayload) override;

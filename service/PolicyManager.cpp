@@ -49,47 +49,7 @@ bool PolicyManager::onFinalization()
     return true;
 }
 
-void PolicyManager::onCompletedChildDownloading(IInstallable* installable)
-{
-    Logger::verbose(getClassName(), __FUNCTION__);
-    JValue postPayload = pbnjson::Object();
-    m_currentDeploymentAction->toJson(postPayload);
-    cout << postPayload.stringify("    ") << endl;
-}
-
-void PolicyManager::onFailedChildDownloading(IInstallable* installable)
-{
-    Logger::verbose(getClassName(), __FUNCTION__);
-    JValue postPayload = pbnjson::Object();
-    m_currentDeploymentAction->toJson(postPayload);
-    cout << postPayload.stringify("    ") << endl;
-}
-
-void PolicyManager::onProgressChildDownloading(IInstallable* installable)
-{
-    Logger::verbose(getClassName(), __FUNCTION__);
-    JValue postPayload = pbnjson::Object();
-    m_currentDeploymentAction->toJson(postPayload);
-    cout << postPayload.stringify("    ") << endl;
-}
-
-void PolicyManager::onCompletedChildInstallation(IInstallable* installable)
-{
-    Logger::verbose(getClassName(), __FUNCTION__);
-    JValue postPayload = pbnjson::Object();
-    m_currentDeploymentAction->toJson(postPayload);
-    cout << postPayload.stringify("    ") << endl;
-}
-
-void PolicyManager::onFailedChildInstallation(IInstallable* installable)
-{
-    Logger::verbose(getClassName(), __FUNCTION__);
-    JValue postPayload = pbnjson::Object();
-    m_currentDeploymentAction->toJson(postPayload);
-    cout << postPayload.stringify("    ") << endl;
-}
-
-void PolicyManager::onProgressChildInstallation(IInstallable* installable)
+void PolicyManager::onChangeStatus()
 {
     Logger::verbose(getClassName(), __FUNCTION__);
     JValue postPayload = pbnjson::Object();
@@ -101,23 +61,84 @@ void PolicyManager::onInstallSubscription(const string& id, const string& status
 {
 }
 
-bool PolicyManager::onCheck(JValue& responsePayload)
+bool PolicyManager::onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
+    Logger::verbose(getClassName(), __FUNCTION__);
+    JValue postPayload = pbnjson::Object();
+    m_currentDeploymentAction->toJson(postPayload);
+    cout << postPayload.stringify("    ") << endl;
     return true;
 }
 
-bool PolicyManager::onInstall(JValue& responsePayload/**/)
+bool PolicyManager::onStartDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
+    if (!m_currentDeploymentAction) {
+        return false;
+    }
+    m_currentDeploymentAction->start();
     return true;
 }
 
-bool PolicyManager::onCancel(JValue& responsePayload/**/)
+bool PolicyManager::onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
+    if (!m_currentDeploymentAction) {
+        return false;
+    }
+    m_currentDeploymentAction->pause();
     return true;
 }
 
-bool PolicyManager::onGetStatus(JValue& responsePayload/**/)
+bool PolicyManager::onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
+    if (!m_currentDeploymentAction) {
+        return false;
+    }
+    m_currentDeploymentAction->resume();
+    return true;
+}
+
+bool PolicyManager::onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+{
+    if (!m_currentDeploymentAction) {
+        return false;
+    }
+    m_currentDeploymentAction->cancel();
+    return true;
+}
+
+bool PolicyManager::onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+{
+    if (!m_currentDeploymentAction) {
+        return false;
+    }
+    m_currentDeploymentAction->start();
+    return true;
+}
+
+bool PolicyManager::onPauseInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+{
+    if (!m_currentDeploymentAction) {
+        return false;
+    }
+    m_currentDeploymentAction->pause();
+    return true;
+}
+
+bool PolicyManager::onResumeInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+{
+    if (!m_currentDeploymentAction) {
+        return false;
+    }
+    m_currentDeploymentAction->resume();
+    return true;
+}
+
+bool PolicyManager::onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+{
+    if (!m_currentDeploymentAction) {
+        return false;
+    }
+    m_currentDeploymentAction->cancel();
     return true;
 }
 
@@ -142,17 +163,23 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
         return;
     }
     m_currentDeploymentAction = make_shared<DeploymentAction>(responsePayload);
-    m_currentDeploymentAction->setListener(this);
-    m_currentDeploymentAction->readyDownloading();
-    m_currentDeploymentAction->readyInstallation();
+    if (!m_currentDeploymentAction->ready()) {
+        Logger::info(getClassName(), "Failed to download");
+        return;
+    }
+    if (!m_currentDeploymentAction->ready()) {
+        Logger::info(getClassName(), "Failed to install");
+        return;
+    }
     if (m_currentDeploymentAction->isForceDownload()) {
-        m_currentDeploymentAction->startDownloading();
+        m_currentDeploymentAction->start();
     }
     if (m_currentDeploymentAction->isForceUpdate()) {
-        m_currentDeploymentAction->startInstallation();
+        m_currentDeploymentAction->start();
     }
 }
 
 void PolicyManager::onConfigData(JValue& responsePayload)
 {
+
 }

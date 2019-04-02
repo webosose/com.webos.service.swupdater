@@ -17,12 +17,12 @@
 #ifndef CORE_INSTALL_ARTIFACT_H_
 #define CORE_INSTALL_ARTIFACT_H_
 
+#include <interface/IInstaller.h>
 #include <iostream>
 #include <pbnjson.hpp>
 
 #include "core/HttpCall.h"
 #include "interface/IClassName.h"
-#include "interface/IInstallable.h"
 #include "interface/IListener.h"
 #include "interface/ISerializable.h"
 
@@ -32,16 +32,22 @@ using namespace pbnjson;
 class Artifact;
 
 class Artifact : public IClassName,
-                 public IInstallable,
+                 public IInstaller,
+                 public HttpCallListener,
                  public ISerializable {
 public:
     Artifact(const JValue& json);
     virtual ~Artifact();
 
     // IInstallable
-    virtual void onProgressChildDownloading(IInstallable* installable) override;
-    virtual bool onReadyDownloading() override;
-    virtual bool onStartDownloading() override;
+    virtual bool ready() override;
+    virtual bool start() override;
+
+    // HttpCallListener
+    virtual void onStartedDownload(HttpCall* call) override;
+    virtual void onProgressDownload(HttpCall* call) override;
+    virtual void onCompletedDownload(HttpCall* call) override;
+    virtual void onFailedDownload(HttpCall* call) override;
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;

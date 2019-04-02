@@ -18,16 +18,30 @@
 
 #include <lunaservice.h>
 
+#include "PolicyManager.h"
 #include "ls2/AppInstaller.h"
 #include "ls2/NotificationManager.h"
 #include "util/Logger.h"
 
 const string LS2Handler::NAME = "com.webos.service.swupdater";
-const LSMethod LS2Handler::METHODS[] = {
-    { "check", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "install", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "cancel", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
+const LSMethod LS2Handler::ROOT_METHODS[] = {
     { "getStatus", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
+    { 0, 0 , LUNA_METHOD_FLAGS_NONE }
+};
+
+const LSMethod LS2Handler::INSTALL_METHODS[] = {
+    { "start", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
+    { "pause", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
+    { "resume", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
+    { "cancel", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
+    { 0, 0 , LUNA_METHOD_FLAGS_NONE }
+};
+
+const LSMethod LS2Handler::DOWNLOAD_METHODS[] = {
+    { "start", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
+    { "pause", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
+    { "resume", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
+    { "cancel", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
     { 0, 0 , LUNA_METHOD_FLAGS_NONE }
 };
 
@@ -52,18 +66,28 @@ bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
 
         // pre processing before request handling
         pre(request, requestPayload, responsePayload);
-        string method = request.getMethod();
+        string kind = request.getKind();
 
         if (LS2Handler::getInstance().m_listener == nullptr) {
             responsePayload.put("errorText", "API handler is null");
-        } else if (method == "check") {
-            LS2Handler::getInstance().check(request, requestPayload, responsePayload);
-        } else if (method == "install") {
-            LS2Handler::getInstance().install(request, requestPayload, responsePayload);
-        } else if (method == "cancel") {
-            LS2Handler::getInstance().cancel(request, requestPayload, responsePayload);
-        } else if (method == "getStatus") {
-            LS2Handler::getInstance().getStatus(request, requestPayload, responsePayload);
+        } else if (kind == "/getStatus") {
+            PolicyManager::getInstance().onGetStatus(request, requestPayload, responsePayload);
+        } else if (kind == "/install/start") {
+            PolicyManager::getInstance().onStartInstall(request, requestPayload, responsePayload);
+        } else if (kind == "/install/pause") {
+            PolicyManager::getInstance().onPauseInstall(request, requestPayload, responsePayload);
+        } else if (kind == "/install/resume") {
+            PolicyManager::getInstance().onResumeInstall(request, requestPayload, responsePayload);
+        } else if (kind == "/install/cancel") {
+            PolicyManager::getInstance().onCancelInstall(request, requestPayload, responsePayload);
+        } else if (kind == "/download/start") {
+            PolicyManager::getInstance().onStartDownload(request, requestPayload, responsePayload);
+        } else if (kind == "/download/pause") {
+            PolicyManager::getInstance().onPauseDownload(request, requestPayload, responsePayload);
+        } else if (kind == "/download/resume") {
+            PolicyManager::getInstance().onResumeDownload(request, requestPayload, responsePayload);
+        } else if (kind == "/download/cancel") {
+            PolicyManager::getInstance().onCancelDownload(request, requestPayload, responsePayload);
         } else {
             responsePayload.put("errorText", "Please extend API handlers");
         }
@@ -77,7 +101,9 @@ LS2Handler::LS2Handler()
     : Handle(LS::registerService(NAME.c_str()))
 {
     setClassName("LS2Handler");
-    this->registerCategory("/", METHODS, NULL, NULL);
+    this->registerCategory("/", ROOT_METHODS, NULL, NULL);
+    this->registerCategory("/download", DOWNLOAD_METHODS, NULL, NULL);
+    this->registerCategory("/install", INSTALL_METHODS, NULL, NULL);
 }
 
 LS2Handler::~LS2Handler()
@@ -120,32 +146,4 @@ void LS2Handler::post(LS::Message& request, JValue& requestPayload, JValue& resp
     request.respond(responsePayload.stringify().c_str());
 
     Logger::info(NAME, "Response", request.getMethod());
-}
-
-void LS2Handler::check(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
-{
-    if (!m_listener->onCheck(responsePayload)) {
-        responsePayload.put("errorText", "Failed to handle check API");
-    }
-}
-
-void LS2Handler::install(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
-{
-    if (!m_listener->onInstall(responsePayload)) {
-        responsePayload.put("errorText", "Failed to handle install API");
-    }
-}
-
-void LS2Handler::cancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
-{
-    if (!m_listener->onCancel(responsePayload)) {
-        responsePayload.put("errorText", "Failed to handle cancel API");
-    }
-}
-
-void LS2Handler::getStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
-{
-    if (!m_listener->onGetStatus(responsePayload)) {
-        responsePayload.put("errorText", "Failed to handle getStatus API");
-    }
 }
