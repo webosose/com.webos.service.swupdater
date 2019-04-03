@@ -22,6 +22,7 @@
 Setting::Setting()
     : m_logCurl(false)
     , m_verbose(false)
+    , m_id("")
 {
 }
 
@@ -36,6 +37,10 @@ bool Setting::onInitialization()
         m_logCurl = true;
     }
 
+    env = std::getenv("ID");
+    if (env) {
+        m_id = env;
+    }
     env = std::getenv("LOG_LEVEL");
     if (env && strcmp(env, "verbose") == 0) {
         Logger::getInstance().setLevel(LogLevel_VERBOSE);

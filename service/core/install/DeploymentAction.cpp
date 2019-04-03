@@ -45,7 +45,6 @@ bool DeploymentAction::ready(bool download)
         return m_downloadState.ready();
     else
         return m_updateState.ready();
-    return true;
 }
 
 bool DeploymentAction::start(bool download)
@@ -54,7 +53,10 @@ bool DeploymentAction::start(bool download)
         if (!(*it)->start(download))
             return false;
     }
-    return true;
+    if (download)
+        return m_downloadState.start();
+    else
+        return m_updateState.start();
 }
 
 bool DeploymentAction::pause(bool download)

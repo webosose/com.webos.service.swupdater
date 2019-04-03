@@ -89,23 +89,24 @@ bool SoftwareModule::ready(bool download)
                 return false;
             }
         }
+        return true;
+    } else {
+        return m_updateState.ready();
     }
-    return m_updateState.ready();
 }
 
 bool SoftwareModule::start(bool download)
 {
     if (download) {
-        // start to download all artifacts
         for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
             if (!it->start() || !m_downloadState.start()) {
                 return false;
             }
         }
+        return true;
+    } else {
+        return startUpdate();
     }
-
-    // All files are ready. Then call state::start() with
-    return true;
 }
 
 bool SoftwareModule::pause(bool download)
@@ -137,7 +138,7 @@ void SoftwareModule::onDownloadStateChanged(State *installer, enum StateType pre
 
     State::transition(m_downloadState, cur);
 
-    if (m_downloadState.getState() == StateType_COMPLETED && m_updateState.getState() == StateType_READY) {
+    if (m_downloadState.getState() == StateType_COMPLETED && m_updateState.getState() == StateType_RUNNING) {
         startUpdate();
     }
 }

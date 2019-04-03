@@ -43,11 +43,17 @@ public:
         return m_verbose;
     }
 
+    virtual string& getId()
+    {
+        return m_id;
+    }
+
 private:
     Setting();
 
     bool m_logCurl;
     bool m_verbose;
+    string m_id;
 };
 
 #endif /* SETTING_H_ */
