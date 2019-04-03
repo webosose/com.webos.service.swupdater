@@ -31,14 +31,25 @@ using namespace pbnjson;
 class AppInstallerListener {
 public:
     AppInstallerListener() {}
-    virtual ~AppInstallerListener() {}
+    virtual ~AppInstallerListener()
+    {
+        if (m_call.isActive())
+            m_call.cancel();
+    }
 
-    virtual void onInstallSubscription(const string& id, const string& status) = 0;
+    virtual void onInstallSubscription(pbnjson::JValue subscriptionPayload) = 0;
+
+    LS::Call& getCall()
+    {
+        return m_call;
+    }
+
+private:
+    LS::Call m_call;
 
 };
 
 class AppInstaller : public IInitializable,
-                     public IListener<AppInstallerListener>,
                      public ISingleton<AppInstaller> {
 friend ISingleton<AppInstaller>;
 public:
@@ -48,12 +59,10 @@ public:
     virtual bool onFinalization() override;
 
     static bool _install(LSHandle* sh, LSMessage* reply, void* ctx);
-    bool install(const string& id, const string& ipkUrl);
+    bool install(const string& id, const string& ipkUrl, AppInstallerListener* listener);
 
 private:
     AppInstaller();
-
-    LS::Call m_install;
 
 };
 

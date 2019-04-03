@@ -16,8 +16,6 @@
 
 #include <iostream>
 
-#include "../util/Fifo.h"
-
 using namespace std;
 
 enum LogLevel {

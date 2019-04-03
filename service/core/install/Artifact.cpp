@@ -33,15 +33,15 @@ Artifact::~Artifact()
 bool Artifact::ready()
 {
     m_httpCall = make_shared<HttpCall>(MethodType_GET, m_download);
-    m_httpCall->setFilename("/tmp/" + m_filename);
+    m_httpCall->setFilename(m_fullname);
     m_httpCall->setListener(this);
-    return IInstaller::ready();
+    return State::ready();
 }
 
 bool Artifact::start()
 {
     m_httpCall->download();
-    return IInstaller::start();
+    return State::start();
 }
 
 void Artifact::onStartedDownload(HttpCall* call)
@@ -89,6 +89,7 @@ bool Artifact::fromJson(const JValue& json)
         JValueUtil::getValue(json, "_links", "download-http", "href", m_download);
     }
 
+    m_fullname = "/home/root/" + m_filename;
     return true;
 }
 
@@ -97,6 +98,6 @@ bool Artifact::toJson(JValue& json)
     json.put("filename", m_filename);
     json.put("total", m_total);
     json.put("size", m_size);
-    json.put("state", IInstaller::toString(getState()));
+    json.put("download", State::toString(getState()));
     return true;
 }

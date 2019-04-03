@@ -25,48 +25,90 @@ DeploymentAction::DeploymentAction(JValue& json)
     , m_isForceUpdate(false)
 {
     setClassName("DeploymentAction");
-    setName("DeploymentAction");
-
     setType(ActionType_INSTALL);
     fromJson(json);
+    m_downloadState.setName("download");
+    m_updateState.setName("update");
 }
 
 DeploymentAction::~DeploymentAction()
 {
 }
 
-bool DeploymentAction::ready()
+bool DeploymentAction::ready(bool download)
 {
     for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
-        if (!(*it)->ready())
+        if (!(*it)->ready(download))
             return false;
     }
-    return IInstaller::ready();
+    if (download)
+        return m_downloadState.ready();
+    else
+        return m_updateState.ready();
+    return true;
 }
 
-bool DeploymentAction::start()
+bool DeploymentAction::start(bool download)
 {
     for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
-        if (!(*it)->start())
+        if (!(*it)->start(download))
             return false;
     }
-    return IInstaller::start();
+    return true;
 }
 
-void DeploymentAction::onStateChange(IInstaller *installer, enum InstallerState prev, enum InstallerState cur)
+bool DeploymentAction::pause(bool download)
 {
-    enum InstallerState state = InstallerState_NONE;
+    if (download)
+        return m_downloadState.pause();
+    else
+        return m_updateState.pause();
+}
+
+bool DeploymentAction::resume(bool download)
+{
+    if (download)
+        return m_downloadState.resume();
+    else
+        return m_updateState.resume();
+}
+
+bool DeploymentAction::cancel(bool download)
+{
+    if (download)
+        return m_downloadState.cancel();
+    else
+        return m_updateState.cancel();
+}
+
+void DeploymentAction::onDownloadStateChanged(State *installer, enum StateType prev, enum StateType cur)
+{
+    if (cur == StateType_FAILED) {
+        m_downloadState.fail();
+    }
 
     for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
-        if ((*it)->getState() > state) {
-            state = (*it)->getState();
+        if ((*it)->getDownloadState().getState() != cur) {
+            return;
         }
     }
 
-    if (state != getState()) {
-        this->changeStatus(state);
-        PolicyManager::getInstance().onChangeStatus();
+    State::transition(m_downloadState, cur);
+}
+
+void DeploymentAction::onUpdateStateChanged(State *installer, enum StateType prev, enum StateType cur)
+{
+    if (cur == StateType_FAILED) {
+        m_updateState.fail();
     }
+
+    for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
+        if ((*it)->getUpdateState().getState() != cur) {
+            return;
+        }
+    }
+
+    State::transition(m_updateState, cur);
 }
 
 bool DeploymentAction::fromJson(const JValue& json)
@@ -87,7 +129,22 @@ bool DeploymentAction::fromJson(const JValue& json)
         shared_ptr<SoftwareModule> softwareModule = SoftwareModule::createSoftwareModule(chunk);
         if (softwareModule) {
             m_softwareModules.push_back(softwareModule);
-            m_softwareModules.back()->setListener(this);
+            m_softwareModules.back()->getUpdateState().setCallback( // @suppress("Invalid arguments")
+                std::bind(&DeploymentAction::onUpdateStateChanged,
+                          this,
+                          std::placeholders::_1,
+                          std::placeholders::_2,
+                          std::placeholders::_3
+                 )
+            );
+            m_softwareModules.back()->getDownloadState().setCallback( // @suppress("Invalid arguments")
+                std::bind(&DeploymentAction::onDownloadStateChanged,
+                          this,
+                          std::placeholders::_1,
+                          std::placeholders::_2,
+                          std::placeholders::_3
+                )
+            );
         }
     }
     return true;
@@ -96,7 +153,8 @@ bool DeploymentAction::fromJson(const JValue& json)
 bool DeploymentAction::toJson(JValue& json)
 {
     AbsAction::toJson(json);
-    json.put("state", IInstaller::toString(getState()));
+    json.put("download", State::toString(m_downloadState.getState()));
+    json.put("update", State::toString(m_updateState.getState()));
 
     JValue softwareModules = pbnjson::Array();
     for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {

@@ -18,11 +18,19 @@
 #define CORE_INSTALL_APPSOFTWAREMODULE_H_
 
 #include "SoftwareModule.h"
+#include "ls2/AppInstaller.h"
 
-class AppSoftwareModule : public SoftwareModule {
+class AppSoftwareModule : public SoftwareModule,
+                          public AppInstallerListener {
 public:
     AppSoftwareModule();
     virtual ~AppSoftwareModule();
+
+    // SoftwareModule
+    virtual bool startUpdate() override;
+
+    // AppInstallerListener
+    virtual void onInstallSubscription(pbnjson::JValue subscriptionPayload) override;
 
 };
 

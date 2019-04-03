@@ -23,3 +23,8 @@ OSSoftwareModule::OSSoftwareModule()
 OSSoftwareModule::~OSSoftwareModule()
 {
 }
+
+bool OSSoftwareModule::startUpdate()
+{
+    return true;
+}

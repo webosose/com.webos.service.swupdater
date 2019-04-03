@@ -16,13 +16,47 @@
 
 #include <core/install/AppSoftwareModule.h>
 #include "util/Logger.h"
+#include "util/JValueUtil.h"
+#include "PolicyManager.h"
 
 AppSoftwareModule::AppSoftwareModule()
+    : SoftwareModule()
 {
     setClassName("ApplicationSoftwareModule");
-    setName("ApplicationSoftwareModule");
 }
 
 AppSoftwareModule::~AppSoftwareModule()
 {
+}
+
+bool AppSoftwareModule::startUpdate()
+{
+    if (m_downloadState.getState() != StateType_COMPLETED) {
+        Logger::info(getClassName(), "Downloading is not completed");
+        return false;
+    }
+
+    for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
+        if (AppInstaller::getInstance().install(this->getName(), it->getFullname(), this)) {
+            return false;
+        }
+    }
+    m_updateState.start();
+    return true;
+}
+
+void AppSoftwareModule::onInstallSubscription(pbnjson::JValue subscriptionPayload)
+{
+    string state;
+
+    if (!JValueUtil::getValue(subscriptionPayload, "details", "state", state))
+        return;
+
+    if (state == "installing") {
+        m_updateState.start();
+    } else if (state == "installed") {
+        m_updateState.complete();
+        getCall().cancel();
+    }
+    PolicyManager::getInstance().onChangeStatus();
 }

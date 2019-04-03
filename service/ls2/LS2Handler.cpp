@@ -65,7 +65,7 @@ bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
         LS2Handler::getInstance().m_requests.pop();
 
         // pre processing before request handling
-        pre(request, requestPayload, responsePayload);
+        before(request, requestPayload, responsePayload);
         string kind = request.getKind();
 
         if (LS2Handler::getInstance().m_listener == nullptr) {
@@ -91,7 +91,7 @@ bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
         } else {
             responsePayload.put("errorText", "Please extend API handlers");
         }
-        post(request, requestPayload, responsePayload);
+        after(request, requestPayload, responsePayload);
     }
     pending = false;
     return true;
@@ -115,6 +115,7 @@ bool LS2Handler::onInitialization()
     attachToLoop(m_mainloop);
     AppInstaller::getInstance().initialize(m_mainloop);
     NotificationManager::getInstance().initialize(m_mainloop);
+
     return true;
 }
 
@@ -126,7 +127,7 @@ bool LS2Handler::onFinalization()
     return true;
 }
 
-void LS2Handler::pre(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+void LS2Handler::before(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     requestPayload = JDomParser::fromString(request.getPayload());
     responsePayload = pbnjson::Object();
@@ -134,7 +135,7 @@ void LS2Handler::pre(LS::Message& request, JValue& requestPayload, JValue& respo
     Logger::info(NAME, "Request", request.getMethod());
 }
 
-void LS2Handler::post(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+void LS2Handler::after(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (responsePayload.hasKey("errorText")) {
         Logger::warning(NAME, responsePayload["errorText"].asString());

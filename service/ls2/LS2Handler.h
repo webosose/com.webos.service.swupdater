@@ -36,15 +36,15 @@ public:
     LS2HandlerListener() {};
     virtual ~LS2HandlerListener() {};
 
-    virtual bool onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
-    virtual bool onStartDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
-    virtual bool onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
-    virtual bool onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
-    virtual bool onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
-    virtual bool onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
-    virtual bool onPauseInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
-    virtual bool onResumeInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
-    virtual bool onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onStartDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onPauseInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onResumeInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
 
 };
 
@@ -56,19 +56,15 @@ friend ISingleton<LS2Handler>;
 public:
     virtual ~LS2Handler();
 
+    // IInitializable
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
-
-    void install_start(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
-    void install_pause(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
-    void cancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
-    void getStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
 
 private:
     static bool onRequest(LSHandle* sh, LSMessage* msg, void* category_context);
 
-    static void pre(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
-    static void post(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
+    static void before(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
+    static void after(LS::Message& request, JValue& requestPayload, JValue& responsePayload);
 
     LS2Handler();
 

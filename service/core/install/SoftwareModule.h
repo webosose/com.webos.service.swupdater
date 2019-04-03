@@ -17,7 +17,7 @@
 #ifndef CORE_INSTALL_SOFTWAREMODULE_H_
 #define CORE_INSTALL_SOFTWAREMODULE_H_
 
-#include <interface/IInstaller.h>
+#include <core/State.h>
 #include <iostream>
 #include <list>
 #include <map>
@@ -42,8 +42,7 @@ enum SoftwareModuleType {
 class SoftwareModule;
 
 class SoftwareModule : public IClassName,
-                       public ISerializable,
-                       public IInstaller {
+                       public ISerializable {
 public:
     static shared_ptr<SoftwareModule> createSoftwareModule(JValue& json);
 
@@ -53,10 +52,15 @@ public:
     SoftwareModule();
     virtual ~SoftwareModule();
 
-    // IInstaller
-    virtual bool ready() override;
-    virtual bool start() override;
-    virtual void onStateChange(IInstaller *installer, enum InstallerState prev, enum InstallerState cur) override;
+    virtual bool startUpdate() = 0;
+
+    bool ready(bool download);
+    bool start(bool download);
+    bool pause(bool download);
+    bool resume(bool download);
+    bool cancel(bool download);
+
+    virtual void onDownloadStateChanged(State *installer, enum StateType prev, enum StateType cur);
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
@@ -77,10 +81,23 @@ public:
         return m_version;
     }
 
+    State& getDownloadState()
+    {
+        return m_downloadState;
+    }
+
+    State& getUpdateState()
+    {
+        return m_updateState;
+    }
+
 protected:
     enum SoftwareModuleType m_type;
     string m_name;
     string m_version;
+
+    State m_downloadState;
+    State m_updateState;
 
     list<Artifact> m_artifacts;
 

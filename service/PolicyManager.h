@@ -17,18 +17,15 @@
 #ifndef POLICYMANAGER_H_
 #define POLICYMANAGER_H_
 
-#include <interface/IInstaller.h>
 #include "core/AbsAction.h"
 #include "hawkbit/HawkBitClient.h"
 #include "hardware/AbsHardware.h"
 #include "interface/IInitializable.h"
 #include "interface/ISingleton.h"
-#include "ls2/AppInstaller.h"
 #include "ls2/LS2Handler.h"
 
 class PolicyManager : public ISingleton<PolicyManager>,
                       public IInitializable,
-                      public AppInstallerListener,
                       public LS2HandlerListener,
                       public HawkBitClientListener {
 friend ISingleton<PolicyManager>;
@@ -39,32 +36,32 @@ public:
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
+    void onStateChanged(State *installer, enum StateType prev, enum StateType cur);
+
     // IInstallable
     virtual void onChangeStatus();
 
-    // AppInstallerListener
-    virtual void onInstallSubscription(const string& id, const string& status) override;
-
     // LS2HandlerListener
-    virtual bool onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual bool onStartDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual bool onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual bool onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual bool onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual bool onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual bool onPauseInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual bool onResumeInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual bool onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onStartDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onPauseInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onResumeInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
 
     // HawkBitClientListener
     virtual void onCancellationAction(JValue& responsePayload) override;
     virtual void onInstallationAction(JValue& responsePayload) override;
-    virtual void onConfigData(JValue& responsePayload) override;
+    virtual void onConfigDataAction(JValue& responsePayload) override;
 
 private:
     PolicyManager();
 
-    shared_ptr<DeploymentAction> m_currentDeploymentAction;
+    shared_ptr<DeploymentAction> m_currentAction;
+    LS::SubscriptionPoint m_statusPoint;
 
 };
 

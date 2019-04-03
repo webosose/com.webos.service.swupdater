@@ -17,7 +17,7 @@
 #ifndef CORE_INSTALL_ARTIFACT_H_
 #define CORE_INSTALL_ARTIFACT_H_
 
-#include <interface/IInstaller.h>
+#include <core/State.h>
 #include <iostream>
 #include <pbnjson.hpp>
 
@@ -32,7 +32,7 @@ using namespace pbnjson;
 class Artifact;
 
 class Artifact : public IClassName,
-                 public IInstaller,
+                 public State,
                  public HttpCallListener,
                  public ISerializable {
 public:
@@ -53,8 +53,15 @@ public:
     virtual bool fromJson(const JValue& json) override;
     virtual bool toJson(JValue& json) override;
 
+    // getter
+    const string& getFullname()
+    {
+        return m_fullname;
+    }
+
 private:
     string m_filename;
+    string m_fullname;
     int m_total;
     int m_size;
 

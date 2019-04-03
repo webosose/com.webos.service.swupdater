@@ -162,6 +162,9 @@ void HttpCall::onReceiveAsyncEvent(void* userdata)
         }
 
         glibcurl_remove(self->m_curl);
+        fflush(self->m_file);
+        fclose(self->m_file);
+        self->m_file = nullptr;
         if (self->m_listener) self->m_listener->onCompletedDownload(self);
     }
 }

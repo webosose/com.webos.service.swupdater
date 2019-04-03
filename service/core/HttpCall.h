@@ -21,7 +21,6 @@
 #include <sstream>
 #include <string>
 #include <curl/curl.h>
-#include <interface/IInstaller.h>
 #include <pbnjson.hpp>
 
 #include "interface/IClassName.h"

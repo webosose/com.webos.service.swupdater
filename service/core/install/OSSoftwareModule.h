@@ -23,6 +23,9 @@ class OSSoftwareModule : public SoftwareModule {
 public:
     OSSoftwareModule();
     virtual ~OSSoftwareModule();
+
+    // SoftwareModule
+    virtual bool startUpdate() override;
 };
 
 #endif /* CORE_INSTALL_OSSOFTWAREMODULE_H_ */

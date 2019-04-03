@@ -35,7 +35,7 @@ public:
 
     virtual void onCancellationAction(JValue& responsePayload) = 0;
     virtual void onInstallationAction(JValue& responsePayload) = 0;
-    virtual void onConfigData(JValue& responsePayload) = 0;
+    virtual void onConfigDataAction(JValue& responsePayload) = 0;
 };
 
 class HawkBitClient : public IInitializable,
@@ -62,21 +62,21 @@ public:
     bool postComplete(shared_ptr<AbsAction> action);
     bool postProgress(shared_ptr<DeploymentAction> action, int of, int cnt);
 
-private:
-    HawkBitClient();
-
-    void start(int seconds = 0);
-    bool isStarted();
-    void stop();
-
     // HackBit communication APIs
     bool getBase(JValue& responsePayload, const string& url);
     bool getCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id);
     bool postCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id);
     bool putConfigData(JValue& requestPayload, JValue& responsePayload);
     bool getDeploymentAction(JValue& requestPayload, JValue& responsePayload, string& id);
-    bool postDeploymentAction(JValue& requestPayload, JValue& responsePayload, string& id);
+    bool postDeploymentAction(JValue& responsePayload, const string& id);
     bool getSoftwaremodules(JValue& requestPayload, JValue& responsePayload, string& id);
+
+private:
+    HawkBitClient();
+
+    void start(int seconds = 0);
+    bool isStarted();
+    void stop();
 
     static const string HAWKBIT_TENANT;
     static const string HAWKBIT_URL;

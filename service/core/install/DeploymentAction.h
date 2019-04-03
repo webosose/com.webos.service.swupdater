@@ -17,7 +17,7 @@
 #ifndef CORE_INSTALL_DEPLOYMENTACTION_H_
 #define CORE_INSTALL_DEPLOYMENTACTION_H_
 
-#include <interface/IInstaller.h>
+#include <core/State.h>
 #include <iostream>
 #include <list>
 #include <map>
@@ -27,16 +27,19 @@
 
 using namespace std;
 
-class DeploymentAction : public AbsAction,
-                         public IInstaller {
+class DeploymentAction : public AbsAction {
 public:
     DeploymentAction(JValue& json);
     virtual ~DeploymentAction();
 
-    // IInstaller
-    virtual bool ready() override;
-    virtual bool start() override;
-    virtual void onStateChange(IInstaller *installer, enum InstallerState prev, enum InstallerState cur) override;
+    bool ready(bool download);
+    bool start(bool download);
+    bool pause(bool download);
+    bool resume(bool download);
+    bool cancel(bool download);
+
+    void onDownloadStateChanged(State *installer, enum StateType prev, enum StateType cur);
+    void onUpdateStateChanged(State *installer, enum StateType prev, enum StateType cur);
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
@@ -52,9 +55,27 @@ public:
         return m_isForceUpdate;
     }
 
+    bool isComplete()
+    {
+        return (m_downloadState.getState() == StateType_COMPLETED && m_updateState.getState() == StateType_COMPLETED);
+    }
+
+    State& getDownloadState()
+    {
+        return m_downloadState;
+    }
+
+    State& getUpdateState()
+    {
+        return m_updateState;
+    }
+
 private:
     bool m_isForceDownload;
     bool m_isForceUpdate;
+
+    State m_downloadState;
+    State m_updateState;
 
     list<shared_ptr<SoftwareModule>> m_softwareModules;
 };
