@@ -62,10 +62,7 @@ HttpCall::~HttpCall()
     if (m_header) {
         curl_slist_free_all(m_header);
     }
-    if (m_file) {
-        fclose(m_file);
-        m_file = nullptr;
-    }
+    close();
 }
 
 bool HttpCall::perform()
@@ -95,7 +92,7 @@ bool HttpCall::download()
         return false;
     }
 
-    glibcurl_set_callback(&HttpCall::onReceiveAsyncEvent, this);
+    glibcurl_set_callback(&HttpCall::onReceiveEvent, this);
     CURLMcode rc = CURLM_OK;
     if (CURLM_OK != (rc = glibcurl_add(m_curl))) {
         Logger::error(getClassName(), "Failed in glibcurl_add", curl_multi_strerror(rc));
@@ -140,7 +137,7 @@ void HttpCall::setMethod(MethodType method)
     }
 }
 
-void HttpCall::onReceiveAsyncEvent(void* userdata)
+void HttpCall::onReceiveEvent(void* userdata)
 {
     HttpCall* self = static_cast<HttpCall*>(userdata);
     if (!self) {
@@ -162,9 +159,7 @@ void HttpCall::onReceiveAsyncEvent(void* userdata)
         }
 
         glibcurl_remove(self->m_curl);
-        fflush(self->m_file);
-        fclose(self->m_file);
-        self->m_file = nullptr;
+        self->close();
         if (self->m_listener) self->m_listener->onCompletedDownload(self);
     }
 }
@@ -226,4 +221,13 @@ void HttpCall::prepare()
 void HttpCall::appendHeader(const std::string& key, const std::string& val)
 {
     m_header = curl_slist_append(m_header, (key + ": " + val).c_str());
+}
+
+void HttpCall::close()
+{
+    if (m_file) {
+        fflush(m_file);
+        fclose(m_file);
+        m_file = nullptr;
+    }
 }

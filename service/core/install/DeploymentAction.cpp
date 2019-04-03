@@ -27,8 +27,8 @@ DeploymentAction::DeploymentAction(JValue& json)
     setClassName("DeploymentAction");
     setType(ActionType_INSTALL);
     fromJson(json);
-    m_downloadState.setName("download");
-    m_updateState.setName("update");
+    m_downloadState.setName("DeploymentAction-download");
+    m_updateState.setName("DeploymentAction-update");
 }
 
 DeploymentAction::~DeploymentAction()
@@ -49,14 +49,21 @@ bool DeploymentAction::ready(bool download)
 
 bool DeploymentAction::start(bool download)
 {
-    for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
-        if (!(*it)->start(download))
-            return false;
-    }
-    if (download)
+    if (download) {
+        for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
+            if (!(*it)->startDownload()) {
+                return false;
+            }
+        }
         return m_downloadState.start();
-    else
+    } else {
+        for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
+            if (!(*it)->startUpdate()) {
+                return false;
+            }
+        }
         return m_updateState.start();
+    }
 }
 
 bool DeploymentAction::pause(bool download)

@@ -31,12 +31,16 @@ void exitDaemon(int signo)
     g_main_loop_quit(s_mainloop);
 }
 
-int main()
+int main(int argc, char* argv[])
 {
     signal(SIGTERM, exitDaemon);
     signal(SIGINT, exitDaemon);
 
     s_mainloop = g_main_loop_new(NULL, FALSE);
+    if (argc > 1) {
+        Setting::getInstance().printHelp();
+        return 1;
+    }
 
     // xxx: DON'T change initialization order.
     Setting::getInstance().initialize(s_mainloop);

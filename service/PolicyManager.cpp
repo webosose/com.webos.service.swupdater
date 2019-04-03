@@ -21,6 +21,8 @@
 #include "util/Logger.h"
 
 PolicyManager::PolicyManager()
+    : m_currentAction(nullptr)
+    , m_statusPoint(nullptr)
 {
     setClassName("PolicyManager");
 }
@@ -34,7 +36,8 @@ bool PolicyManager::onInitialization()
     HawkBitClient::getInstance().setListener(this);
     LS2Handler::getInstance().setListener(this);
 
-    m_statusPoint.setServiceHandle(&LS2Handler::getInstance());
+    m_statusPoint = new LS::SubscriptionPoint();
+    m_statusPoint->setServiceHandle(&LS2Handler::getInstance());
 
     // first polling
     HawkBitClient::getInstance().poll(&HawkBitClient::getInstance());
@@ -43,6 +46,7 @@ bool PolicyManager::onInitialization()
 
 bool PolicyManager::onFinalization()
 {
+    delete m_statusPoint;
     LS2Handler::getInstance().setListener(nullptr);
     HawkBitClient::getInstance().setListener(nullptr);
 
@@ -56,6 +60,7 @@ void PolicyManager::onStateChanged(State *installer, enum StateType prev, enum S
         JValue responsePayload;
         HawkBitClient::getInstance().postDeploymentAction(responsePayload, m_currentAction->getId());
         m_currentAction = nullptr;
+        onChangeStatus();
     }
 }
 
@@ -74,7 +79,7 @@ void PolicyManager::onChangeStatus()
     current.put("subscribed", true);
     current.put("returnValue", true);
     if (prev != current) {
-        m_statusPoint.post(current.stringify().c_str());
+        m_statusPoint->post(current.stringify().c_str());
         prev = current.duplicate();
     }
 }
@@ -89,7 +94,7 @@ void PolicyManager::onGetStatus(LS::Message& request, JValue& requestPayload, JV
         m_currentAction->toJson(responsePayload);
     }
     if (request.isSubscription()) {
-        m_statusPoint.subscribe(request);
+        m_statusPoint->subscribe(request);
         responsePayload.put("subscribed", true);
     }
 }

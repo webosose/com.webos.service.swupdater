@@ -30,6 +30,8 @@ friend class ISingleton<Setting>;
 public:
     virtual ~Setting();
 
+    void printHelp();
+
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 

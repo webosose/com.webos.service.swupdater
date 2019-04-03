@@ -62,8 +62,10 @@ public:
 private:
     string m_filename;
     string m_fullname;
+
     int m_total;
-    int m_size;
+    int m_curSize;
+    int m_prevSize;
 
     // hash value
     string m_sha1;

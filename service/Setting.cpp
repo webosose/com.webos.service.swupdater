@@ -24,23 +24,37 @@ Setting::Setting()
     , m_verbose(false)
     , m_id("")
 {
+    setClassName("Setting");
 }
 
 Setting::~Setting()
 {
 }
 
+void Setting::printHelp()
+{
+    cout << "Usage) ENV_OPTIONS /usr/sbin/swupdater"<< endl;
+    cout << "Option) ID=webOS_XXXX"<< endl;
+    cout << "Option) LOG_TYPE=[pmlog|console]"<< endl;
+    cout << "Option) LOG_LEVEL=[verbose|debug|info|warning|error]"<< endl;
+    cout << "Option) LOG_CURL=[on|off]"<< endl;
+    cout << "Example) ID=webOS_kkangeva LOG_TYPE=console LOG_LEVEL=verbose /usr/sbin/swupdater"<< endl;
+}
+
 bool Setting::onInitialization()
 {
-    char* env = std::getenv("LOG_CURL");
-    if (env && strcmp(env, "on") == 0) {
-        m_logCurl = true;
-    }
-
-    env = std::getenv("ID");
+    char* env = std::getenv("ID");
     if (env) {
         m_id = env;
     }
+
+    env = std::getenv("LOG_TYPE");
+    if (env && strcmp(env, "pmlog") == 0) {
+        Logger::getInstance().setType(LogType_PMLOG);
+    } else if (env && strcmp(env, "console") == 0) {
+        Logger::getInstance().setType(LogType_CONSOLE);
+    }
+
     env = std::getenv("LOG_LEVEL");
     if (env && strcmp(env, "verbose") == 0) {
         Logger::getInstance().setLevel(LogLevel_VERBOSE);
@@ -53,6 +67,11 @@ bool Setting::onInitialization()
         Logger::getInstance().setLevel(LogLevel_WARNING);
     } else if (env && strcmp(env, "error") == 0) {
         Logger::getInstance().setLevel(LogLevel_ERROR);
+    }
+
+    env = std::getenv("LOG_CURL");
+    if (env && strcmp(env, "on") == 0) {
+        m_logCurl = true;
     }
     return true;
 }

@@ -18,7 +18,7 @@
 
 NotificationManager::NotificationManager()
 {
-    setClassName("com.webos.notification");
+    setClassName("NotificationManager");
 }
 
 NotificationManager::~NotificationManager()

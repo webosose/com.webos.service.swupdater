@@ -98,7 +98,7 @@ const string& Logger::toString(const enum LogLevel& level)
 
 Logger::Logger()
     : m_level(LogLevel_INFO)
-    , m_type(LogType_CONSOLE)
+    , m_type(LogType_PMLOG)
 {
 }
 

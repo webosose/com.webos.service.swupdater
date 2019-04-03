@@ -102,11 +102,12 @@ public:
     }
 
 private:
-    static void onReceiveAsyncEvent(void* userdata);
+    static void onReceiveEvent(void* userdata);
     static size_t onReceiveData(char* contents, size_t size, size_t nmemb, void* userdata);
 
     void prepare();
     void appendHeader(const std::string& key, const std::string& val);
+    void close();
 
     // request
     CURL* m_curl;

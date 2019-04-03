@@ -61,7 +61,7 @@ private:
     PolicyManager();
 
     shared_ptr<DeploymentAction> m_currentAction;
-    LS::SubscriptionPoint m_statusPoint;
+    LS::SubscriptionPoint *m_statusPoint;
 
 };
 

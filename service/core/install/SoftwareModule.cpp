@@ -73,8 +73,8 @@ SoftwareModule::SoftwareModule()
     , m_version("")
 {
     setClassName("SoftwareModule");
-    m_downloadState.setName("download");
-    m_downloadState.setName("update");
+    m_downloadState.setName("SoftwareModule-download");
+    m_updateState.setName("SoftwareModule-update");
 }
 
 SoftwareModule::~SoftwareModule()
@@ -95,18 +95,14 @@ bool SoftwareModule::ready(bool download)
     }
 }
 
-bool SoftwareModule::start(bool download)
+bool SoftwareModule::startDownload()
 {
-    if (download) {
-        for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
-            if (!it->start() || !m_downloadState.start()) {
-                return false;
-            }
+    for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
+        if (!it->start()) {
+            return false;
         }
-        return true;
-    } else {
-        return startUpdate();
     }
+    return m_downloadState.start();
 }
 
 bool SoftwareModule::pause(bool download)
@@ -127,7 +123,7 @@ bool SoftwareModule::cancel(bool download)
 void SoftwareModule::onDownloadStateChanged(State *installer, enum StateType prev, enum StateType cur)
 {
     if (cur == StateType_FAILED) {
-        m_updateState.fail();
+        m_downloadState.fail();
     }
 
     for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
@@ -137,7 +133,6 @@ void SoftwareModule::onDownloadStateChanged(State *installer, enum StateType pre
     }
 
     State::transition(m_downloadState, cur);
-
     if (m_downloadState.getState() == StateType_COMPLETED && m_updateState.getState() == StateType_RUNNING) {
         startUpdate();
     }

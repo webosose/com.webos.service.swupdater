@@ -19,9 +19,11 @@
 #include "PolicyManager.h"
 
 Artifact::Artifact(const JValue& json)
+    : m_curSize(0)
+    , m_prevSize(0)
 {
     setClassName("Artifact");
-    setName("Artifact");
+    setName("Artifact-download");
     fromJson(json);
 }
 
@@ -47,28 +49,33 @@ bool Artifact::start()
 void Artifact::onStartedDownload(HttpCall* call)
 {
     Logger::info(getClassName(), "Start downloading - " + call->getFilename());
-    m_size = call->getResponseSize();
+    m_curSize = call->getResponseSize();
     PolicyManager::getInstance().onChangeStatus();
 }
 
 void Artifact::onProgressDownload(HttpCall* call)
 {
-    Logger::info(getClassName(), "Progress downloading - " + call->getFilename());
-    m_size = call->getResponseSize();
-    PolicyManager::getInstance().onChangeStatus();
+    m_curSize = call->getResponseSize();
+
+    // To avoid many subscription issues.
+    if ((m_curSize - m_prevSize) > (1024 * 1024)) {
+        Logger::verbose(getClassName(), "Progress downloading - " + call->getFilename());
+        PolicyManager::getInstance().onChangeStatus();
+        m_prevSize = m_curSize;
+    }
 }
 
 void Artifact::onCompletedDownload(HttpCall* call)
 {
     Logger::info(getClassName(), "Complete downloading - " + call->getFilename());
-    m_size = call->getResponseSize();
+    m_curSize = call->getResponseSize();
     complete();
 }
 
 void Artifact::onFailedDownload(HttpCall* call)
 {
-    Logger::info(getClassName(), "Fail downloading - " + call->getFilename());
-    m_size = 0;
+    Logger::warning(getClassName(), "Fail downloading - " + call->getFilename());
+    m_curSize = 0;
     fail();
 }
 
@@ -97,7 +104,7 @@ bool Artifact::toJson(JValue& json)
 {
     json.put("filename", m_filename);
     json.put("total", m_total);
-    json.put("size", m_size);
+    json.put("size", m_curSize);
     json.put("download", State::toString(getState()));
     return true;
 }

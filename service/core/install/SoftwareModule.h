@@ -52,10 +52,10 @@ public:
     SoftwareModule();
     virtual ~SoftwareModule();
 
+    bool startDownload();
     virtual bool startUpdate() = 0;
 
     bool ready(bool download);
-    bool start(bool download);
     bool pause(bool download);
     bool resume(bool download);
     bool cancel(bool download);

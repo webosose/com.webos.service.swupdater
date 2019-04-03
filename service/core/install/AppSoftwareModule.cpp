@@ -27,16 +27,19 @@ AppSoftwareModule::AppSoftwareModule()
 
 AppSoftwareModule::~AppSoftwareModule()
 {
+    if (getCall().isActive())
+        getCall().cancel();
 }
 
 bool AppSoftwareModule::startUpdate()
 {
-    m_updateState.start();
-    if (m_downloadState.getState() != StateType_COMPLETED) {
-        Logger::info(getClassName(), "Downloading is not completed");
+    if (!m_updateState.start()) {
         return false;
     }
-
+    if (m_downloadState.getState() != StateType_COMPLETED) {
+        Logger::info(getClassName(), "Downloading is not completed");
+        return true;
+    }
     for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
         if (AppInstaller::getInstance().install(this->getName(), it->getFullname(), this)) {
             return false;
@@ -53,12 +56,11 @@ void AppSoftwareModule::onInstallSubscription(pbnjson::JValue subscriptionPayloa
         return;
 
     if (state == "installing") {
-        Logger::info(getClassName(), "Start installation");
         m_updateState.start();
     } else if (state == "installed") {
-        Logger::info(getClassName(), "Complete installation");
         m_updateState.complete();
         getCall().cancel();
     }
-    PolicyManager::getInstance().onChangeStatus();
+
+    // TODO update progress?
 }
