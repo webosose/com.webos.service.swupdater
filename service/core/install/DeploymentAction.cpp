@@ -23,101 +23,225 @@ DeploymentAction::DeploymentAction(JValue& json)
     : AbsAction()
     , m_isForceDownload(false)
     , m_isForceUpdate(false)
+    , m_download("DeploymentAction-download")
+    , m_update("DeploymentAction-update")
+    , m_curDownload(0)
+    , m_curUpdate(0)
 {
     setClassName("DeploymentAction");
     setType(ActionType_INSTALL);
     fromJson(json);
-    m_downloadState.setName("DeploymentAction-download");
-    m_updateState.setName("DeploymentAction-update");
 }
 
 DeploymentAction::~DeploymentAction()
 {
+    removeCallback();
+    m_modules.clear();
 }
 
-bool DeploymentAction::ready(bool download)
+bool DeploymentAction::prepare()
 {
-    for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
-        if (!(*it)->ready(download))
+    return true;
+}
+
+bool DeploymentAction::start()
+{
+    return true;
+}
+
+bool DeploymentAction::pause()
+{
+    return true;
+}
+
+bool DeploymentAction::resume()
+{
+    return true;
+}
+
+bool DeploymentAction::cancel()
+{
+    return true;
+}
+
+void DeploymentAction::onDownloadStateChanged(enum StateType prev, enum StateType cur, void *source)
+{
+    switch (cur) {
+    case StateType_NONE:
+        break;
+
+    case StateType_READY:
+        break;
+
+    case StateType_PAUSED:
+        break;
+
+    case StateType_RUNNING:
+        break;
+
+    case StateType_CANCELED:
+        m_download.cancel();
+        break;
+
+    case StateType_COMPLETED:
+        if (m_curDownload == m_modules.size() -1) {
+            m_download.complete();
+            break;
+        }
+        m_curDownload++;
+        m_modules[m_curDownload].startDownload();
+        break;
+
+    case StateType_FAILED:
+        m_download.fail();
+        break;
+    }
+
+    // All artifacts are downloaded
+    if (m_download.getState() == StateType_COMPLETED && m_update.getState() == StateType_RUNNING) {
+        m_modules[m_curUpdate].startUpdate();
+    }
+}
+
+bool DeploymentAction::prepareDownload()
+{
+    enum TransitionType type = m_download.canPrepare();
+    if (type != TransitionType_Allowed) {
+        return State::writeCommonLog(m_download, type, getClassName(), "prepare");
+    }
+    for (auto it = m_modules.begin(); it != m_modules.end(); ++it) {
+        if (!it->prepareDownload()) {
+            m_download.fail();
             return false;
-    }
-    if (download)
-        return m_downloadState.ready();
-    else
-        return m_updateState.ready();
-}
-
-bool DeploymentAction::start(bool download)
-{
-    if (download) {
-        for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
-            if (!(*it)->startDownload()) {
-                return false;
-            }
-        }
-        return m_downloadState.start();
-    } else {
-        for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
-            if (!(*it)->startUpdate()) {
-                return false;
-            }
-        }
-        return m_updateState.start();
-    }
-}
-
-bool DeploymentAction::pause(bool download)
-{
-    if (download)
-        return m_downloadState.pause();
-    else
-        return m_updateState.pause();
-}
-
-bool DeploymentAction::resume(bool download)
-{
-    if (download)
-        return m_downloadState.resume();
-    else
-        return m_updateState.resume();
-}
-
-bool DeploymentAction::cancel(bool download)
-{
-    if (download)
-        return m_downloadState.cancel();
-    else
-        return m_updateState.cancel();
-}
-
-void DeploymentAction::onDownloadStateChanged(State *installer, enum StateType prev, enum StateType cur)
-{
-    if (cur == StateType_FAILED) {
-        m_downloadState.fail();
-    }
-
-    for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
-        if ((*it)->getDownloadState().getState() != cur) {
-            return;
         }
     }
-
-    State::transition(m_downloadState, cur);
+    return m_download.prepare();
 }
 
-void DeploymentAction::onUpdateStateChanged(State *installer, enum StateType prev, enum StateType cur)
+bool DeploymentAction::startDownload()
 {
-    if (cur == StateType_FAILED) {
-        m_updateState.fail();
+    enum TransitionType type = m_download.canStart();
+    if (type != TransitionType_Allowed) {
+        return State::writeCommonLog(m_download, type, getClassName(), "start");
     }
 
-    for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
-        if ((*it)->getUpdateState().getState() != cur) {
-            return;
+    m_curDownload = 0;
+    if (!m_modules[m_curDownload].startDownload()) {
+        Logger::verbose(getClassName(), "Start download - " + m_modules[m_curDownload].getName());
+        return false;
+    }
+    return m_download.start();
+}
+
+bool DeploymentAction::pauseDownload()
+{
+    enum TransitionType type = m_download.canPause();
+    if (type == TransitionType_Same) {
+        return true;
+    } else if (type == TransitionType_NotAllowed) {
+        return false;
+    }
+    return m_download.pause();
+}
+
+bool DeploymentAction::resumeDownload()
+{
+    enum TransitionType type = m_download.canResume();
+    if (type == TransitionType_Same) {
+        return true;
+    } else if (type == TransitionType_NotAllowed) {
+        return false;
+    }
+    return m_download.resume();
+}
+
+bool DeploymentAction::cancelDownload()
+{
+    enum TransitionType type = m_download.canCancel();
+    if (type == TransitionType_Same) {
+        return true;
+    } else if (type == TransitionType_NotAllowed) {
+        return false;
+    }
+    return m_download.cancel();
+}
+
+void DeploymentAction::onUpdateStateChanged(enum StateType prev, enum StateType cur, void *source)
+{
+    switch (cur) {
+     case StateType_NONE:
+         break;
+
+     case StateType_READY:
+         break;
+
+     case StateType_PAUSED:
+         break;
+
+     case StateType_RUNNING:
+         break;
+
+     case StateType_CANCELED:
+         m_update.cancel();
+         break;
+
+     case StateType_COMPLETED:
+         if (m_curUpdate == m_modules.size() -1) {
+             m_update.complete();
+             break;
+         }
+         m_curUpdate++;
+         m_modules[m_curUpdate].startUpdate();
+         break;
+
+     case StateType_FAILED:
+         m_update.fail();
+         break;
+     }
+}
+
+bool DeploymentAction::prepareUpdate()
+{
+    enum TransitionType type = m_update.canPrepare();
+    if (type != TransitionType_Allowed) {
+        return State::writeCommonLog(m_update, type, getClassName(), "prepare");
+    }
+    for (auto it = m_modules.begin(); it != m_modules.end(); ++it) {
+        if (!it->prepareUpdate()) {
+            m_update.fail();
+            return false;
         }
     }
+    return m_update.prepare();
+}
 
-    State::transition(m_updateState, cur);
+bool DeploymentAction::startUpdate()
+{
+    enum TransitionType type = m_update.canStart();
+    if (type != TransitionType_Allowed) {
+        return State::writeCommonLog(m_update, type, getClassName(), "start");
+    }
+
+    m_curUpdate = 0;
+    if (m_download.getState() == StateType_COMPLETED) {
+        m_modules[m_curUpdate].startUpdate();
+    }
+    return m_update.start();
+}
+
+bool DeploymentAction::pauseUpdate()
+{
+    return m_update.pause();
+}
+
+bool DeploymentAction::resumeUpdate()
+{
+    return m_update.resume();
+}
+
+bool DeploymentAction::cancelUpdate()
+{
+    return m_update.cancel();
 }
 
 bool DeploymentAction::fromJson(const JValue& json)
@@ -135,42 +259,58 @@ bool DeploymentAction::fromJson(const JValue& json)
     }
 
     for (JValue chunk : json["deployment"]["chunks"].items()) {
-        shared_ptr<SoftwareModule> softwareModule = SoftwareModule::createSoftwareModule(chunk);
-        if (softwareModule) {
-            m_softwareModules.push_back(softwareModule);
-            m_softwareModules.back()->getUpdateState().setCallback( // @suppress("Invalid arguments")
-                std::bind(&DeploymentAction::onUpdateStateChanged,
-                          this,
-                          std::placeholders::_1,
-                          std::placeholders::_2,
-                          std::placeholders::_3
-                 )
-            );
-            m_softwareModules.back()->getDownloadState().setCallback( // @suppress("Invalid arguments")
-                std::bind(&DeploymentAction::onDownloadStateChanged,
-                          this,
-                          std::placeholders::_1,
-                          std::placeholders::_2,
-                          std::placeholders::_3
-                )
-            );
-        }
+        m_modules.emplace_back(chunk);
     }
+    addCallback();
     return true;
 }
 
 bool DeploymentAction::toJson(JValue& json)
 {
     AbsAction::toJson(json);
-    json.put("download", State::toString(m_downloadState.getState()));
-    json.put("update", State::toString(m_updateState.getState()));
+    json.put("download", m_download.getStateStr());
+    json.put("update", m_update.getStateStr());
 
     JValue softwareModules = pbnjson::Array();
-    for (auto it = m_softwareModules.begin(); it != m_softwareModules.end(); ++it) {
+    for (auto it = m_modules.begin(); it != m_modules.end(); ++it) {
         JValue softwareModule = pbnjson::Object();
-        (*it)->toJson(softwareModule);
+        it->toJson(softwareModule);
         softwareModules.append(softwareModule);
     }
     json.put("softwareModules", softwareModules);
     return true;
+}
+
+
+void DeploymentAction::addCallback()
+{
+    for (auto it = m_modules.begin(); it != m_modules.end(); ++it) {
+        it->getDownload().setCallback( // @suppress("Invalid arguments")
+            std::bind(&DeploymentAction::onDownloadStateChanged,
+                      this,
+                      std::placeholders::_1,
+                      std::placeholders::_2,
+                      std::placeholders::_3
+            ),
+            &(*it)
+        );
+
+        it->getUpdate().setCallback( // @suppress("Invalid arguments")
+            std::bind(&DeploymentAction::onUpdateStateChanged,
+                      this,
+                      std::placeholders::_1,
+                      std::placeholders::_2,
+                      std::placeholders::_3
+            ),
+            &(*it)
+        );
+    }
+}
+
+void DeploymentAction::removeCallback()
+{
+    for (auto it = m_modules.begin(); it != m_modules.end(); ++it) {
+        it->getDownload().setCallback(nullptr, nullptr);
+        it->getUpdate().setCallback(nullptr, nullptr);
+    }
 }

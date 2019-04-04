@@ -20,7 +20,8 @@
 #include "util/Logger.h"
 
 Setting::Setting()
-    : m_logCurl(false)
+    : m_onLogCurl(false)
+    , m_onLogHttp(false)
     , m_verbose(false)
     , m_id("")
 {
@@ -38,6 +39,7 @@ void Setting::printHelp()
     cout << "Option) LOG_TYPE=[pmlog|console]"<< endl;
     cout << "Option) LOG_LEVEL=[verbose|debug|info|warning|error]"<< endl;
     cout << "Option) LOG_CURL=[on|off]"<< endl;
+    cout << "Option) LOG_HTTP=[on|off]"<< endl;
     cout << "Example) ID=webOS_kkangeva LOG_TYPE=console LOG_LEVEL=verbose /usr/sbin/swupdater"<< endl;
 }
 
@@ -71,7 +73,12 @@ bool Setting::onInitialization()
 
     env = std::getenv("LOG_CURL");
     if (env && strcmp(env, "on") == 0) {
-        m_logCurl = true;
+        m_onLogCurl = true;
+    }
+
+    env = std::getenv("LOG_HTTP");
+    if (env && strcmp(env, "on") == 0) {
+        m_onLogHttp = true;
     }
     return true;
 }

@@ -17,11 +17,12 @@
 #ifndef CORE_INSTALL_ARTIFACT_H_
 #define CORE_INSTALL_ARTIFACT_H_
 
-#include <core/State.h>
 #include <iostream>
 #include <pbnjson.hpp>
 
-#include "core/HttpCall.h"
+#include "core/HttpFile.h"
+#include "core/State.h"
+#include "ls2/AppInstaller.h"
 #include "interface/IClassName.h"
 #include "interface/IListener.h"
 #include "interface/ISerializable.h"
@@ -32,37 +33,71 @@ using namespace pbnjson;
 class Artifact;
 
 class Artifact : public IClassName,
-                 public State,
-                 public HttpCallListener,
+                 public HttpFileListener,
+                 public AppInstallerListener,
                  public ISerializable {
 public:
     Artifact(const JValue& json);
     virtual ~Artifact();
 
-    // IInstallable
-    virtual bool ready() override;
-    virtual bool start() override;
+    // HttpFileListener
+    virtual void onStartedDownload(HttpFile* call) override;
+    virtual void onProgressDownload(HttpFile* call) override;
+    virtual void onCompletedDownload(HttpFile* call) override;
+    virtual void onFailedDownload(HttpFile* call) override;
 
-    // HttpCallListener
-    virtual void onStartedDownload(HttpCall* call) override;
-    virtual void onProgressDownload(HttpCall* call) override;
-    virtual void onCompletedDownload(HttpCall* call) override;
-    virtual void onFailedDownload(HttpCall* call) override;
+    bool prepareDownload();
+    bool startDownload();
+
+    // AppInstallerListener
+    virtual void onInstallSubscription(pbnjson::JValue subscriptionPayload) override;
+
+    bool prepareUpdate();
+    bool startUpdate();
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
     virtual bool toJson(JValue& json) override;
 
-    // getter
-    const string& getFullname()
+    const string& getFileName()
     {
-        return m_fullname;
+        return m_fileName;
+    }
+
+    const string getFileExtension()
+    {
+        string extension = m_fileName.substr(m_fileName.find_last_of(".") + 1);
+        return extension;
+    }
+
+    const string getIpkName()
+    {
+        string ipkName = m_fileName.substr(0, m_fileName.find_first_of("_"));
+        return ipkName;
+    }
+
+    const string getFullName()
+    {
+        return DIRNAME + m_fileName;
+    }
+
+    State& getDownload()
+    {
+        return m_download;
+    }
+
+    State& getUpdate()
+    {
+        return m_update;
     }
 
 private:
-    string m_filename;
-    string m_fullname;
+    const static string DIRNAME;
 
+    // file info
+    string m_fileName;
+
+    // file size
     int m_total;
     int m_curSize;
     int m_prevSize;
@@ -73,9 +108,13 @@ private:
 
     // download link
     string m_md5sum;
-    string m_download;
+    string m_url;
 
-    shared_ptr<HttpCall> m_httpCall;
+    State m_download;
+    State m_update;
+    bool m_updateInProgress;
+
+    shared_ptr<HttpFile> m_httpFile;
 };
 
 #endif /* CORE_INSTALL_ARTIFACT_H_ */

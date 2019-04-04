@@ -36,7 +36,7 @@ public:
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    void onStateChanged(State *installer, enum StateType prev, enum StateType cur);
+    void onStateChanged(enum StateType prev, enum StateType cur, void *source);
 
     // IInstallable
     virtual void onChangeStatus();

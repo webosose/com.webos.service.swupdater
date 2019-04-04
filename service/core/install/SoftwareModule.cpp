@@ -15,29 +15,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "core/install/SoftwareModule.h"
-#include "core/install/AppSoftwareModule.h"
-#include "core/install/OSSoftwareModule.h"
 #include "ls2/AppInstaller.h"
 #include "PolicyManager.h"
 #include "util/JValueUtil.h"
-
-shared_ptr<SoftwareModule> SoftwareModule::createSoftwareModule(JValue& json)
-{
-    shared_ptr<SoftwareModule> softwareModule = nullptr;
-
-    if (!json.hasKey("part"))
-        return nullptr;
-
-    if (SoftwareModule::toEnum(json["part"].asString()) == SoftwareModuleType_Application) {
-        softwareModule = make_shared<AppSoftwareModule>();
-        softwareModule->fromJson(json);
-    } else if (SoftwareModule::toEnum(json["part"].asString()) == SoftwareModuleType_OS) {
-        softwareModule = make_shared<OSSoftwareModule>();
-        softwareModule->fromJson(json);
-    }
-
-    return softwareModule;
-}
 
 string SoftwareModule::toString(enum SoftwareModuleType& type)
 {
@@ -67,75 +47,154 @@ SoftwareModuleType SoftwareModule::toEnum(const string& type)
     return SoftwareModuleType_Unknown;
 }
 
-SoftwareModule::SoftwareModule()
+SoftwareModule::SoftwareModule(JValue& json)
     : m_type(SoftwareModuleType_Unknown)
     , m_name("")
     , m_version("")
+    , m_download("SoftwareModule-download")
+    , m_update("SoftwareModule-update")
+    , m_curDownload(0)
+    , m_curUpdate(0)
 {
     setClassName("SoftwareModule");
-    m_downloadState.setName("SoftwareModule-download");
-    m_updateState.setName("SoftwareModule-update");
+    fromJson(json);
 }
 
 SoftwareModule::~SoftwareModule()
 {
+    removeCallback();
 }
 
-bool SoftwareModule::ready(bool download)
+void SoftwareModule::onDownloadStateChanged(enum StateType prev, enum StateType cur, void *source)
 {
-    if (download) {
-        for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
-            if (!it->ready() || !m_downloadState.ready()) {
-                return false;
-            }
+    switch (cur) {
+    case StateType_NONE:
+        break;
+
+    case StateType_READY:
+        break;
+
+    case StateType_PAUSED:
+        break;
+
+    case StateType_RUNNING:
+        break;
+
+    case StateType_CANCELED:
+        m_download.cancel();
+        break;
+
+    case StateType_COMPLETED:
+        if (m_curDownload == m_artifacts.size() -1) {
+            m_download.complete();
+            break;
         }
-        return true;
-    } else {
-        return m_updateState.ready();
+        m_curDownload++;
+        m_artifacts[m_curDownload].startDownload();
+        break;
+
+    case StateType_FAILED:
+        m_download.fail();
+        break;
     }
+
+    // All artifacts are downloaded
+    if (m_download.getState() == StateType_COMPLETED && m_update.getState() == StateType_RUNNING) {
+        m_artifacts[m_curUpdate].startUpdate();
+    }
+}
+
+bool SoftwareModule::prepareDownload()
+{
+    enum TransitionType type = m_download.canPrepare();
+    if (type != TransitionType_Allowed) {
+        return State::writeCommonLog(m_download, type, getClassName(), "prepare");
+    }
+    for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
+        if (!it->prepareDownload()) {
+            m_download.fail();
+            return false;
+        }
+    }
+    return m_download.prepare();
 }
 
 bool SoftwareModule::startDownload()
 {
+    enum TransitionType type = m_download.canStart();
+    if (type != TransitionType_Allowed) {
+        return State::writeCommonLog(m_download, type, getClassName(), "start");
+    }
+
+    m_curDownload = 0;
+    if (!m_artifacts[m_curDownload].startDownload()) {
+        Logger::verbose(getClassName(), "Start download - " + m_artifacts.begin()->getFileName());
+        return false;
+    }
+    return m_download.start();
+}
+
+void SoftwareModule::onUpdateStateChanged(enum StateType prev, enum StateType cur, void *source)
+{
+    switch (cur) {
+     case StateType_NONE:
+         break;
+
+     case StateType_READY:
+         break;
+
+     case StateType_PAUSED:
+         break;
+
+     case StateType_RUNNING:
+         break;
+
+     case StateType_CANCELED:
+         m_update.canCancel();
+         break;
+
+     case StateType_COMPLETED:
+         if (m_curUpdate == m_artifacts.size() -1) {
+             m_update.complete();
+             break;
+         }
+         m_curUpdate++;
+         m_artifacts[m_curUpdate].startUpdate();
+         break;
+
+     case StateType_FAILED:
+         m_update.fail();
+         break;
+     }
+}
+
+bool SoftwareModule::prepareUpdate()
+{
+    enum TransitionType type = m_update.canPrepare();
+    if (type != TransitionType_Allowed) {
+        return State::writeCommonLog(m_update, type, getClassName(), "prepare");
+    }
     for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
-        if (!it->start()) {
+        if (!it->prepareUpdate()) {
+            m_update.fail();
             return false;
         }
     }
-    return m_downloadState.start();
+    return m_update.prepare();
 }
 
-bool SoftwareModule::pause(bool download)
+bool SoftwareModule::startUpdate()
 {
-    return false;
-}
-
-bool SoftwareModule::resume(bool download)
-{
-    return false;
-}
-
-bool SoftwareModule::cancel(bool download)
-{
-    return false;
-}
-
-void SoftwareModule::onDownloadStateChanged(State *installer, enum StateType prev, enum StateType cur)
-{
-    if (cur == StateType_FAILED) {
-        m_downloadState.fail();
+    enum TransitionType type = m_update.canStart();
+    if (type != TransitionType_Allowed) {
+        return State::writeCommonLog(m_update, type, getClassName(), "start");
     }
 
-    for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
-        if (it->getState() != cur) {
-            return;
-        }
+    m_curUpdate = 0;
+    if (m_download.getState() == StateType_COMPLETED) {
+        m_artifacts[m_curUpdate].startUpdate();
     }
-
-    State::transition(m_downloadState, cur);
-    if (m_downloadState.getState() == StateType_COMPLETED && m_updateState.getState() == StateType_RUNNING) {
-        startUpdate();
-    }
+    return m_update.start();
 }
 
 bool SoftwareModule::fromJson(const JValue& json)
@@ -152,16 +211,10 @@ bool SoftwareModule::fromJson(const JValue& json)
     if (json.hasKey("artifacts") && json["artifacts"].isArray()) {
         for (JValue artifact : json["artifacts"].items()) {
             m_artifacts.emplace_back(artifact);
-            m_artifacts.back().setCallback( // @suppress("Invalid arguments")
-                std::bind(&SoftwareModule::onDownloadStateChanged,
-                          this,
-                          std::placeholders::_1,
-                          std::placeholders::_2,
-                          std::placeholders::_3
-                )
-            );
         }
     }
+
+    addCallback();
     return true;
 }
 
@@ -170,8 +223,8 @@ bool SoftwareModule::toJson(JValue& json)
     json.put("type", toString(m_type));
     json.put("name", m_name);
     json.put("version", m_version);
-    json.put("download", State::toString(m_downloadState.getState()));
-    json.put("update", State::toString(m_updateState.getState()));
+    json.put("download", m_download.getStateStr());
+    json.put("update", m_update.getStateStr());
 
     JValue artifacts = pbnjson::Array();
     for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
@@ -181,4 +234,36 @@ bool SoftwareModule::toJson(JValue& json)
     }
     json.put("artifacts", artifacts);
     return true;
+}
+
+void SoftwareModule::addCallback()
+{
+    for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
+        it->getDownload().setCallback( // @suppress("Invalid arguments")
+            std::bind(&SoftwareModule::onDownloadStateChanged,
+                      this,
+                      std::placeholders::_1,
+                      std::placeholders::_2,
+                      std::placeholders::_3
+            ),
+            &(*it)
+        );
+        it->getUpdate().setCallback( // @suppress("Invalid arguments")
+            std::bind(&SoftwareModule::onUpdateStateChanged,
+                      this,
+                      std::placeholders::_1,
+                      std::placeholders::_2,
+                      std::placeholders::_3
+            ),
+            &(*it)
+        );
+    }
+}
+
+void SoftwareModule::removeCallback()
+{
+    for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
+        it->getDownload().setCallback(nullptr, nullptr);
+        it->getUpdate().setCallback(nullptr, nullptr);
+    }
 }

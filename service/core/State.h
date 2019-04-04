@@ -16,10 +16,8 @@
 
 #include <iostream>
 #include <functional>
-#include <vector>
 
 #include "util/Logger.h"
-#include "interface/IListener.h"
 
 using namespace std;
 
@@ -28,13 +26,21 @@ enum StateType {
     StateType_READY,
     StateType_PAUSED,
     StateType_RUNNING,
+    StateType_CANCELED,
     StateType_COMPLETED,
     StateType_FAILED,
 };
 
+enum TransitionType {
+    TransitionType_Unknown = -2,
+    TransitionType_NotAllowed = -1,
+    TransitionType_Same = 0,
+    TransitionType_Allowed = 1
+};
+
 class State;
 
-typedef std::function<void(State* state, enum StateType prev, enum StateType cur)> Callback;
+typedef std::function<void(enum StateType prev, enum StateType cur, void* source)> Callback;
 
 class State {
 public:
@@ -53,6 +59,9 @@ public:
         case StateType_RUNNING:
             return "running";
 
+        case StateType_CANCELED:
+            return "canceled";
+
         case StateType_COMPLETED:
             return "completed";
 
@@ -62,177 +71,158 @@ public:
         return "unknown";
     }
 
-    static bool transition(State& state, enum StateType type) {
-        switch (type) {
-        case StateType_NONE:
-        case StateType_READY:
+    static bool writeCommonLog(State& state, enum TransitionType type, const string& className, const string& transition)
+    {
+        if (type == TransitionType_NotAllowed) {
+            Logger::info(className, transition + " is not allowed from " + state.getStateStr());
             return false;
-
-        case StateType_PAUSED:
-            return state.pause();
-
-        case StateType_RUNNING:
-            return state.start();
-
-        case StateType_COMPLETED:
-            return state.complete();
-
-        case StateType_FAILED:
-            state.fail();
+        } else if (type == TransitionType_Same) {
+            Logger::info(className, transition + " is already called");
             return true;
         }
-        return false;
+        return true;
     }
 
-    State()
-        : m_name("Installable")
+    State(const string& name)
+        : m_name(name)
         , m_state(StateType_NONE)
+        , m_callbackData(nullptr)
     {
     }
 
     virtual ~State()
     {
-        if (m_state == StateType_PAUSED || m_state == StateType_RUNNING)
+        if (m_state == StateType_PAUSED || m_state == StateType_RUNNING) {
             cancel();
+        }
     }
 
-    virtual bool ready()
+    enum TransitionType canPrepare()
     {
-        switch(m_state) {
-        case StateType_PAUSED:
-        case StateType_COMPLETED:
-        case StateType_FAILED:
-        case StateType_RUNNING:
+        return checkTransition(StateType_READY);
+    }
+
+    bool prepare()
+    {
+        if (checkTransition(StateType_READY) == TransitionType_NotAllowed)
             return false;
-
-        case StateType_READY:
-            return true;
-
-        case StateType_NONE:
-            break;
-        }
-        changeStatus(StateType_READY);
+        changeState(StateType_READY);
         return true;
     }
 
-    virtual bool start()
+    enum TransitionType canStart()
     {
-        switch(m_state) {
-        case StateType_NONE:
-        case StateType_PAUSED:
-        case StateType_COMPLETED:
-        case StateType_FAILED:
+        return checkTransition(StateType_RUNNING);
+    }
+
+    bool start()
+    {
+        if (canStart() == TransitionType_NotAllowed)
             return false;
-
-        case StateType_RUNNING:
-            return true;
-
-        case StateType_READY:
-            break;
-        }
-
-        changeStatus(StateType_RUNNING);
+        changeState(StateType_RUNNING);
         return true;
     }
 
-    virtual bool pause()
+    enum TransitionType canPause()
     {
-        switch(m_state) {
-        case StateType_NONE:
-        case StateType_READY:
-        case StateType_COMPLETED:
-        case StateType_FAILED:
+        return checkTransition(StateType_PAUSED);
+    }
+
+    bool pause()
+    {
+        if (canPause() == TransitionType_NotAllowed)
             return false;
-
-        case StateType_PAUSED:
-            return true;
-
-        case StateType_RUNNING:
-            break;
-        }
-
-        changeStatus(StateType_PAUSED);
+        changeState(StateType_PAUSED);
         return true;
     }
 
-    virtual bool resume()
+    enum TransitionType canResume()
     {
-        switch(m_state) {
-        case StateType_NONE:
-        case StateType_READY:
-        case StateType_COMPLETED:
-        case StateType_FAILED:
+        return checkTransition(StateType_RUNNING);
+    }
+
+    bool resume()
+    {
+        if (canResume() == TransitionType_NotAllowed)
             return false;
-
-        case StateType_RUNNING:
-            return true;
-
-        case StateType_PAUSED:
-            break;
-        }
-
-        changeStatus(StateType_RUNNING);
+        changeState(StateType_RUNNING);
         return true;
     }
 
-    virtual bool cancel()
+    enum TransitionType canCancel()
     {
-        switch(m_state) {
-        case StateType_NONE:
-        case StateType_READY:
-        case StateType_COMPLETED:
-        case StateType_FAILED:
+        return checkTransition(StateType_CANCELED);
+    }
+
+    bool cancel()
+    {
+        if (canCancel() == TransitionType_NotAllowed)
             return false;
-
-        case StateType_PAUSED:
-        case StateType_RUNNING:
-            break;
-        }
-
-        changeStatus(StateType_READY);
+        changeState(StateType_CANCELED);
         return true;
     }
 
-    virtual bool complete()
+    enum TransitionType canComplete()
     {
-        switch(m_state) {
-        case StateType_NONE:
-        case StateType_READY:
-        case StateType_FAILED:
-        case StateType_PAUSED:
+        return checkTransition(StateType_COMPLETED);
+    }
+
+    bool complete()
+    {
+        if (canComplete() == TransitionType_NotAllowed)
             return false;
-
-        case StateType_COMPLETED:
-            return true;
-
-        case StateType_RUNNING:
-            break;
-        }
-
-        changeStatus(StateType_COMPLETED);
+        changeState(StateType_COMPLETED);
         return true;
     }
 
-    virtual void fail()
+    enum TransitionType canFail()
     {
-        switch(m_state) {
-        case StateType_NONE:
-        case StateType_READY:
-        case StateType_PAUSED:
-        case StateType_COMPLETED:
-        case StateType_FAILED:
-            return;
-
-        case StateType_RUNNING:
-            break;
-        }
-        changeStatus(StateType_FAILED);
+        return checkTransition(StateType_FAILED);
     }
 
+    bool fail()
+    {
+        if (canFail() == TransitionType_NotAllowed)
+            return false;
+        changeState(StateType_FAILED);
+        return true;
+    }
+
+    bool transit(enum StateType state)
+    {
+        switch (state) {
+        case StateType_NONE:
+            return false;
+
+        case StateType_READY:
+            return prepare();
+
+        case StateType_PAUSED:
+            return pause();
+
+        case StateType_RUNNING:
+            return start();
+
+        case StateType_CANCELED:
+            return cancel();
+
+        case StateType_COMPLETED:
+            return complete();
+
+        case StateType_FAILED:
+            return fail();
+        }
+        return false;
+    }
 
     enum StateType getState()
     {
         return m_state;
+    }
+
+    string getStateStr()
+    {
+        return toString(m_state);
     }
 
     const string& getName()
@@ -240,36 +230,163 @@ public:
         return m_name;
     }
 
-    void setName(const string& name)
+    void setCallback(Callback callbackFunc, void* callbackData)
     {
-        m_name = name;
-    }
-
-    void setCallback(Callback callback)
-    {
-        m_callback = std::move(callback);
-    }
-
-protected:
-    void changeStatus(enum StateType nextStatus)
-    {
-        if (m_state == nextStatus)
-            return;
-
-        enum StateType prev = m_state;
-        m_state = nextStatus;
-
-        Logger::info(m_name, toString(prev) + " ==> " + toString(m_state));
-
-        if (m_callback)
-            m_callback(this, prev, m_state);
+        m_callbackFunc = std::move(callbackFunc);
+        m_callbackData = callbackData;
     }
 
 private:
+    enum TransitionType checkTransition(enum StateType state)
+    {
+        switch (m_state) {
+        case StateType_NONE:
+            if (state == StateType_NONE) {
+                return TransitionType_Same;
+            } else if (state == StateType_READY) {
+                return TransitionType_Allowed;
+            } else if (state == StateType_PAUSED) {
+                return TransitionType_Allowed;
+            } else if (state == StateType_RUNNING) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_CANCELED) {
+                return TransitionType_Allowed;
+            } else if (state == StateType_COMPLETED) {
+                return TransitionType_Allowed;
+            } else if (state == StateType_FAILED) {
+                return TransitionType_Allowed;
+            }
+            return TransitionType_Unknown;
+
+        case StateType_READY:
+            if (state == StateType_NONE) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_READY) {
+                return TransitionType_Same;
+            } else if (state == StateType_PAUSED) {
+                return TransitionType_Allowed;
+            } else if (state == StateType_RUNNING) {
+                return TransitionType_Allowed;
+            } else if (state == StateType_CANCELED) {
+                return TransitionType_Allowed;
+            } else if (state == StateType_COMPLETED) {
+                return TransitionType_Allowed;
+            } else if (state == StateType_FAILED) {
+                return TransitionType_Allowed;
+            }
+            return TransitionType_Unknown;
+
+        case StateType_PAUSED:
+            if (state == StateType_NONE) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_READY) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_PAUSED) {
+                return TransitionType_Same;
+            } else if (state == StateType_RUNNING) {
+                return TransitionType_Allowed;
+            } else if (state == StateType_CANCELED) {
+                return TransitionType_Allowed;
+            } else if (state == StateType_COMPLETED) {
+                return TransitionType_Allowed;
+            } else if (state == StateType_FAILED) {
+                return TransitionType_Allowed;
+            }
+            return TransitionType_Unknown;
+
+        case StateType_RUNNING:
+            if (state == StateType_NONE) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_READY) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_PAUSED) {
+                return TransitionType_Allowed;
+            } else if (state == StateType_RUNNING) {
+                return TransitionType_Same;
+            } else if (state == StateType_CANCELED) {
+                return TransitionType_Allowed;
+            } else if (state == StateType_COMPLETED) {
+                return TransitionType_Allowed;
+            } else if (state == StateType_FAILED) {
+                return TransitionType_Allowed;
+            }
+            return TransitionType_Unknown;
+
+        case StateType_CANCELED:
+            if (state == StateType_NONE) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_READY) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_PAUSED) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_RUNNING) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_CANCELED) {
+                return TransitionType_Same;
+            } else if (state == StateType_COMPLETED) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_FAILED) {
+                return TransitionType_NotAllowed;
+            }
+            return TransitionType_Unknown;
+
+        case StateType_COMPLETED:
+            if (state == StateType_NONE) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_READY) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_PAUSED) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_RUNNING) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_CANCELED) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_COMPLETED) {
+                return TransitionType_Same;
+            } else if (state == StateType_FAILED) {
+                return TransitionType_NotAllowed;
+            }
+            return TransitionType_Unknown;
+
+        case StateType_FAILED:
+            if (state == StateType_NONE) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_READY) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_PAUSED) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_RUNNING) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_CANCELED) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_COMPLETED) {
+                return TransitionType_NotAllowed;
+            } else if (state == StateType_FAILED) {
+                return TransitionType_Same;
+            }
+            return TransitionType_Unknown;
+        }
+        return TransitionType_Unknown;
+    }
+
+    void changeState(enum StateType nextState)
+    {
+        if (m_state == nextState)
+            return;
+
+        enum StateType prev = m_state;
+        m_state = nextState;
+
+        Logger::info("ChangeState", m_name, toString(prev) + " ==> " + toString(m_state));
+        if (m_callbackFunc)
+            m_callbackFunc(prev, m_state, m_callbackData);
+    }
+
     string m_name;
     enum StateType m_state;
 
-    Callback m_callback;
+    Callback m_callbackFunc;
+    void* m_callbackData;
 };
 
 #endif /* CORE_STATE_H_ */

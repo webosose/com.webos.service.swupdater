@@ -16,6 +16,7 @@
 
 #include "ICAS.h"
 #include "Setting.h"
+#include "util/Socket.h"
 
 ICAS::ICAS()
 {
@@ -37,10 +38,13 @@ string ICAS::getEnv(const string& key)
     } else if (key == "hawkbit_url") {
         return "https://maas-ota-server.apps.na.vwapps.io";
     } else if (key == "hawkbit_id") {
-        if (Setting::getInstance().getId().empty())
-            return "webOS_Demo";
-        else
+        if (!Setting::getInstance().getId().empty()) {
             return Setting::getInstance().getId();
+        } else if (!Socket::getMacAddress("wlan0").empty()) {
+            return "webOS_" + Socket::getMacAddress("wlan0");
+        } else {
+            return "webOS_Demo";
+        }
     } else if (key == "hawkbit_token") {
         return "007eecfb134343209cb882d45becd8d7";
     }

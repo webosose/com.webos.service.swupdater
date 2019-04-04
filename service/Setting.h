@@ -35,9 +35,14 @@ public:
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    virtual bool getLogCurl()
+    virtual bool onLogCurl()
     {
-        return m_logCurl;
+        return m_onLogCurl;
+    }
+
+    virtual bool onLogHttp()
+    {
+        return m_onLogHttp;
     }
 
     virtual bool verbose()
@@ -53,7 +58,8 @@ public:
 private:
     Setting();
 
-    bool m_logCurl;
+    bool m_onLogCurl;
+    bool m_onLogHttp;
     bool m_verbose;
     string m_id;
 };

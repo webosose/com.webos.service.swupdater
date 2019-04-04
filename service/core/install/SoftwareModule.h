@@ -17,12 +17,11 @@
 #ifndef CORE_INSTALL_SOFTWAREMODULE_H_
 #define CORE_INSTALL_SOFTWAREMODULE_H_
 
-#include <core/State.h>
 #include <iostream>
-#include <list>
-#include <map>
+#include <deque>
 #include <pbnjson.hpp>
 
+#include "core/State.h"
 #include "core/install/Artifact.h"
 #include "interface/IClassName.h"
 #include "interface/ISerializable.h"
@@ -39,28 +38,22 @@ enum SoftwareModuleType {
     SoftwareModuleType_Mixed
 };
 
-class SoftwareModule;
-
 class SoftwareModule : public IClassName,
                        public ISerializable {
 public:
-    static shared_ptr<SoftwareModule> createSoftwareModule(JValue& json);
-
     static string toString(enum SoftwareModuleType& type);
     static SoftwareModuleType toEnum(const string& type);
 
-    SoftwareModule();
+    SoftwareModule(JValue& json);
     virtual ~SoftwareModule();
 
+    virtual void onDownloadStateChanged(enum StateType prev, enum StateType cur, void *source);
+    bool prepareDownload();
     bool startDownload();
-    virtual bool startUpdate() = 0;
 
-    bool ready(bool download);
-    bool pause(bool download);
-    bool resume(bool download);
-    bool cancel(bool download);
-
-    virtual void onDownloadStateChanged(State *installer, enum StateType prev, enum StateType cur);
+    virtual void onUpdateStateChanged(enum StateType prev, enum StateType cur, void *source);
+    bool prepareUpdate();
+    bool startUpdate();
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
@@ -76,30 +69,31 @@ public:
         return m_name;
     }
 
-    const string& getVersion()
+    State& getDownload()
     {
-        return m_version;
+        return m_download;
     }
 
-    State& getDownloadState()
+    State& getUpdate()
     {
-        return m_downloadState;
-    }
-
-    State& getUpdateState()
-    {
-        return m_updateState;
+        return m_update;
     }
 
 protected:
+    void addCallback();
+    void removeCallback();
+
     enum SoftwareModuleType m_type;
     string m_name;
     string m_version;
 
-    State m_downloadState;
-    State m_updateState;
+    // states
+    State m_download;
+    State m_update;
 
-    list<Artifact> m_artifacts;
+    deque<Artifact> m_artifacts;
+    unsigned int m_curDownload;
+    unsigned int m_curUpdate;
 
 };
 

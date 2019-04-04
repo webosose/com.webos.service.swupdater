@@ -19,7 +19,7 @@
 
 #include <core/State.h>
 #include <iostream>
-#include <list>
+#include <deque>
 #include <map>
 
 #include "core/AbsAction.h"
@@ -32,14 +32,25 @@ public:
     DeploymentAction(JValue& json);
     virtual ~DeploymentAction();
 
-    bool ready(bool download);
-    bool start(bool download);
-    bool pause(bool download);
-    bool resume(bool download);
-    bool cancel(bool download);
+    bool prepare();
+    bool start();
+    bool pause();
+    bool resume();
+    bool cancel();
 
-    void onDownloadStateChanged(State *installer, enum StateType prev, enum StateType cur);
-    void onUpdateStateChanged(State *installer, enum StateType prev, enum StateType cur);
+    void onDownloadStateChanged(enum StateType prev, enum StateType cur, void *source);
+    bool prepareDownload();
+    bool startDownload();
+    bool pauseDownload();
+    bool resumeDownload();
+    bool cancelDownload();
+
+    void onUpdateStateChanged(enum StateType prev, enum StateType cur, void *source);
+    bool prepareUpdate();
+    bool startUpdate();
+    bool pauseUpdate();
+    bool resumeUpdate();
+    bool cancelUpdate();
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
@@ -57,27 +68,37 @@ public:
 
     bool isComplete()
     {
-        return (m_downloadState.getState() == StateType_COMPLETED && m_updateState.getState() == StateType_COMPLETED);
+        return (m_download.getState() == StateType_COMPLETED && m_update.getState() == StateType_COMPLETED);
+    }
+
+    bool isFailed()
+    {
+        return (m_download.getState() == StateType_FAILED || m_update.getState() == StateType_FAILED);
     }
 
     State& getDownloadState()
     {
-        return m_downloadState;
+        return m_download;
     }
 
     State& getUpdateState()
     {
-        return m_updateState;
+        return m_update;
     }
 
 private:
+    void addCallback();
+    void removeCallback();
+
     bool m_isForceDownload;
     bool m_isForceUpdate;
 
-    State m_downloadState;
-    State m_updateState;
+    State m_download;
+    State m_update;
 
-    list<shared_ptr<SoftwareModule>> m_softwareModules;
+    deque<SoftwareModule> m_modules;
+    unsigned int m_curDownload;
+    unsigned int m_curUpdate;
 };
 
 #endif /* CORE_INSTALL_DEPLOYMENTACTION_H_ */

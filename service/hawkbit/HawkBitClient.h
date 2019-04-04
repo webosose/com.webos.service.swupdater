@@ -17,9 +17,9 @@
 #ifndef HAWKBIT_HAWKBITCLIENT_H_
 #define HAWKBIT_HAWKBITCLIENT_H_
 
+#include <core/HttpRequest.h>
 #include <pbnjson.hpp>
 
-#include "core/HttpCall.h"
 #include "core/cancel/CancellationAction.h"
 #include "core/install/DeploymentAction.h"
 #include "interface/IInitializable.h"
@@ -68,7 +68,8 @@ public:
     bool postCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id);
     bool putConfigData(JValue& requestPayload, JValue& responsePayload);
     bool getDeploymentAction(JValue& requestPayload, JValue& responsePayload, string& id);
-    bool postDeploymentAction(JValue& responsePayload, const string& id);
+    bool postDeploymentActionSuccess(JValue& responsePayload, const string& id);
+    bool postDeploymentActionFailed(JValue& responsePayload, const string& id);
     bool getSoftwaremodules(JValue& requestPayload, JValue& responsePayload, string& id);
 
 private:

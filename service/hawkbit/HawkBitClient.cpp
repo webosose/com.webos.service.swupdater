@@ -17,7 +17,8 @@
 #include <curl/curl.h>
 #include <glib.h>
 
-#include "core/HttpCall.h"
+#include "Setting.h"
+#include "core/HttpRequest.h"
 #include "external/glibcurl.h"
 #include "hardware/AbsHardware.h"
 #include "hawkbit/HawkBitClient.h"
@@ -144,10 +145,8 @@ bool HawkBitClient::postComplete(shared_ptr<AbsAction> action)
         url = m_hawkBitUrl + "/cancelAction/" + action->getId() + "/feedback";
     }
 
-    HttpCall httpCall(MethodType_POST, url);
-    httpCall.setBody(requestPayload);
-
-    if (!httpCall.perform()) {
+    HttpRequest httpCall;
+    if (!httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
         Logger::error(getClassName(), "Failed to post feedback");
         return false;
     }
@@ -156,8 +155,9 @@ bool HawkBitClient::postComplete(shared_ptr<AbsAction> action)
 
 bool HawkBitClient::postProgress(shared_ptr<DeploymentAction> action, int of, int cnt)
 {
-    JValue requestPayload = pbnjson::Object();
+    const string url = m_hawkBitUrl + "/deploymentBase/" + action->getId() + "/feedback";
 
+    JValue requestPayload = pbnjson::Object();
     requestPayload.put("id", action->getId());
     requestPayload.put("time", Time::getUtcTime());
     requestPayload.put("status", pbnjson::Object());
@@ -168,11 +168,8 @@ bool HawkBitClient::postProgress(shared_ptr<DeploymentAction> action, int of, in
     requestPayload["status"]["result"]["progress"].put("of", of);
     requestPayload["status"]["result"]["progress"].put("cnt", cnt);
 
-    string url = m_hawkBitUrl + "/deploymentBase/" + action->getId() + "/feedback";
-    HttpCall httpCall(MethodType_POST, url);
-    httpCall.setBody(requestPayload);
-
-    if (!httpCall.perform()) {
+    HttpRequest httpCall;
+    if (httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
         Logger::error(getClassName(), "Failed to post feedback");
         return false;
     }
@@ -211,64 +208,83 @@ void HawkBitClient::stop()
 
 bool HawkBitClient::getBase(JValue& responsePayload, const string& url)
 {
-    HttpCall httpCall(MethodType_GET, url);
+    HttpRequest httpCall;
 
-    Logger::verbose(getClassName(), "RestAPI", "GET " + url);
-    if (!httpCall.perform()) {
+    if (Setting::getInstance().onLogHttp()) {
+        Logger::verbose(getClassName(), "RestAPI", "GET " + url);
+    }
+    if (!httpCall.open(MethodType_GET, url) || !httpCall.send()) {
         Logger::error(getClassName(), "Failed to perform HttpCall");
         return false;
     }
 
-    long responseCode = httpCall.getResponseCode();
+    long responseCode = httpCall.getStatus();
     if (responseCode != 200L) {
-        Logger::error(getClassName(), HttpCall::toString(responseCode));
+        Logger::error(getClassName(), HttpRequest::toString(responseCode));
         return false;
     }
 
-    responsePayload = JDomParser::fromString(httpCall.getResponsePayload());
+    responsePayload = JDomParser::fromString(httpCall.getResponseText());
+    if (Setting::getInstance().onLogHttp()) {
+        Logger::verbose(getClassName(), "Response - \n" + responsePayload.stringify("    "));
+    }
     return true;
 }
 
 bool HawkBitClient::getCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id)
 {
     const string url = m_hawkBitUrl + "/cancelAction/" + id;
-    HttpCall httpCall(MethodType_GET, url);
+    HttpRequest httpCall;
+    httpCall.open(MethodType_GET, url);
 
-    Logger::info(getClassName(), "RestAPI", "GET Cancellation Action");
+    if (Setting::getInstance().onLogHttp()) {
+        Logger::verbose(getClassName(), "RestAPI", "GET Cancellation Action");
+    }
     return true;
 }
 
 bool HawkBitClient::postCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id)
 {
     const string url = m_hawkBitUrl + "/cancelAction/" + id + "/feedback";
-    HttpCall httpCall(MethodType_POST, url);
+    HttpRequest httpCall;
+    httpCall.open(MethodType_POST, url);
 
-    Logger::info(getClassName(), "RestAPI", "POST Cancellation Action");
+    if (Setting::getInstance().onLogHttp()) {
+        Logger::verbose(getClassName(), "RestAPI", "POST Cancellation Action");
+    }
     return true;
 }
 
 bool HawkBitClient::putConfigData(JValue& requestPayload, JValue& responsePayload)
 {
     const string url = m_hawkBitUrl + "/configData";
-    HttpCall httpCall(MethodType_PUT, url);
+    HttpRequest httpCall;
+    httpCall.open(MethodType_PUT, url);
 
-    Logger::info(getClassName(), "RestAPI", "PUT ConfigData");
+    if (Setting::getInstance().onLogHttp()) {
+        Logger::verbose(getClassName(), "RestAPI", "PUT ConfigData");
+    }
     return true;
 }
 
 bool HawkBitClient::getDeploymentAction(JValue& requestPayload, JValue& responsePayload, string& id)
 {
     const string url = m_hawkBitUrl + "/deploymentBase/" + id;
-    HttpCall httpCall(MethodType_GET, url);
+    HttpRequest httpCall;
+    httpCall.open(MethodType_GET, url);
 
-    Logger::info(getClassName(), "RestAPI", "GET Deployment Action");
+    if (Setting::getInstance().onLogHttp()) {
+        Logger::verbose(getClassName(), "RestAPI", "GET Deployment Action");
+    }
     return true;
 }
 
-bool HawkBitClient::postDeploymentAction(JValue& responsePayload, const string& id)
+bool HawkBitClient::postDeploymentActionSuccess(JValue& responsePayload, const string& id)
 {
-    Logger::info(getClassName(), "RestAPI", "POST Deployment Action");
     const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
+    if (Setting::getInstance().onLogHttp()) {
+        Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
+    }
 
     JValue requestPayload = pbnjson::Object();
     requestPayload.put("id", id);
@@ -278,10 +294,31 @@ bool HawkBitClient::postDeploymentAction(JValue& responsePayload, const string& 
     requestPayload["status"].put("result", pbnjson::Object());
     requestPayload["status"]["result"].put("finished", "success");
 
-    HttpCall httpCall(MethodType_POST, url);
-    httpCall.setBody(requestPayload);
+    HttpRequest httpCall;
+    if (!httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
+        Logger::error(getClassName(), "Failed to post feedback");
+        return false;
+    }
+    return true;
+}
 
-    if (!httpCall.perform()) {
+bool HawkBitClient::postDeploymentActionFailed(JValue& responsePayload, const string& id)
+{
+    const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
+    if (Setting::getInstance().onLogHttp()) {
+        Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
+    }
+
+    JValue requestPayload = pbnjson::Object();
+    requestPayload.put("id", id);
+    requestPayload.put("time", Time::getUtcTime());
+    requestPayload.put("status", pbnjson::Object());
+    requestPayload["status"].put("execution", "closed");
+    requestPayload["status"].put("result", pbnjson::Object());
+    requestPayload["status"]["result"].put("finished", "failure");
+
+    HttpRequest httpCall;
+    if (!httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
         Logger::error(getClassName(), "Failed to post feedback");
         return false;
     }
@@ -291,9 +328,12 @@ bool HawkBitClient::postDeploymentAction(JValue& responsePayload, const string& 
 bool HawkBitClient::getSoftwaremodules(JValue& requestPayload, JValue& responsePayload, string& id)
 {
     const string url = m_hawkBitUrl + "/softwaremodules/" + id + "/artifacts";
-    HttpCall httpCall(MethodType_GET, url);
+    HttpRequest httpCall;
+    httpCall.open(MethodType_GET, url);
 
-    Logger::info(getClassName(), "RestAPI", "GET Softwaremodules");
+    if (Setting::getInstance().onLogHttp()) {
+        Logger::info(getClassName(), "RestAPI", "GET Softwaremodules");
+    }
     return true;
 }
 

@@ -19,7 +19,7 @@
 #include <PolicyManager.h>
 #include <Setting.h>
 
-#include <updater/FOSSInstaller.h>
+#include "updater/FOSSInstaller.h"
 
 using namespace std;
 using namespace pbnjson;
