@@ -18,6 +18,7 @@
 #define CORE_HTTPCALL_H_
 
 #include <algorithm>
+#include <map>
 #include <sstream>
 #include <string>
 #include <curl/curl.h>
@@ -108,6 +109,8 @@ private:
     void prepare();
     void appendHeader(const std::string& key, const std::string& val);
     void close();
+
+    static map<CURL*, HttpCall*> s_httpCallMap;
 
     // request
     CURL* m_curl;

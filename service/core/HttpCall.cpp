@@ -20,6 +20,8 @@
 #include "hardware/AbsHardware.h"
 #include "Setting.h"
 
+map<CURL*, HttpCall*> HttpCall::s_httpCallMap = map<CURL*, HttpCall*>();
+
 string HttpCall::toString(long responseCode)
 {
     switch(responseCode) {
@@ -92,12 +94,13 @@ bool HttpCall::download()
         return false;
     }
 
-    glibcurl_set_callback(&HttpCall::onReceiveEvent, this);
+    glibcurl_set_callback(&HttpCall::onReceiveEvent, nullptr);
     CURLMcode rc = CURLM_OK;
     if (CURLM_OK != (rc = glibcurl_add(m_curl))) {
         Logger::error(getClassName(), "Failed in glibcurl_add", curl_multi_strerror(rc));
         return false;
     }
+    s_httpCallMap[m_curl] = this;
 
     if (m_listener) m_listener->onStartedDownload(this);
     return true;
@@ -139,12 +142,6 @@ void HttpCall::setMethod(MethodType method)
 
 void HttpCall::onReceiveEvent(void* userdata)
 {
-    HttpCall* self = static_cast<HttpCall*>(userdata);
-    if (!self) {
-        Logger::error(self->getClassName(), "userdata is null");
-        return;
-    }
-
     CURLMsg* curlMsg = nullptr;
     int size;
     while (true) {
@@ -154,10 +151,17 @@ void HttpCall::onReceiveEvent(void* userdata)
         }
 
         if (curlMsg->msg != CURLMSG_DONE)  {
-            Logger::warning(self->getClassName(), "Unknown CURLMsg");
+            Logger::warning("HttpCall", "Unknown CURLMsg");
             continue;
         }
 
+        HttpCall* self = s_httpCallMap[curlMsg->easy_handle];
+        if (!self) {
+            Logger::error("HttpCall", "HttpCall is null");
+            break;
+        }
+
+        s_httpCallMap.erase(curlMsg->easy_handle);
         glibcurl_remove(self->m_curl);
         self->close();
         if (self->m_listener) self->m_listener->onCompletedDownload(self);
