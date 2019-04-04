@@ -15,20 +15,3 @@
 # limitations under the License.
 #
 # LICENSE@@@
-
-cmake_minimum_required(VERSION 2.8.7)
-
-project(com.webos.service.swupdater)
-
-include(webOS/webOS)
-
-# modules
-webos_modules_init(1 1 1 QUALIFIER RC4)
-webos_component(1 0 0)
-
-add_subdirectory(service)
-add_subdirectory(application)
-
-# bus
-webos_build_system_bus_files()
-

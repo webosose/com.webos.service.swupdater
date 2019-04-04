@@ -1,0 +1,16 @@
+{
+	"id": "com.webos.app.swupdater",
+	"version": "1.0.0",
+	"vendor": "LGE-SWP",
+	"type": "web",
+	"main": "index.html",
+	"title": "S/W update sampler",
+	"icon": "icon.png",
+	"miniicon": "icon-mini.png",
+	"largeIcon": "icon-large.png",
+	"trustLevel": "trusted",
+	"requiredPermissions": [
+		"private", "public", "swupdate.manage"
+	],
+	"uiRevision": 2
+}
