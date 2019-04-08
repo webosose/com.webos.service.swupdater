@@ -15,35 +15,25 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import React from 'react';
-import kind from '@enact/core/kind';
 import MoonstoneDecorator from '@enact/moonstone/MoonstoneDecorator';
-import Panels from '@enact/moonstone/Panels';
-import css from './App.module.less';
-import MainPanel from '../views/MainPanel';
+import MainView from '../views/MainView';
 
-const App = kind({
-    name: 'App',
+class AppBase extends React.Component {
+    constructor () {
+        super();
+    }
 
-    styles: {
-        css,
-        className: 'app'
-    },
-
-    handlers: {
-        onApplicationClose: () => {
-            if (typeof window === 'object') {
-                window.close();
-            }
+    onApplicationClose = () => {
+        if (typeof window === 'object') {
+            window.close();
         }
-    },
+    }
 
-    render: (props) => (
-        <div {...props}>
-            <Panels onApplicationClose={props.onApplicationClose}>
-                <MainPanel {...props}/>
-            </Panels>
-        </div>
-    )
-});
+    render() {
+        return <MainView />;
+    }
+}
 
-export default MoonstoneDecorator(App);
+const App = MoonstoneDecorator(AppBase);
+
+export default App;
