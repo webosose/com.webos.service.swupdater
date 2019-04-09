@@ -39,32 +39,7 @@ DeploymentAction::~DeploymentAction()
     m_modules.clear();
 }
 
-bool DeploymentAction::prepare()
-{
-    return true;
-}
-
-bool DeploymentAction::start()
-{
-    return true;
-}
-
-bool DeploymentAction::pause()
-{
-    return true;
-}
-
-bool DeploymentAction::resume()
-{
-    return true;
-}
-
-bool DeploymentAction::cancel()
-{
-    return true;
-}
-
-void DeploymentAction::onDownloadStateChanged(enum StateType prev, enum StateType cur, void *source)
+void DeploymentAction::onDownloadStateChanged(enum StateType prev, enum StateType cur)
 {
     switch (cur) {
     case StateType_NONE:
@@ -73,10 +48,13 @@ void DeploymentAction::onDownloadStateChanged(enum StateType prev, enum StateTyp
     case StateType_READY:
         break;
 
-    case StateType_PAUSED:
+    case StateType_WAITING:
         break;
 
     case StateType_RUNNING:
+        break;
+
+    case StateType_PAUSED:
         break;
 
     case StateType_CANCELED:
@@ -127,7 +105,7 @@ bool DeploymentAction::startDownload()
 
     m_curDownload = 0;
     if (!m_modules[m_curDownload].startDownload()) {
-        Logger::verbose(getClassName(), "Start download - " + m_modules[m_curDownload].getName());
+        Logger::verbose(getClassName(), m_modules[m_curDownload].getName(), "Start download");
         return false;
     }
     return m_download.start();
@@ -166,7 +144,7 @@ bool DeploymentAction::cancelDownload()
     return m_download.cancel();
 }
 
-void DeploymentAction::onUpdateStateChanged(enum StateType prev, enum StateType cur, void *source)
+void DeploymentAction::onUpdateStateChanged(enum StateType prev, enum StateType cur)
 {
     switch (cur) {
      case StateType_NONE:
@@ -175,10 +153,13 @@ void DeploymentAction::onUpdateStateChanged(enum StateType prev, enum StateType 
      case StateType_READY:
          break;
 
-     case StateType_PAUSED:
+     case StateType_WAITING:
          break;
 
      case StateType_RUNNING:
+         break;
+
+     case StateType_PAUSED:
          break;
 
      case StateType_CANCELED:
@@ -289,20 +270,16 @@ void DeploymentAction::addCallback()
             std::bind(&DeploymentAction::onDownloadStateChanged,
                       this,
                       std::placeholders::_1,
-                      std::placeholders::_2,
-                      std::placeholders::_3
-            ),
-            &(*it)
+                      std::placeholders::_2
+            )
         );
 
         it->getUpdate().setCallback( // @suppress("Invalid arguments")
             std::bind(&DeploymentAction::onUpdateStateChanged,
                       this,
                       std::placeholders::_1,
-                      std::placeholders::_2,
-                      std::placeholders::_3
-            ),
-            &(*it)
+                      std::placeholders::_2
+            )
         );
     }
 }
@@ -310,7 +287,7 @@ void DeploymentAction::addCallback()
 void DeploymentAction::removeCallback()
 {
     for (auto it = m_modules.begin(); it != m_modules.end(); ++it) {
-        it->getDownload().setCallback(nullptr, nullptr);
-        it->getUpdate().setCallback(nullptr, nullptr);
+        it->getDownload().setCallback(nullptr);
+        it->getUpdate().setCallback(nullptr);
     }
 }

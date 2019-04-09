@@ -64,7 +64,7 @@ bool AppInstaller::install(const string& id, const string& ipkUrl, AppInstallerL
             API.c_str(),
             requestPayload.stringify().c_str()
         );
-        Logger::info(getClassName(), "Call", "Install API is called for " + id);
+        LS2Handler::writeBLog("Call", "/install - " + id, requestPayload);
         listener->getCall().continueWith(_install, listener);
     }
     catch (const LS::Error &e) {

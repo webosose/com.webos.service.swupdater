@@ -65,7 +65,7 @@ SoftwareModule::~SoftwareModule()
     removeCallback();
 }
 
-void SoftwareModule::onDownloadStateChanged(enum StateType prev, enum StateType cur, void *source)
+void SoftwareModule::onDownloadStateChanged(enum StateType prev, enum StateType cur)
 {
     switch (cur) {
     case StateType_NONE:
@@ -74,10 +74,13 @@ void SoftwareModule::onDownloadStateChanged(enum StateType prev, enum StateType 
     case StateType_READY:
         break;
 
-    case StateType_PAUSED:
+    case StateType_WAITING:
         break;
 
     case StateType_RUNNING:
+        break;
+
+    case StateType_PAUSED:
         break;
 
     case StateType_CANCELED:
@@ -99,7 +102,7 @@ void SoftwareModule::onDownloadStateChanged(enum StateType prev, enum StateType 
     }
 
     // All artifacts are downloaded
-    if (m_download.getState() == StateType_COMPLETED && m_update.getState() == StateType_RUNNING) {
+    if (m_download.getState() == StateType_COMPLETED && m_update.getState() == StateType_WAITING) {
         m_artifacts[m_curUpdate].startUpdate();
     }
 }
@@ -128,13 +131,13 @@ bool SoftwareModule::startDownload()
 
     m_curDownload = 0;
     if (!m_artifacts[m_curDownload].startDownload()) {
-        Logger::verbose(getClassName(), "Start download - " + m_artifacts.begin()->getFileName());
+        Logger::verbose(getClassName(), m_artifacts.begin()->getFileName(), "Start download");
         return false;
     }
     return m_download.start();
 }
 
-void SoftwareModule::onUpdateStateChanged(enum StateType prev, enum StateType cur, void *source)
+void SoftwareModule::onUpdateStateChanged(enum StateType prev, enum StateType cur)
 {
     switch (cur) {
      case StateType_NONE:
@@ -143,10 +146,13 @@ void SoftwareModule::onUpdateStateChanged(enum StateType prev, enum StateType cu
      case StateType_READY:
          break;
 
-     case StateType_PAUSED:
+     case StateType_WAITING:
          break;
 
      case StateType_RUNNING:
+         break;
+
+     case StateType_PAUSED:
          break;
 
      case StateType_CANCELED:
@@ -193,8 +199,10 @@ bool SoftwareModule::startUpdate()
     m_curUpdate = 0;
     if (m_download.getState() == StateType_COMPLETED) {
         m_artifacts[m_curUpdate].startUpdate();
+        return m_update.start();
+    } else {
+        return m_update.wait();
     }
-    return m_update.start();
 }
 
 bool SoftwareModule::fromJson(const JValue& json)
@@ -243,19 +251,15 @@ void SoftwareModule::addCallback()
             std::bind(&SoftwareModule::onDownloadStateChanged,
                       this,
                       std::placeholders::_1,
-                      std::placeholders::_2,
-                      std::placeholders::_3
-            ),
-            &(*it)
+                      std::placeholders::_2
+            )
         );
         it->getUpdate().setCallback( // @suppress("Invalid arguments")
             std::bind(&SoftwareModule::onUpdateStateChanged,
                       this,
                       std::placeholders::_1,
-                      std::placeholders::_2,
-                      std::placeholders::_3
-            ),
-            &(*it)
+                      std::placeholders::_2
+            )
         );
     }
 }
@@ -263,7 +267,7 @@ void SoftwareModule::addCallback()
 void SoftwareModule::removeCallback()
 {
     for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ++it) {
-        it->getDownload().setCallback(nullptr, nullptr);
-        it->getUpdate().setCallback(nullptr, nullptr);
+        it->getDownload().setCallback(nullptr);
+        it->getUpdate().setCallback(nullptr);
     }
 }

@@ -47,11 +47,11 @@ public:
     SoftwareModule(JValue& json);
     virtual ~SoftwareModule();
 
-    virtual void onDownloadStateChanged(enum StateType prev, enum StateType cur, void *source);
+    virtual void onDownloadStateChanged(enum StateType prev, enum StateType cur);
     bool prepareDownload();
     bool startDownload();
 
-    virtual void onUpdateStateChanged(enum StateType prev, enum StateType cur, void *source);
+    virtual void onUpdateStateChanged(enum StateType prev, enum StateType cur);
     bool prepareUpdate();
     bool startUpdate();
 

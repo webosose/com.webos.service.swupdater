@@ -30,8 +30,6 @@ PolicyManager::PolicyManager()
 PolicyManager::~PolicyManager()
 {
     if (m_currentAction) {
-        m_currentAction->getUpdateState().setCallback(nullptr, nullptr);
-        m_currentAction->getDownloadState().setCallback(nullptr, nullptr);
         m_currentAction = nullptr;
     }
 }
@@ -61,6 +59,9 @@ bool PolicyManager::onFinalization()
 
 void PolicyManager::onStateChanged(enum StateType prev, enum StateType cur, void *source)
 {
+    if (prev == StateType_NONE)
+        return;
+
     onChangeStatus();
     if (m_currentAction->isComplete()) {
         JValue responsePayload;
@@ -94,6 +95,7 @@ void PolicyManager::onChangeStatus()
     current.put("subscribed", true);
     current.put("returnValue", true);
     if (prev != current) {
+        LS2Handler::writeBLog("Post", "/getStatus", current);
         m_statusPoint->post(current.stringify().c_str());
         prev = current.duplicate();
     }
@@ -139,6 +141,7 @@ void PolicyManager::onPauseDownload(LS::Message& request, JValue& requestPayload
 void PolicyManager::onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
+        responsePayload.put("errorText", "No active deployment action");
         return;
     }
     if (!m_currentAction->resumeDownload()) {
@@ -149,6 +152,7 @@ void PolicyManager::onResumeDownload(LS::Message& request, JValue& requestPayloa
 void PolicyManager::onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
+        responsePayload.put("errorText", "No active deployment action");
         return;
     }
     if (!m_currentAction->cancelDownload()) {
@@ -159,6 +163,7 @@ void PolicyManager::onCancelDownload(LS::Message& request, JValue& requestPayloa
 void PolicyManager::onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
+        responsePayload.put("errorText", "No active deployment action");
         return;
     }
     if (!m_currentAction->startUpdate()) {
@@ -169,6 +174,7 @@ void PolicyManager::onStartInstall(LS::Message& request, JValue& requestPayload,
 void PolicyManager::onPauseInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
+        responsePayload.put("errorText", "No active deployment action");
         return;
     }
     if (!m_currentAction->pauseUpdate()) {
@@ -179,6 +185,7 @@ void PolicyManager::onPauseInstall(LS::Message& request, JValue& requestPayload,
 void PolicyManager::onResumeInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
+        responsePayload.put("errorText", "No active deployment action");
         return;
     }
     if (!m_currentAction->resumeUpdate()) {
@@ -189,6 +196,7 @@ void PolicyManager::onResumeInstall(LS::Message& request, JValue& requestPayload
 void PolicyManager::onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
+        responsePayload.put("errorText", "No active deployment action");
         return;
     }
     if (!m_currentAction->cancelUpdate()) {
@@ -210,31 +218,13 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
     }
     if (m_currentAction) {
         if (m_currentAction->getId() == id) {
-            Logger::info(getClassName(), "Deployment is still in progress");
+            Logger::info(getClassName(), "Update is in progress");
         } else {
             Logger::error(getClassName(), "Unknown error");
         }
         return;
     }
     m_currentAction = make_shared<DeploymentAction>(responsePayload);
-    m_currentAction->getUpdateState().setCallback( // @suppress("Invalid arguments")
-        std::bind(&PolicyManager::onStateChanged,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2,
-                  std::placeholders::_3
-         ),
-         nullptr
-    );
-    m_currentAction->getDownloadState().setCallback( // @suppress("Invalid arguments")
-        std::bind(&PolicyManager::onStateChanged,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2,
-                  std::placeholders::_3
-        ),
-        nullptr
-    );
     if (!m_currentAction->prepareDownload()) {
         Logger::info(getClassName(), "Failed to download");
         return;

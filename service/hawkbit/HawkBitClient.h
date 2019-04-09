@@ -17,10 +17,9 @@
 #ifndef HAWKBIT_HAWKBITCLIENT_H_
 #define HAWKBIT_HAWKBITCLIENT_H_
 
-#include <core/HttpRequest.h>
 #include <pbnjson.hpp>
 
-#include "core/cancel/CancellationAction.h"
+#include "core/HttpRequest.h"
 #include "core/install/DeploymentAction.h"
 #include "interface/IInitializable.h"
 #include "interface/IListener.h"

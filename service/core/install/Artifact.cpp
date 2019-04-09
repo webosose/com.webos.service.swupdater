@@ -15,6 +15,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "core/install/Artifact.h"
+
 #include "util/JValueUtil.h"
 #include "PolicyManager.h"
 
@@ -38,9 +39,8 @@ Artifact::~Artifact()
 
 void Artifact::onStartedDownload(HttpFile* call)
 {
-    Logger::info(getClassName(), "Start downloading - " + call->getFilename());
+    Logger::info(getClassName(), m_fileName, __FUNCTION__);
     m_curSize = call->getFilesize();
-    PolicyManager::getInstance().onChangeStatus();
 }
 
 void Artifact::onProgressDownload(HttpFile* call)
@@ -49,7 +49,8 @@ void Artifact::onProgressDownload(HttpFile* call)
 
     // To avoid many subscription issues.
     if ((m_curSize - m_prevSize) > (1024 * 512)) {
-        Logger::verbose(getClassName(), "Progress downloading - " + call->getFilename());
+        Logger::debug(getClassName(), m_fileName, std::string(__FUNCTION__) + " (" + to_string(m_curSize) + "/" + to_string(m_total) + ")");
+        // TODO Need to change progress handler
         PolicyManager::getInstance().onChangeStatus();
         m_prevSize = m_curSize;
     }
@@ -57,25 +58,25 @@ void Artifact::onProgressDownload(HttpFile* call)
 
 void Artifact::onCompletedDownload(HttpFile* call)
 {
+    Logger::info(getClassName(), m_fileName, __FUNCTION__);
     if (m_download.canComplete() != TransitionType_Allowed) {
         return;
     }
 
-    Logger::info(getClassName(), "Complete downloading - " + call->getFilename());
     m_curSize = call->getFilesize();
 
     if (!m_download.complete()) {
-        Logger::warning(getClassName(), "Invalid transition");
+        Logger::error(getClassName(), m_fileName, "Failed to complete download");
     }
 }
 
 void Artifact::onFailedDownload(HttpFile* call)
 {
+    Logger::error(getClassName(), m_fileName, __FUNCTION__);
     if (m_download.canFail() != TransitionType_Allowed) {
         return;
     }
 
-    Logger::warning(getClassName(), "Fail downloading - " + call->getFilename());
     m_curSize = 0;
     m_download.fail();
 }
@@ -114,10 +115,13 @@ void Artifact::onInstallSubscription(pbnjson::JValue subscriptionPayload)
     if (!JValueUtil::getValue(subscriptionPayload, "details", "state", state))
         return;
 
+    LS2Handler::writeBLog("Return", "/install", subscriptionPayload);
+
     if (state == "installed") {
         getCall().cancel();
         m_update.complete();
     } else if (state == "install failed") {
+        Logger::error(getClassName(), m_fileName, "Failed to install artifact");
         getCall().cancel();
         m_update.fail();
     }
@@ -136,25 +140,24 @@ bool Artifact::startUpdate()
 {
     enum TransitionType type = m_update.canStart();
     if (type == TransitionType_NotAllowed) {
-        Logger::verbose(getClassName(), "Transition is not allowed");
+        Logger::error(getClassName(), m_fileName, "Translation is not allowed");
         return false;
     }
     if (m_updateInProgress) {
-        Logger::verbose(getClassName(), "Update is in progress");
+        Logger::debug(getClassName(), m_fileName, "Update is in progress");
         return true;
     } else if (m_download.getState() == StateType_COMPLETED) {
         m_updateInProgress = true;
         if (getFileExtension() == "ipk") {
             AppInstaller::getInstance().install(getIpkName(), getFullName(), this);
         } else {
-            Logger::info(getClassName(), "Unsupported file type. Just completed");
+            Logger::warning(getClassName(), m_fileName, "Not supported file extension");
             return m_update.complete();
         }
     } else {
-        cout << m_download.getStateStr() << endl;
-        Logger::verbose(getClassName(), "Need to wait more time");
+        Logger::debug(getClassName(), m_fileName, "Download is not completed");
     }
-    return m_update.start();
+    return m_update.wait();
 }
 
 bool Artifact::fromJson(const JValue& json)

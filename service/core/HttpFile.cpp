@@ -49,9 +49,7 @@ bool HttpFile::send(JValue request)
         Logger::error(getClassName(), "Failed to open file : " + string(strerror(errno)));
         return false;
     }
-    if (Setting::getInstance().onLogHttp()) {
-        Logger::verbose(getClassName(), "Open file - " + m_filename);
-    }
+    Logger::verbose(getClassName(), "Open file - " + m_filename);
     if (!prepare()) {
         return false;
     }
@@ -75,9 +73,7 @@ Done:
         Logger::error(getClassName(), "Failed in glibcurl_add", curl_multi_strerror(rc2));
         return false;
     }
-    if (Setting::getInstance().onLogHttp()) {
-        Logger::verbose(getClassName(), "Downloading is started. Try to call 'onStartedDownload'");
-    }
+    Logger::verbose(getClassName(), "Downloading is started. Try to call 'onStartedDownload'");
     if (m_listener) {
         m_listener->onStartedDownload(this);
     }
@@ -106,9 +102,7 @@ void HttpFile::onReceiveFileEvent(void* userdata)
 
         glibcurl_remove(self->m_easyHandle);
 
-        if (Setting::getInstance().onLogHttp()) {
-            Logger::verbose("HttpFile", "Downloading is completed. Try to call 'onCompletedDownload'");
-        }
+        Logger::verbose("HttpFile", "Downloading is completed. Try to call 'onCompletedDownload'");
         if (self->m_listener) {
             self->m_listener->onCompletedDownload(self);
         }

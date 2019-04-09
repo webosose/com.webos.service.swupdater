@@ -17,11 +17,11 @@
 #ifndef CORE_INSTALL_DEPLOYMENTACTION_H_
 #define CORE_INSTALL_DEPLOYMENTACTION_H_
 
-#include <core/State.h>
 #include <iostream>
 #include <deque>
 #include <map>
 
+#include "core/State.h"
 #include "core/AbsAction.h"
 #include "core/install/SoftwareModule.h"
 
@@ -32,20 +32,14 @@ public:
     DeploymentAction(JValue& json);
     virtual ~DeploymentAction();
 
-    bool prepare();
-    bool start();
-    bool pause();
-    bool resume();
-    bool cancel();
-
-    void onDownloadStateChanged(enum StateType prev, enum StateType cur, void *source);
+    void onDownloadStateChanged(enum StateType prev, enum StateType cur);
     bool prepareDownload();
     bool startDownload();
     bool pauseDownload();
     bool resumeDownload();
     bool cancelDownload();
 
-    void onUpdateStateChanged(enum StateType prev, enum StateType cur, void *source);
+    void onUpdateStateChanged(enum StateType prev, enum StateType cur);
     bool prepareUpdate();
     bool startUpdate();
     bool pauseUpdate();

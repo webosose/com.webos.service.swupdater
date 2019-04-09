@@ -17,10 +17,10 @@
 #ifndef SETTING_H_
 #define SETTING_H_
 
-#include <interface/IInitializable.h>
 #include <iostream>
 #include <string>
 
+#include "interface/IInitializable.h"
 #include "interface/ISingleton.h"
 
 using namespace std;
@@ -35,21 +35,6 @@ public:
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    virtual bool onLogCurl()
-    {
-        return m_onLogCurl;
-    }
-
-    virtual bool onLogHttp()
-    {
-        return m_onLogHttp;
-    }
-
-    virtual bool verbose()
-    {
-        return m_verbose;
-    }
-
     virtual string& getId()
     {
         return m_id;
@@ -58,9 +43,6 @@ public:
 private:
     Setting();
 
-    bool m_onLogCurl;
-    bool m_onLogHttp;
-    bool m_verbose;
     string m_id;
 };
 

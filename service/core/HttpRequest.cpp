@@ -62,8 +62,7 @@ bool HttpRequest::open(const MethodType& methodType, const std::string& url)
     if (!setMethod(methodType) || !setUrl(url))
         return false;
 
-    if (Setting::getInstance().onLogHttp())
-        Logger::verbose(getClassName(), "Open for " + (!url.empty() ? url : "null"));
+    Logger::verbose(getClassName(), __FUNCTION__);
     return true;
 }
 
@@ -93,8 +92,7 @@ bool HttpRequest::send(JValue request)
         goto Done;
     }
 
-    if (Setting::getInstance().onLogHttp())
-        Logger::verbose(getClassName(), "Send for " + (!m_url.empty() ? m_url : "null"));
+    Logger::verbose(getClassName(), __FUNCTION__);
     return true;
 
 Done:
@@ -123,7 +121,7 @@ bool HttpRequest::prepare()
     CURLcode rc = CURLE_OK;
     string errorText;
 
-    if (Setting::getInstance().onLogCurl()) {
+    if (Logger::getInstance().isVerbose()) {
         rc = curl_easy_setopt(m_easyHandle, CURLOPT_VERBOSE, 1L);
         if (rc != CURLE_OK) {
             goto Done;
