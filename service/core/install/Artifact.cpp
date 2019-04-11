@@ -15,68 +15,134 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "core/install/Artifact.h"
+
 #include "util/JValueUtil.h"
 #include "PolicyManager.h"
 
-Artifact::Artifact(const JValue& json)
-    : m_curSize(0)
+const string Artifact::DIRNAME = "/home/root/";
+
+Artifact::Artifact()
+    : m_total(0)
+    , m_curSize(0)
     , m_prevSize(0)
+    , m_updateInProgress(false)
 {
     setClassName("Artifact");
-    setName("Artifact-download");
-    fromJson(json);
 }
 
 Artifact::~Artifact()
 {
-    m_httpCall = nullptr;
+    m_httpFile = nullptr;
 }
 
-bool Artifact::ready()
+void Artifact::onStartedDownload(HttpFile* call)
 {
-    m_httpCall = make_shared<HttpCall>(MethodType_GET, m_download);
-    m_httpCall->setFilename(m_fullname);
-    m_httpCall->setListener(this);
-    return State::ready();
+    Logger::info(getClassName(), m_fileName, __FUNCTION__);
+    m_curSize = call->getFilesize();
 }
 
-bool Artifact::start()
+void Artifact::onProgressDownload(HttpFile* call)
 {
-    m_httpCall->download();
-    return State::start();
-}
-
-void Artifact::onStartedDownload(HttpCall* call)
-{
-    Logger::info(getClassName(), "Start downloading - " + call->getFilename());
-    m_curSize = call->getResponseSize();
-    PolicyManager::getInstance().onChangeStatus();
-}
-
-void Artifact::onProgressDownload(HttpCall* call)
-{
-    m_curSize = call->getResponseSize();
+    m_curSize = call->getFilesize();
 
     // To avoid many subscription issues.
-    if ((m_curSize - m_prevSize) > (1024 * 1024)) {
-        Logger::verbose(getClassName(), "Progress downloading - " + call->getFilename());
+    if ((m_curSize - m_prevSize) > (1024 * 512)) {
+        Logger::debug(getClassName(), m_fileName, std::string(__FUNCTION__) + " (" + to_string(m_curSize) + "/" + to_string(m_total) + ")");
+        // TODO Need to change progress handler
         PolicyManager::getInstance().onChangeStatus();
         m_prevSize = m_curSize;
     }
 }
 
-void Artifact::onCompletedDownload(HttpCall* call)
+void Artifact::onCompletedDownload(HttpFile* call)
 {
-    Logger::info(getClassName(), "Complete downloading - " + call->getFilename());
-    m_curSize = call->getResponseSize();
-    complete();
+    Logger::info(getClassName(), m_fileName, __FUNCTION__);
+    if (m_download.canComplete() != TransitionType_Allowed) {
+        return;
+    }
+
+    m_curSize = call->getFilesize();
+
+    if (!m_download.complete()) {
+        Logger::error(getClassName(), m_fileName, "Failed to complete download");
+    }
 }
 
-void Artifact::onFailedDownload(HttpCall* call)
+void Artifact::onFailedDownload(HttpFile* call)
 {
-    Logger::warning(getClassName(), "Fail downloading - " + call->getFilename());
+    Logger::error(getClassName(), m_fileName, __FUNCTION__);
+    if (m_download.canFail() != TransitionType_Allowed) {
+        return;
+    }
+
     m_curSize = 0;
-    fail();
+    m_download.fail();
+}
+
+bool Artifact::prepareDownload()
+{
+    if (!Leaf::prepareDownload())
+        return false;
+    m_httpFile = make_shared<HttpFile>();
+    m_httpFile->open(MethodType_GET, m_url);
+    m_httpFile->setFilename(getFullName());
+    m_httpFile->setListener(this);
+
+    return true;
+}
+
+bool Artifact::startDownload()
+{
+    if (!Leaf::startDownload())
+        return false;
+    if (!m_httpFile->send()) {
+        m_download.fail();
+        return false;
+    }
+    return true;
+}
+
+
+void Artifact::onInstallSubscription(pbnjson::JValue subscriptionPayload)
+{
+    string state;
+    if (!JValueUtil::getValue(subscriptionPayload, "details", "state", state))
+        return;
+
+    LS2Handler::writeBLog("Return", "/install", subscriptionPayload);
+
+    if (state == "installed") {
+        getCall().cancel();
+        m_update.complete();
+    } else if (state == "install failed") {
+        Logger::error(getClassName(), m_fileName, "Failed to install artifact");
+        getCall().cancel();
+        m_update.fail();
+    }
+}
+
+bool Artifact::startUpdate()
+{
+    enum TransitionType type = m_update.canStart();
+    if (type == TransitionType_NotAllowed) {
+        Logger::error(getClassName(), m_fileName, "Translation is not allowed");
+        return false;
+    }
+    if (m_updateInProgress) {
+        Logger::debug(getClassName(), m_fileName, "Update is in progress");
+        return true;
+    } else if (m_download.getState() == StateType_COMPLETED) {
+        m_updateInProgress = true;
+        if (getFileExtension() == "ipk") {
+            AppInstaller::getInstance().install(getIpkName(), getFullName(), this);
+        } else {
+            Logger::warning(getClassName(), m_fileName, "Not supported file extension");
+            return m_update.complete();
+        }
+    } else {
+        Logger::debug(getClassName(), m_fileName, "Download is not completed");
+    }
+    return m_update.wait();
 }
 
 bool Artifact::fromJson(const JValue& json)
@@ -84,27 +150,26 @@ bool Artifact::fromJson(const JValue& json)
     ISerializable::fromJson(json);
 
     JValueUtil::getValue(json, "size", m_total);
-    JValueUtil::getValue(json, "filename", m_filename);
+    JValueUtil::getValue(json, "filename", m_fileName);
     JValueUtil::getValue(json, "hashes", "sha1", m_sha1);
     JValueUtil::getValue(json, "hashes", "md5", m_md5);
 
     JValueUtil::getValue(json, "_links", "md5sum", "href", m_md5sum);
-    JValueUtil::getValue(json, "_links", "download", "href", m_download);
+    JValueUtil::getValue(json, "_links", "download", "href", m_url);
 
     if (m_md5sum.empty()) {
         JValueUtil::getValue(json, "_links", "md5sum-http", "href", m_md5sum);
-        JValueUtil::getValue(json, "_links", "download-http", "href", m_download);
+        JValueUtil::getValue(json, "_links", "download-http", "href", m_url);
     }
-
-    m_fullname = "/home/root/" + m_filename;
     return true;
 }
 
 bool Artifact::toJson(JValue& json)
 {
-    json.put("filename", m_filename);
+    Component::toJson(json);
+
+    json.put("filename", m_fileName);
     json.put("total", m_total);
     json.put("size", m_curSize);
-    json.put("download", State::toString(getState()));
     return true;
 }

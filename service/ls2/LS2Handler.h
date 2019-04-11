@@ -54,6 +54,9 @@ class LS2Handler : public Handle,
                    public ISingleton<LS2Handler> {
 friend ISingleton<LS2Handler>;
 public:
+    static void writeALog(const string& type, LS::Message& request, JValue& payload);
+    static void writeBLog(const string& type, const string& kind, JValue& payload);
+
     virtual ~LS2Handler();
 
     // IInitializable

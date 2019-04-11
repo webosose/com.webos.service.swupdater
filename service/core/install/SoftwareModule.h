@@ -17,17 +17,14 @@
 #ifndef CORE_INSTALL_SOFTWAREMODULE_H_
 #define CORE_INSTALL_SOFTWAREMODULE_H_
 
-#include <core/State.h>
 #include <iostream>
-#include <list>
-#include <map>
+#include <deque>
 #include <pbnjson.hpp>
 
+#include "core/State.h"
 #include "core/install/Artifact.h"
+#include "core/experimental/Composite.h"
 #include "interface/IClassName.h"
-#include "interface/ISerializable.h"
-#include "interface/ISingleton.h"
-#include "interface/IListener.h"
 
 using namespace std;
 using namespace pbnjson;
@@ -39,28 +36,14 @@ enum SoftwareModuleType {
     SoftwareModuleType_Mixed
 };
 
-class SoftwareModule;
-
 class SoftwareModule : public IClassName,
-                       public ISerializable {
+                       public Composite {
 public:
-    static shared_ptr<SoftwareModule> createSoftwareModule(JValue& json);
-
     static string toString(enum SoftwareModuleType& type);
     static SoftwareModuleType toEnum(const string& type);
 
     SoftwareModule();
     virtual ~SoftwareModule();
-
-    bool startDownload();
-    virtual bool startUpdate() = 0;
-
-    bool ready(bool download);
-    bool pause(bool download);
-    bool resume(bool download);
-    bool cancel(bool download);
-
-    virtual void onDownloadStateChanged(State *installer, enum StateType prev, enum StateType cur);
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
@@ -76,30 +59,13 @@ public:
         return m_name;
     }
 
-    const string& getVersion()
-    {
-        return m_version;
-    }
-
-    State& getDownloadState()
-    {
-        return m_downloadState;
-    }
-
-    State& getUpdateState()
-    {
-        return m_updateState;
-    }
-
 protected:
+    void addCallback();
+    void removeCallback();
+
     enum SoftwareModuleType m_type;
     string m_name;
     string m_version;
-
-    State m_downloadState;
-    State m_updateState;
-
-    list<Artifact> m_artifacts;
 
 };
 

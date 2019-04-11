@@ -132,7 +132,7 @@ void LS2Handler::before(LS::Message& request, JValue& requestPayload, JValue& re
     requestPayload = JDomParser::fromString(request.getPayload());
     responsePayload = pbnjson::Object();
 
-    Logger::info(NAME, "Request", request.getMethod());
+    writeALog("Request", request, requestPayload);
 }
 
 void LS2Handler::after(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
@@ -145,6 +145,30 @@ void LS2Handler::after(LS::Message& request, JValue& requestPayload, JValue& res
         responsePayload.put("returnValue", true);
     }
     request.respond(responsePayload.stringify().c_str());
+    writeALog("Response", request, requestPayload);
+}
 
-    Logger::info(NAME, "Response", request.getMethod());
+void LS2Handler::writeALog(const string& type, LS::Message& request, JValue& payload)
+{
+    string log = request.getKind();
+    log += " - " + string(request.getSenderServiceName() ? request.getSenderServiceName() : request.getApplicationID());
+
+    if (Logger::getInstance().isVerbose()) {
+        log += "\n" + payload.stringify("    ");
+        Logger::verbose(NAME, type, log);
+    } else {
+        Logger::debug(NAME, type, log);
+    }
+}
+
+void LS2Handler::writeBLog(const string& type, const string& kind, JValue& payload)
+{
+    string log = kind;
+
+    if (Logger::getInstance().isVerbose()) {
+        log += "\n" + payload.stringify("    ");
+        Logger::verbose(NAME, type, log);
+    } else {
+        Logger::debug(NAME, type, log);
+    }
 }

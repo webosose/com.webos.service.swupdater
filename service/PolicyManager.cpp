@@ -29,6 +29,9 @@ PolicyManager::PolicyManager()
 
 PolicyManager::~PolicyManager()
 {
+    if (m_currentAction) {
+        m_currentAction = nullptr;
+    }
 }
 
 bool PolicyManager::onInitialization()
@@ -47,40 +50,48 @@ bool PolicyManager::onInitialization()
 bool PolicyManager::onFinalization()
 {
     delete m_statusPoint;
+    m_statusPoint = nullptr;
     LS2Handler::getInstance().setListener(nullptr);
     HawkBitClient::getInstance().setListener(nullptr);
 
     return true;
 }
 
-void PolicyManager::onStateChanged(State *installer, enum StateType prev, enum StateType cur)
-{
-    onChangeStatus();
-    if (m_currentAction->isComplete()) {
-        JValue responsePayload;
-        HawkBitClient::getInstance().postDeploymentAction(responsePayload, m_currentAction->getId());
-        m_currentAction = nullptr;
-        onChangeStatus();
-    }
-}
-
 void PolicyManager::onChangeStatus()
 {
     static JValue prev;
-    JValue current = pbnjson::Object();
+    JValue cur = pbnjson::Object();
 
-    if (!m_currentAction) {
-        current.put("id", nullptr);
-        current.put("download", nullptr);
-        current.put("update", nullptr);
-    } else {
-        m_currentAction->toJson(current);
+    // post subscription
+    if (m_statusPoint && m_statusPoint->getSubscribersCount() > 0) {
+        if (!m_currentAction) {
+            cur.put("id", nullptr);
+            cur.put("download", nullptr);
+            cur.put("update", nullptr);
+        } else {
+            m_currentAction->toJson(cur);
+        }
+        cur.put("subscribed", true);
+        cur.put("returnValue", true);
+        if (prev != cur) {
+            LS2Handler::writeBLog("Post", "/getStatus", cur);
+            m_statusPoint->post(cur.stringify().c_str());
+            prev = cur.duplicate();
+        }
     }
-    current.put("subscribed", true);
-    current.put("returnValue", true);
-    if (prev != current) {
-        m_statusPoint->post(current.stringify().c_str());
-        prev = current.duplicate();
+
+    if (!m_currentAction)
+        return;
+
+    // check installation status
+    if (m_currentAction->isComplete()) {
+        JValue responsePayload;
+        HawkBitClient::getInstance().postDeploymentActionSuccess(responsePayload, m_currentAction->getId());
+        m_currentAction = nullptr;
+    } else if (m_currentAction->isFailed()) {
+        JValue responsePayload;
+        HawkBitClient::getInstance().postDeploymentActionFailed(responsePayload, m_currentAction->getId());
+        m_currentAction = nullptr;
     }
 }
 
@@ -105,7 +116,7 @@ void PolicyManager::onStartDownload(LS::Message& request, JValue& requestPayload
         responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->start(true)) {
+    if (!m_currentAction->startDownload()) {
         return;
     }
 }
@@ -116,7 +127,7 @@ void PolicyManager::onPauseDownload(LS::Message& request, JValue& requestPayload
         responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->pause(true)) {
+    if (!m_currentAction->pauseDownload()) {
         return;
     }
 }
@@ -124,9 +135,10 @@ void PolicyManager::onPauseDownload(LS::Message& request, JValue& requestPayload
 void PolicyManager::onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
+        responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->resume(true)) {
+    if (!m_currentAction->resumeDownload()) {
         return;
     }
 }
@@ -134,9 +146,10 @@ void PolicyManager::onResumeDownload(LS::Message& request, JValue& requestPayloa
 void PolicyManager::onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
+        responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->cancel(true)) {
+    if (!m_currentAction->cancelDownload()) {
         return;
     }
 }
@@ -144,9 +157,10 @@ void PolicyManager::onCancelDownload(LS::Message& request, JValue& requestPayloa
 void PolicyManager::onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
+        responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->start(false)) {
+    if (!m_currentAction->startUpdate()) {
         return;
     }
 }
@@ -154,9 +168,10 @@ void PolicyManager::onStartInstall(LS::Message& request, JValue& requestPayload,
 void PolicyManager::onPauseInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
+        responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->pause(false)) {
+    if (!m_currentAction->pauseUpdate()) {
         return;
     }
 }
@@ -164,9 +179,10 @@ void PolicyManager::onPauseInstall(LS::Message& request, JValue& requestPayload,
 void PolicyManager::onResumeInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
+        responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->resume(false)) {
+    if (!m_currentAction->resumeUpdate()) {
         return;
     }
 }
@@ -174,9 +190,10 @@ void PolicyManager::onResumeInstall(LS::Message& request, JValue& requestPayload
 void PolicyManager::onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
+        responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->cancel(false)) {
+    if (!m_currentAction->cancelUpdate()) {
         return;
     }
 }
@@ -195,42 +212,27 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
     }
     if (m_currentAction) {
         if (m_currentAction->getId() == id) {
-            Logger::info(getClassName(), "Deployment is still in progress");
+            Logger::info(getClassName(), "Update is in progress");
         } else {
-            Logger::error(getClassName(), "Unknown error");
+            Logger::error(getClassName(), "'Id' is not same - " + m_currentAction->getId() + " : " + id);
         }
         return;
     }
-    m_currentAction = make_shared<DeploymentAction>(responsePayload);
-    m_currentAction->getUpdateState().setCallback( // @suppress("Invalid arguments")
-        std::bind(&PolicyManager::onStateChanged,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2,
-                  std::placeholders::_3
-         )
-    );
-    m_currentAction->getDownloadState().setCallback( // @suppress("Invalid arguments")
-        std::bind(&PolicyManager::onStateChanged,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2,
-                  std::placeholders::_3
-        )
-    );
-    if (!m_currentAction->ready(true)) {
+    m_currentAction = make_shared<DeploymentAction>();
+    m_currentAction->fromJson(responsePayload);
+    if (!m_currentAction->prepareDownload()) {
         Logger::info(getClassName(), "Failed to download");
         return;
     }
-    if (!m_currentAction->ready(false)) {
+    if (!m_currentAction->prepareUpdate()) {
         Logger::info(getClassName(), "Failed to install");
         return;
     }
     if (m_currentAction->isForceDownload()) {
-        m_currentAction->start(true);
+        m_currentAction->startDownload();
     }
     if (m_currentAction->isForceUpdate()) {
-        m_currentAction->start(false);
+        m_currentAction->startUpdate();
     }
 }
 

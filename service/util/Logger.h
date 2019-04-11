@@ -15,6 +15,7 @@
 #define UTIL_LOGGER_H_
 
 #include <iostream>
+#include <map>
 
 using namespace std;
 
@@ -54,6 +55,10 @@ public:
 
     void setLevel(enum LogLevel level);
     void setType(enum LogType type);
+    bool isVerbose()
+    {
+        return m_level == LogLevel_VERBOSE;
+    }
 
 private:
     static const string EMPTY;

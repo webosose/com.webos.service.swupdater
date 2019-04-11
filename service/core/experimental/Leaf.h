@@ -14,18 +14,28 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_INSTALL_OSSOFTWAREMODULE_H_
-#define CORE_INSTALL_OSSOFTWAREMODULE_H_
 
-#include "SoftwareModule.h"
+#ifndef CORE_EXPERIMENTAL_LEAF_H_
+#define CORE_EXPERIMENTAL_LEAF_H_
 
-class OSSoftwareModule : public SoftwareModule {
+#include <core/experimental/Component.h>
+
+class Leaf : public Component {
 public:
-    OSSoftwareModule();
-    virtual ~OSSoftwareModule();
+    Leaf();
+    virtual ~Leaf();
 
-    // SoftwareModule
+    virtual bool prepareDownload() override;
+    virtual bool startDownload() override;
+    virtual bool pauseDownload() override;
+    virtual bool resumeDownload() override;
+    virtual bool cancelDownload()  override;
+
+    virtual bool prepareUpdate() override;
     virtual bool startUpdate() override;
+    virtual bool pauseUpdate() override;
+    virtual bool resumeUpdate() override;
+    virtual bool cancelUpdate() override;
 };
 
-#endif /* CORE_INSTALL_OSSOFTWAREMODULE_H_ */
+#endif /* CORE_EXPERIMENTAL_LEAF_H_ */
