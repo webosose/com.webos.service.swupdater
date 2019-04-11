@@ -84,11 +84,11 @@ void PolicyManager::onChangeStatus()
         return;
 
     // check installation status
-    if (m_currentAction->isComplete()) {
+    if (m_currentAction->getStatus().getStatus() == StatusType_COMPLETED) {
         JValue responsePayload;
         HawkBitClient::getInstance().postDeploymentActionSuccess(responsePayload, m_currentAction->getId());
         m_currentAction = nullptr;
-    } else if (m_currentAction->isFailed()) {
+    } else if (m_currentAction->getStatus().getStatus() == StatusType_FAILED) {
         JValue responsePayload;
         HawkBitClient::getInstance().postDeploymentActionFailed(responsePayload, m_currentAction->getId());
         m_currentAction = nullptr;
@@ -110,90 +110,46 @@ void PolicyManager::onGetStatus(LS::Message& request, JValue& requestPayload, JV
     }
 }
 
-void PolicyManager::onStartDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+void PolicyManager::onInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
         responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->startDownload()) {
+    if (!m_currentAction->install()) {
         return;
     }
 }
 
-void PolicyManager::onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+void PolicyManager::onPause(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
         responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->pauseDownload()) {
+    if (!m_currentAction->pause()) {
         return;
     }
 }
 
-void PolicyManager::onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+void PolicyManager::onResume(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
         responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->resumeDownload()) {
+    if (!m_currentAction->resume()) {
         return;
     }
 }
 
-void PolicyManager::onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+void PolicyManager::onCancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
         responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->cancelDownload()) {
-        return;
-    }
-}
-
-void PolicyManager::onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
-{
-    if (!m_currentAction) {
-        responsePayload.put("errorText", "No active deployment action");
-        return;
-    }
-    if (!m_currentAction->startUpdate()) {
-        return;
-    }
-}
-
-void PolicyManager::onPauseInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
-{
-    if (!m_currentAction) {
-        responsePayload.put("errorText", "No active deployment action");
-        return;
-    }
-    if (!m_currentAction->pauseUpdate()) {
-        return;
-    }
-}
-
-void PolicyManager::onResumeInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
-{
-    if (!m_currentAction) {
-        responsePayload.put("errorText", "No active deployment action");
-        return;
-    }
-    if (!m_currentAction->resumeUpdate()) {
-        return;
-    }
-}
-
-void PolicyManager::onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
-{
-    if (!m_currentAction) {
-        responsePayload.put("errorText", "No active deployment action");
-        return;
-    }
-    if (!m_currentAction->cancelUpdate()) {
+    if (!m_currentAction->cancel()) {
         return;
     }
 }
@@ -220,19 +176,12 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
     }
     m_currentAction = make_shared<DeploymentAction>();
     m_currentAction->fromJson(responsePayload);
-    if (!m_currentAction->prepareDownload()) {
+    if (!m_currentAction->prepare()) {
         Logger::info(getClassName(), "Failed to download");
         return;
     }
-    if (!m_currentAction->prepareUpdate()) {
-        Logger::info(getClassName(), "Failed to install");
-        return;
-    }
     if (m_currentAction->isForceDownload()) {
-        m_currentAction->startDownload();
-    }
-    if (m_currentAction->isForceUpdate()) {
-        m_currentAction->startUpdate();
+        m_currentAction->install();
     }
 }
 

@@ -17,14 +17,13 @@
 #ifndef CORE_EXPERIMENTAL_COMPONENT_H_
 #define CORE_EXPERIMENTAL_COMPONENT_H_
 
-#include "core/State.h"
+#include "core/Status.h"
 #include "interface/ISerializable.h"
 
 class Component : public ISerializable {
 public:
     Component()
-        : m_download("AbsComponent-download")
-        , m_update("AbsComponent-update")
+        : m_status("AbsComponent-download")
     {
 
     }
@@ -34,48 +33,25 @@ public:
 
     }
 
-    virtual bool prepareDownload() = 0;
-    virtual bool startDownload() = 0;
-    virtual bool pauseDownload() = 0;
-    virtual bool resumeDownload() = 0;
-    virtual bool cancelDownload() = 0;
+    virtual bool prepare() = 0;
+    virtual bool install() = 0;
+    virtual bool pause() = 0;
+    virtual bool resume() = 0;
+    virtual bool cancel() = 0;
 
-    virtual bool prepareUpdate() = 0;
-    virtual bool startUpdate() = 0;
-    virtual bool pauseUpdate() = 0;
-    virtual bool resumeUpdate() = 0;
-    virtual bool cancelUpdate() = 0;
-
-    State& getDownload()
+    Status& getStatus()
     {
-        return m_download;
-    }
-
-    State& getUpdate()
-    {
-        return m_update;
+        return m_status;
     }
 
     virtual bool toJson(JValue& json) override
     {
-        json.put("download", m_download.getStateStr());
-        json.put("update", m_update.getStateStr());
+        json.put("status", m_status.getStatusStr());
         return true;
     }
 
-    bool isComplete()
-    {
-        return (m_download.getState() == StateType_COMPLETED && m_update.getState() == StateType_COMPLETED);
-    }
-
-    bool isFailed()
-    {
-        return (m_download.getState() == StateType_FAILED || m_update.getState() == StateType_FAILED);
-    }
-
 protected:
-    State m_download;
-    State m_update;
+    Status m_status;
 
 };
 

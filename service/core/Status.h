@@ -11,8 +11,8 @@
  * LICENSE@@@
  */
 
-#ifndef CORE_STATE_H_
-#define CORE_STATE_H_
+#ifndef CORE_STATUS_H_
+#define CORE_STATUS_H_
 
 #include <iostream>
 #include <functional>
@@ -21,15 +21,14 @@
 
 using namespace std;
 
-enum StateType {
-    StateType_NONE,
-    StateType_READY,
-    StateType_WAITING,
-    StateType_RUNNING,
-    StateType_PAUSED,
-    StateType_CANCELED,
-    StateType_COMPLETED,
-    StateType_FAILED,
+enum StatusType {
+    StatusType_NONE,
+    StatusType_READY,
+    StatusType_RUNNING,
+    StatusType_PAUSED,
+    StatusType_CANCELED,
+    StatusType_COMPLETED,
+    StatusType_FAILED,
 };
 
 enum TransitionType {
@@ -39,44 +38,41 @@ enum TransitionType {
     TransitionType_Allowed = 1
 };
 
-typedef std::function<void(enum StateType prev, enum StateType cur)> Callback;
+typedef std::function<void(enum StatusType prev, enum StatusType cur)> Callback;
 
-class State {
+class Status {
 public:
-    static string toString(enum StateType type)
+    static string toString(enum StatusType type)
     {
         switch (type) {
-        case StateType_NONE:
+        case StatusType_NONE:
             return "none";
 
-        case StateType_READY:
+        case StatusType_READY:
             return "ready";
 
-        case StateType_WAITING:
-            return "waiting";
-
-        case StateType_RUNNING:
+        case StatusType_RUNNING:
             return "running";
 
-        case StateType_PAUSED:
+        case StatusType_PAUSED:
             return "paused";
 
-        case StateType_CANCELED:
+        case StatusType_CANCELED:
             return "canceled";
 
-        case StateType_COMPLETED:
+        case StatusType_COMPLETED:
             return "completed";
 
-        case StateType_FAILED:
+        case StatusType_FAILED:
             return "failed";
         }
         return "unknown";
     }
 
-    static bool writeCommonLog(State& state, enum TransitionType type, const string& className, const string& transition)
+    static bool writeCommonLog(Status& status, enum TransitionType type, const string& className, const string& transition)
     {
         if (type == TransitionType_NotAllowed) {
-            Logger::info(className, transition + " is not allowed from " + state.getStateStr());
+            Logger::info(className, transition + " is not allowed from " + status.getStatusStr());
             return false;
         } else if (type == TransitionType_Same) {
             Logger::info(className, transition + " is already called");
@@ -85,161 +81,145 @@ public:
         return true;
     }
 
-    State(const string& name)
+    Status(const string& name)
         : m_name(name)
-        , m_state(StateType_NONE)
+        , m_status(StatusType_NONE)
     {
     }
 
-    virtual ~State()
+    virtual ~Status()
     {
-        if (m_state == StateType_PAUSED || m_state == StateType_RUNNING || m_state == StateType_WAITING) {
+        if (m_status == StatusType_PAUSED || m_status == StatusType_RUNNING) {
             cancel();
         }
     }
 
     enum TransitionType canPrepare()
     {
-        return checkTransition(StateType_READY);
+        return checkTransition(StatusType_READY);
     }
 
     bool prepare()
     {
-        if (checkTransition(StateType_READY) == TransitionType_NotAllowed)
+        if (checkTransition(StatusType_READY) == TransitionType_NotAllowed)
             return false;
-        changeState(StateType_READY);
+        changeStatus(StatusType_READY);
         return true;
     }
 
-    enum TransitionType canWait()
+    enum TransitionType canInstall()
     {
-        return checkTransition(StateType_WAITING);
+        return checkTransition(StatusType_RUNNING);
     }
 
-    bool wait()
+    bool install()
     {
-        if (canWait() == TransitionType_NotAllowed)
+        if (canInstall() == TransitionType_NotAllowed)
             return false;
-        changeState(StateType_WAITING);
-        return true;
-    }
-
-    enum TransitionType canStart()
-    {
-        return checkTransition(StateType_RUNNING);
-    }
-
-    bool start()
-    {
-        if (canStart() == TransitionType_NotAllowed)
-            return false;
-        changeState(StateType_RUNNING);
+        changeStatus(StatusType_RUNNING);
         return true;
     }
 
     enum TransitionType canPause()
     {
-        return checkTransition(StateType_PAUSED);
+        return checkTransition(StatusType_PAUSED);
     }
 
     bool pause()
     {
         if (canPause() == TransitionType_NotAllowed)
             return false;
-        changeState(StateType_PAUSED);
+        changeStatus(StatusType_PAUSED);
         return true;
     }
 
     enum TransitionType canResume()
     {
-        return checkTransition(StateType_RUNNING);
+        return checkTransition(StatusType_RUNNING);
     }
 
     bool resume()
     {
         if (canResume() == TransitionType_NotAllowed)
             return false;
-        changeState(StateType_RUNNING);
+        changeStatus(StatusType_RUNNING);
         return true;
     }
 
     enum TransitionType canCancel()
     {
-        return checkTransition(StateType_CANCELED);
+        return checkTransition(StatusType_CANCELED);
     }
 
     bool cancel()
     {
         if (canCancel() == TransitionType_NotAllowed)
             return false;
-        changeState(StateType_CANCELED);
+        changeStatus(StatusType_CANCELED);
         return true;
     }
 
     enum TransitionType canComplete()
     {
-        return checkTransition(StateType_COMPLETED);
+        return checkTransition(StatusType_COMPLETED);
     }
 
     bool complete()
     {
         if (canComplete() == TransitionType_NotAllowed)
             return false;
-        changeState(StateType_COMPLETED);
+        changeStatus(StatusType_COMPLETED);
         return true;
     }
 
     enum TransitionType canFail()
     {
-        return checkTransition(StateType_FAILED);
+        return checkTransition(StatusType_FAILED);
     }
 
     bool fail()
     {
         if (canFail() == TransitionType_NotAllowed)
             return false;
-        changeState(StateType_FAILED);
+        changeStatus(StatusType_FAILED);
         return true;
     }
 
-    bool transit(enum StateType state)
+    bool transit(enum StatusType status)
     {
-        switch (state) {
-        case StateType_NONE:
+        switch (status) {
+        case StatusType_NONE:
             return false;
 
-        case StateType_READY:
+        case StatusType_READY:
             return prepare();
 
-        case StateType_WAITING:
-            return wait();
+        case StatusType_RUNNING:
+            return install();
 
-        case StateType_RUNNING:
-            return start();
-
-        case StateType_PAUSED:
+        case StatusType_PAUSED:
             return pause();
 
-        case StateType_CANCELED:
+        case StatusType_CANCELED:
             return cancel();
 
-        case StateType_COMPLETED:
+        case StatusType_COMPLETED:
             return complete();
 
-        case StateType_FAILED:
+        case StatusType_FAILED:
             return fail();
         }
         return false;
     }
 
-    enum StateType getState()
+    enum StatusType getStatus()
     {
-        return m_state;
+        return m_status;
     }
 
-    string getStateStr()
+    string getStatusStr()
     {
-        return toString(m_state);
+        return toString(m_status);
     }
 
     const string& getName()
@@ -253,13 +233,13 @@ public:
     }
 
 private:
-    enum TransitionType checkTransition(enum StateType state);
-    void changeState(enum StateType nextState);
+    enum TransitionType checkTransition(enum StatusType status);
+    void changeStatus(enum StatusType nextStatus);
 
     string m_name;
-    enum StateType m_state;
+    enum StatusType m_status;
 
     Callback m_callbackFunc;
 };
 
-#endif /* CORE_STATE_H_ */
+#endif /* CORE_STATUS_H_ */

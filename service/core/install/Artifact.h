@@ -20,8 +20,8 @@
 #include <iostream>
 #include <pbnjson.hpp>
 
+#include <core/Status.h>
 #include "core/HttpFile.h"
-#include "core/State.h"
 #include "core/experimental/Leaf.h"
 #include "ls2/AppInstaller.h"
 #include "interface/IClassName.h"
@@ -30,8 +30,6 @@
 
 using namespace std;
 using namespace pbnjson;
-
-class Artifact;
 
 class Artifact : public IClassName,
                  public HttpFileListener,
@@ -47,13 +45,12 @@ public:
     virtual void onCompletedDownload(HttpFile* call) override;
     virtual void onFailedDownload(HttpFile* call) override;
 
-    virtual bool prepareDownload() override;
-    virtual bool startDownload() override;
-
     // AppInstallerListener
     virtual void onInstallSubscription(pbnjson::JValue subscriptionPayload) override;
 
-    virtual bool startUpdate() override;
+    // Leaf
+    virtual bool prepare() override;
+    virtual bool install() override;
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;

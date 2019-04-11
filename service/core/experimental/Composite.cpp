@@ -15,11 +15,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#include <core/experimental/Composite.h>
+#include "core/experimental/Composite.h"
 
 Composite::Composite()
-    : m_downloadIndex(-1)
-    , m_updateIndex(-1)
+    : m_current(-1)
 {
     m_children.clear();
 }
@@ -29,251 +28,119 @@ Composite::~Composite()
     m_children.clear();
 }
 
-void Composite::onDownloadStateChanged(enum StateType prev, enum StateType cur)
+void Composite::onChildStatusChanged(enum StatusType prev, enum StatusType cur)
 {
-    if (m_download.getState() != StateType_RUNNING) {
+    if (m_status.getStatus() != StatusType_RUNNING) {
         return;
     }
 
     switch (cur) {
-    case StateType_NONE:
-    case StateType_WAITING:
-    case StateType_RUNNING:
-    case StateType_PAUSED:
-    case StateType_CANCELED:
+    case StatusType_NONE:
+    case StatusType_READY:
+    case StatusType_RUNNING:
+    case StatusType_PAUSED:
+    case StatusType_CANCELED:
         // Don't need to consider this status change. Composite already know this changes.
         return;
 
-    case StateType_READY:
-        m_children[m_downloadIndex]->startDownload();
-        break;
-
-    case StateType_COMPLETED:
-        if (m_downloadIndex == m_children.size() -1) {
-            m_download.complete();
+    case StatusType_COMPLETED:
+        if (m_current == m_children.size() -1) {
+            m_status.complete();
             break;
         }
-        m_children[++m_downloadIndex]->prepareDownload();
+        m_children[++m_current]->install();
         return;
 
-    case StateType_FAILED:
-        m_download.fail();
+    case StatusType_FAILED:
+        m_status.fail();
         return;
-    }
-
-    if (m_download.getState() == StateType_COMPLETED && m_update.getState() == StateType_WAITING) {
-        startUpdate();
     }
 }
 
-bool Composite::prepareDownload()
+bool Composite::prepare()
 {
-    enum TransitionType type = m_download.canPrepare();
+    enum TransitionType type = m_status.canPrepare();
     if (type == TransitionType_NotAllowed) {
         return false;
     } else if (type == TransitionType_Same) {
         return true;
     }
-    m_downloadIndex = 0;
-    if (!m_children[m_downloadIndex]->prepareDownload()) {
-        m_download.fail();
-        return false;
-    }
-    return m_download.prepare();
-}
-
-bool Composite::startDownload()
-{
-    enum TransitionType type = m_download.canStart();
-    if (type == TransitionType_NotAllowed) {
-        return false;
-    } else if (type == TransitionType_Same) {
-        return true;
-    }
-    if (!m_children[m_downloadIndex]->startDownload()) {
-        m_download.fail();
-        return false;
-    }
-    return m_download.start();
-}
-
-bool Composite::pauseDownload()
-{
-    enum TransitionType type = m_download.canPause();
-    if (type == TransitionType_NotAllowed) {
-        return false;
-    } else if (type == TransitionType_Same) {
-        return true;
-    }
-    if (!m_children[m_downloadIndex]->pauseDownload()) {
-        m_download.fail();
-        return false;
-    }
-    return m_download.pause();
-}
-
-bool Composite::resumeDownload()
-{
-    enum TransitionType type = m_download.canResume();
-    if (type == TransitionType_NotAllowed) {
-        return false;
-    } else if (type == TransitionType_Same) {
-        return true;
-    }
-    if (!m_children[m_downloadIndex]->resumeDownload()) {
-        m_download.fail();
-        return false;
-    }
-    return m_download.resume();
-}
-
-bool Composite::cancelDownload()
-{
-    enum TransitionType type = m_download.canCancel();
-    if (type == TransitionType_NotAllowed) {
-        return false;
-    } else if (type == TransitionType_Same) {
-        return true;
-    }
-    if (!m_children[m_downloadIndex]->cancelDownload()) {
-        m_download.fail();
-        return false;
-    }
-    return m_download.cancel();
-}
-
-void Composite::onUpdateStateChanged(enum StateType prev, enum StateType cur)
-{
-    if (m_update.getState() != StateType_RUNNING) {
-        return;
-    }
-
-    switch (cur) {
-    case StateType_NONE:
-    case StateType_WAITING:
-    case StateType_RUNNING:
-    case StateType_PAUSED:
-    case StateType_CANCELED:
-        // Don't need to consider this status change. Composite already know this changes.
-        return;
-
-    case StateType_READY:
-        m_children[m_updateIndex]->startUpdate();
-        break;
-
-    case StateType_COMPLETED:
-        if (m_updateIndex == m_children.size() -1) {
-            m_update.complete();
-            break;
-        }
-        m_children[++m_updateIndex]->prepareUpdate();
-        return;
-
-    case StateType_FAILED:
-        m_update.fail();
-        return;
-    }
-}
-
-bool Composite::prepareUpdate()
-{
-    enum TransitionType type = m_update.canPrepare();
-    if (type == TransitionType_NotAllowed) {
-        return false;
-    } else if (type == TransitionType_Same) {
-        return true;
-    }
-    m_updateIndex = 0;
-    if (!m_children[m_updateIndex]->prepareUpdate()) {
-        m_update.fail();
-        return false;
-    }
-    return m_update.prepare();
-}
-
-bool Composite::startUpdate()
-{
-    if (m_download.getState() == StateType_COMPLETED) {
-        enum TransitionType type = m_update.canStart();
-        if (type == TransitionType_NotAllowed) {
-            return false;
-        } else if (type == TransitionType_Same) {
-            return true;
-        }
-        m_updateIndex = 0;
-        if (!m_children[m_updateIndex]->startUpdate()) {
-            m_update.fail();
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        if (!(*it)->prepare()) {
+            m_status.fail();
             return false;
         }
-        return m_update.start();
-    } else {
-        enum TransitionType type = m_update.canWait();
-        if (type == TransitionType_NotAllowed) {
-            return false;
-        } else if (type == TransitionType_Same) {
-            return true;
-        }
-        return m_update.wait();
     }
+
+    return m_status.prepare();
 }
 
-bool Composite::pauseUpdate()
+bool Composite::install()
 {
-    enum TransitionType type = m_update.canPause();
+    enum TransitionType type = m_status.canInstall();
     if (type == TransitionType_NotAllowed) {
         return false;
     } else if (type == TransitionType_Same) {
         return true;
     }
-    if (!m_children[m_updateIndex]->pauseUpdate()) {
-        m_update.fail();
+    m_current = 0;
+    if (!m_children[m_current]->install()) {
+        m_status.fail();
         return false;
     }
-    return m_update.pause();
+    return m_status.install();
 }
 
-bool Composite::resumeUpdate()
+bool Composite::pause()
 {
-    enum TransitionType type = m_update.canResume();
+    enum TransitionType type = m_status.canPause();
     if (type == TransitionType_NotAllowed) {
         return false;
     } else if (type == TransitionType_Same) {
         return true;
     }
-    if (!m_children[m_updateIndex]->pauseUpdate()) {
-        m_update.fail();
+    if (!m_children[m_current]->pause()) {
+        m_status.fail();
         return false;
     }
-    return m_update.resume();
+    return m_status.pause();
 }
 
-bool Composite::cancelUpdate()
+bool Composite::resume()
 {
-    enum TransitionType type = m_update.canCancel();
+    enum TransitionType type = m_status.canResume();
     if (type == TransitionType_NotAllowed) {
         return false;
     } else if (type == TransitionType_Same) {
         return true;
     }
-    if (!m_children[m_updateIndex]->cancelUpdate()) {
-        m_update.fail();
+    if (!m_children[m_current]->resume()) {
+        m_status.fail();
         return false;
     }
-    return m_update.cancel();
+    return m_status.resume();
+}
+
+bool Composite::cancel()
+{
+    enum TransitionType type = m_status.canCancel();
+    if (type == TransitionType_NotAllowed) {
+        return false;
+    } else if (type == TransitionType_Same) {
+        return true;
+    }
+    if (!m_children[m_current]->cancel()) {
+        m_status.fail();
+        return false;
+    }
+    return m_status.cancel();
 }
 
 void Composite::add(shared_ptr<Component> component)
 {
     m_children.push_back(component);
-    component->getDownload().setCallback( // @suppress("Invalid arguments")
-        std::bind(&Composite::onDownloadStateChanged,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2
-        )
-    );
-    component->getUpdate().setCallback( // @suppress("Invalid arguments")
-        std::bind(&Composite::onUpdateStateChanged,
+    component->getStatus().setCallback( // @suppress("Invalid arguments")
+        std::bind(&Composite::onChildStatusChanged,
                   this,
                   std::placeholders::_1,
                   std::placeholders::_2
@@ -283,36 +150,5 @@ void Composite::add(shared_ptr<Component> component)
 
 void Composite::remove(shared_ptr<Component> component)
 {
-    component->getDownload().setCallback(nullptr);
-    component->getUpdate().setCallback(nullptr);
-    //
+    component->getStatus().setCallback(nullptr);
 }
-
-//void DeploymentAction::addCallback()
-//{
-//    for (auto it = m_modules.begin(); it != m_modules.end(); ++it) {
-//        it->getDownload().setCallback( // @suppress("Invalid arguments")
-//            std::bind(&DeploymentAction::onDownloadStateChanged,
-//                      this,
-//                      std::placeholders::_1,
-//                      std::placeholders::_2
-//            )
-//        );
-//
-//        it->getUpdate().setCallback( // @suppress("Invalid arguments")
-//            std::bind(&DeploymentAction::onUpdateStateChanged,
-//                      this,
-//                      std::placeholders::_1,
-//                      std::placeholders::_2
-//            )
-//        );
-//    }
-//}
-//
-//void DeploymentAction::removeCallback()
-//{
-//    for (auto it = m_modules.begin(); it != m_modules.end(); ++it) {
-//        it->getDownload().setCallback(nullptr);
-//        it->getUpdate().setCallback(nullptr);
-//    }
-//}

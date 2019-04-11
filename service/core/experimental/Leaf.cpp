@@ -25,112 +25,57 @@ Leaf::~Leaf()
 {
 }
 
-bool Leaf::prepareDownload()
+bool Leaf::prepare()
 {
-    enum TransitionType type = m_download.canPrepare();
+    enum TransitionType type = m_status.canPrepare();
     if (type == TransitionType_NotAllowed) {
         return false;
     } else if (type == TransitionType_Same) {
         return true;
     }
-    return m_download.prepare();
+    return m_status.prepare();
 }
 
-bool Leaf::startDownload()
+bool Leaf::install()
 {
-    enum TransitionType type = m_download.canStart();
+    enum TransitionType type = m_status.canInstall();
     if (type == TransitionType_NotAllowed) {
         return false;
     } else if (type == TransitionType_Same) {
         return true;
     }
-    return m_download.start();
+    return m_status.install();
 }
 
-bool Leaf::pauseDownload()
+bool Leaf::pause()
 {
-    enum TransitionType type = m_download.canPause();
+    enum TransitionType type = m_status.canPause();
     if (type == TransitionType_NotAllowed) {
         return false;
     } else if (type == TransitionType_Same) {
         return true;
     }
-    return m_download.pause();
+    return m_status.pause();
 }
 
-bool Leaf::resumeDownload()
+bool Leaf::resume()
 {
-    enum TransitionType type = m_download.canResume();
+    enum TransitionType type = m_status.canResume();
     if (type == TransitionType_NotAllowed) {
         return false;
     } else if (type == TransitionType_Same) {
         return true;
     }
-    return m_download.resume();
+    return m_status.resume();
 }
 
-bool Leaf::cancelDownload()
+bool Leaf::cancel()
 {
-    enum TransitionType type = m_download.canCancel();
+    enum TransitionType type = m_status.canCancel();
     if (type == TransitionType_NotAllowed) {
         return false;
     } else if (type == TransitionType_Same) {
         return true;
     }
-    return m_download.cancel();
-}
-
-bool Leaf::prepareUpdate()
-{
-    enum TransitionType type = m_update.canPrepare();
-    if (type == TransitionType_NotAllowed) {
-        return false;
-    } else if (type == TransitionType_Same) {
-        return true;
-    }
-    return m_update.prepare();
-}
-
-bool Leaf::startUpdate()
-{
-    enum TransitionType type = m_update.canStart();
-    if (type == TransitionType_NotAllowed) {
-        return false;
-    } else if (type == TransitionType_Same) {
-        return true;
-    }
-    return m_update.start();
-}
-
-bool Leaf::pauseUpdate()
-{
-    enum TransitionType type = m_update.canPause();
-    if (type == TransitionType_NotAllowed) {
-        return false;
-    } else if (type == TransitionType_Same) {
-        return true;
-    }
-    return m_update.pause();
-}
-
-bool Leaf::resumeUpdate()
-{
-    enum TransitionType type = m_update.canResume();
-    if (type == TransitionType_NotAllowed) {
-        return false;
-    } else if (type == TransitionType_Same) {
-        return true;
-    }
-    return m_update.resume();
-}
-
-bool Leaf::cancelUpdate()
-{
-    enum TransitionType type = m_update.canPrepare();
-    if (type == TransitionType_NotAllowed) {
-        return false;
-    } else if (type == TransitionType_Same) {
-        return true;
-    }
-    return m_update.prepare();
+    return m_status.cancel();
 }

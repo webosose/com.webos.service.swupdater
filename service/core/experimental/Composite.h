@@ -18,10 +18,10 @@
 #ifndef CORE_EXPERIMENTAL_COMPOSITE_H_
 #define CORE_EXPERIMENTAL_COMPOSITE_H_
 
-#include <core/experimental/Component.h>
 #include <iostream>
 #include <deque>
 
+#include "core/experimental/Component.h"
 
 using namespace std;
 
@@ -30,19 +30,12 @@ public:
     Composite();
     virtual ~Composite();
 
-    virtual void onDownloadStateChanged(enum StateType prev, enum StateType cur);
-    virtual bool prepareDownload() override;
-    virtual bool startDownload() override;
-    virtual bool pauseDownload() override;
-    virtual bool resumeDownload() override;
-    virtual bool cancelDownload()  override;
-
-    virtual void onUpdateStateChanged(enum StateType prev, enum StateType cur);
-    virtual bool prepareUpdate() override;
-    virtual bool startUpdate() override;
-    virtual bool pauseUpdate() override;
-    virtual bool resumeUpdate() override;
-    virtual bool cancelUpdate() override;
+    virtual void onChildStatusChanged(enum StatusType prev, enum StatusType cur);
+    virtual bool prepare() override;
+    virtual bool install() override;
+    virtual bool pause() override;
+    virtual bool resume() override;
+    virtual bool cancel()  override;
 
 protected:
     void add(shared_ptr<Component> component);
@@ -50,8 +43,7 @@ protected:
 
     deque<shared_ptr<Component>> m_children;
 
-    unsigned int m_downloadIndex;
-    unsigned int m_updateIndex;
+    unsigned int m_current;
 
 };
 

@@ -17,11 +17,11 @@
 #ifndef CORE_INSTALL_SOFTWAREMODULE_H_
 #define CORE_INSTALL_SOFTWAREMODULE_H_
 
+#include <core/Status.h>
 #include <iostream>
 #include <deque>
 #include <pbnjson.hpp>
 
-#include "core/State.h"
 #include "core/install/Artifact.h"
 #include "core/experimental/Composite.h"
 #include "interface/IClassName.h"

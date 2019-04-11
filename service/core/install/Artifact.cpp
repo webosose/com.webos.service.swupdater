@@ -57,51 +57,35 @@ void Artifact::onProgressDownload(HttpFile* call)
 void Artifact::onCompletedDownload(HttpFile* call)
 {
     Logger::info(getClassName(), m_fileName, __FUNCTION__);
-    if (m_download.canComplete() != TransitionType_Allowed) {
+    if (m_status.canComplete() != TransitionType_Allowed) {
         return;
     }
 
     m_curSize = call->getFilesize();
 
-    if (!m_download.complete()) {
-        Logger::error(getClassName(), m_fileName, "Failed to complete download");
+    if (m_status.getStatus() != StatusType_RUNNING) {
+        return;
+    }
+
+
+    if (getFileExtension() == "ipk") {
+        AppInstaller::getInstance().install(getIpkName(), getFullName(), this);
+    } else {
+        Logger::warning(getClassName(), m_fileName, "Not supported file extension");
+        m_status.complete();
     }
 }
 
 void Artifact::onFailedDownload(HttpFile* call)
 {
     Logger::error(getClassName(), m_fileName, __FUNCTION__);
-    if (m_download.canFail() != TransitionType_Allowed) {
+    if (m_status.canFail() != TransitionType_Allowed) {
         return;
     }
 
     m_curSize = 0;
-    m_download.fail();
+    m_status.fail();
 }
-
-bool Artifact::prepareDownload()
-{
-    if (!Leaf::prepareDownload())
-        return false;
-    m_httpFile = make_shared<HttpFile>();
-    m_httpFile->open(MethodType_GET, m_url);
-    m_httpFile->setFilename(getFullName());
-    m_httpFile->setListener(this);
-
-    return true;
-}
-
-bool Artifact::startDownload()
-{
-    if (!Leaf::startDownload())
-        return false;
-    if (!m_httpFile->send()) {
-        m_download.fail();
-        return false;
-    }
-    return true;
-}
-
 
 void Artifact::onInstallSubscription(pbnjson::JValue subscriptionPayload)
 {
@@ -113,36 +97,35 @@ void Artifact::onInstallSubscription(pbnjson::JValue subscriptionPayload)
 
     if (state == "installed") {
         getCall().cancel();
-        m_update.complete();
+        m_status.complete();
     } else if (state == "install failed") {
         Logger::error(getClassName(), m_fileName, "Failed to install artifact");
         getCall().cancel();
-        m_update.fail();
+        m_status.fail();
     }
 }
 
-bool Artifact::startUpdate()
+bool Artifact::prepare()
 {
-    enum TransitionType type = m_update.canStart();
-    if (type == TransitionType_NotAllowed) {
-        Logger::error(getClassName(), m_fileName, "Translation is not allowed");
+    if (!Leaf::prepare())
+        return false;
+    m_httpFile = make_shared<HttpFile>();
+    m_httpFile->open(MethodType_GET, m_url);
+    m_httpFile->setFilename(getFullName());
+    m_httpFile->setListener(this);
+
+    return true;
+}
+
+bool Artifact::install()
+{
+    if (!Leaf::install())
+        return false;
+    if (!m_httpFile->send()) {
+        m_status.fail();
         return false;
     }
-    if (m_updateInProgress) {
-        Logger::debug(getClassName(), m_fileName, "Update is in progress");
-        return true;
-    } else if (m_download.getState() == StateType_COMPLETED) {
-        m_updateInProgress = true;
-        if (getFileExtension() == "ipk") {
-            AppInstaller::getInstance().install(getIpkName(), getFullName(), this);
-        } else {
-            Logger::warning(getClassName(), m_fileName, "Not supported file extension");
-            return m_update.complete();
-        }
-    } else {
-        Logger::debug(getClassName(), m_fileName, "Download is not completed");
-    }
-    return m_update.wait();
+    return true;
 }
 
 bool Artifact::fromJson(const JValue& json)
