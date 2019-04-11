@@ -16,6 +16,12 @@
 
 enum TransitionType State::checkTransition(enum StateType state)
 {
+    if (state == StateType_CANCELED ||
+        state == StateType_COMPLETED ||
+        state == StateType_FAILED) {
+        return TransitionType_Allowed;
+    }
+
     switch (m_state) {
     case StateType_NONE:
         if (state == StateType_NONE) {
@@ -27,15 +33,10 @@ enum TransitionType State::checkTransition(enum StateType state)
         } else if (state == StateType_RUNNING) {
             return TransitionType_NotAllowed;
         } else if (state == StateType_PAUSED) {
-            return TransitionType_Allowed;
-        } else if (state == StateType_CANCELED) {
-            return TransitionType_Allowed;
-        } else if (state == StateType_COMPLETED) {
-            return TransitionType_Allowed;
-        } else if (state == StateType_FAILED) {
-            return TransitionType_Allowed;
+            return TransitionType_NotAllowed;
+        } else {
+            return TransitionType_Unknown;
         }
-        return TransitionType_Unknown;
 
     case StateType_READY:
         if (state == StateType_NONE) {
@@ -47,15 +48,10 @@ enum TransitionType State::checkTransition(enum StateType state)
         } else if (state == StateType_RUNNING) {
             return TransitionType_Allowed;
         } else if (state == StateType_PAUSED) {
-            return TransitionType_Allowed;
-        } else if (state == StateType_CANCELED) {
-            return TransitionType_Allowed;
-        } else if (state == StateType_COMPLETED) {
-            return TransitionType_Allowed;
-        } else if (state == StateType_FAILED) {
-            return TransitionType_Allowed;
+            return TransitionType_NotAllowed;
+        } else {
+            return TransitionType_Unknown;
         }
-        return TransitionType_Unknown;
 
     case StateType_WAITING:
         if (state == StateType_NONE) {
@@ -68,14 +64,9 @@ enum TransitionType State::checkTransition(enum StateType state)
             return TransitionType_Allowed;
         } else if (state == StateType_PAUSED) {
             return TransitionType_NotAllowed;
-        } else if (state == StateType_CANCELED) {
-            return TransitionType_Allowed;
-        } else if (state == StateType_COMPLETED) {
-            return TransitionType_Allowed;
-        } else if (state == StateType_FAILED) {
-            return TransitionType_Allowed;
+        } else {
+            return TransitionType_Unknown;
         }
-        return TransitionType_Unknown;
 
     case StateType_RUNNING:
         if (state == StateType_NONE) {
@@ -88,14 +79,9 @@ enum TransitionType State::checkTransition(enum StateType state)
             return TransitionType_Same;
         } else if (state == StateType_PAUSED) {
             return TransitionType_Allowed;
-        } else if (state == StateType_CANCELED) {
-            return TransitionType_Allowed;
-        } else if (state == StateType_COMPLETED) {
-            return TransitionType_Allowed;
-        } else if (state == StateType_FAILED) {
-            return TransitionType_Allowed;
+        } else {
+            return TransitionType_Unknown;
         }
-        return TransitionType_Unknown;
 
     case StateType_PAUSED:
         if (state == StateType_NONE) {
@@ -108,74 +94,30 @@ enum TransitionType State::checkTransition(enum StateType state)
             return TransitionType_Allowed;
         } else if (state == StateType_PAUSED) {
             return TransitionType_Same;
-        } else if (state == StateType_CANCELED) {
-            return TransitionType_Allowed;
-        } else if (state == StateType_COMPLETED) {
-            return TransitionType_Allowed;
-        } else if (state == StateType_FAILED) {
-            return TransitionType_Allowed;
+        } else {
+            return TransitionType_Unknown;
         }
-        return TransitionType_Unknown;
 
     case StateType_CANCELED:
-        if (state == StateType_NONE) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_READY) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_WAITING) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_RUNNING) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_PAUSED) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_CANCELED) {
+        if (state == StateType_CANCELED) {
             return TransitionType_Same;
-        } else if (state == StateType_COMPLETED) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_FAILED) {
+        } else {
             return TransitionType_NotAllowed;
         }
-        return TransitionType_Unknown;
 
     case StateType_COMPLETED:
-        if (state == StateType_NONE) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_READY) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_WAITING) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_RUNNING) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_PAUSED) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_CANCELED) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_COMPLETED) {
+        if (state == StateType_COMPLETED) {
             return TransitionType_Same;
-        } else if (state == StateType_FAILED) {
+        } else {
             return TransitionType_NotAllowed;
         }
-        return TransitionType_Unknown;
 
     case StateType_FAILED:
-        if (state == StateType_NONE) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_READY) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_WAITING) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_RUNNING) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_PAUSED) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_CANCELED) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_COMPLETED) {
-            return TransitionType_NotAllowed;
-        } else if (state == StateType_FAILED) {
+        if (state == StateType_FAILED) {
             return TransitionType_Same;
+        } else {
+            return TransitionType_NotAllowed;
         }
-        return TransitionType_Unknown;
     }
     return TransitionType_Unknown;
 }

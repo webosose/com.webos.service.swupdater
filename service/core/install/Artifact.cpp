@@ -21,15 +21,13 @@
 
 const string Artifact::DIRNAME = "/home/root/";
 
-Artifact::Artifact(const JValue& json)
-    : m_curSize(0)
+Artifact::Artifact()
+    : m_total(0)
+    , m_curSize(0)
     , m_prevSize(0)
-    , m_download("Artifact-download")
-    , m_update("Artifact-update")
     , m_updateInProgress(false)
 {
     setClassName("Artifact");
-    fromJson(json);
 }
 
 Artifact::~Artifact()
@@ -83,29 +81,25 @@ void Artifact::onFailedDownload(HttpFile* call)
 
 bool Artifact::prepareDownload()
 {
-    if (m_download.canPrepare() != TransitionType_Allowed) {
+    if (!Leaf::prepareDownload())
         return false;
-    }
-
     m_httpFile = make_shared<HttpFile>();
     m_httpFile->open(MethodType_GET, m_url);
     m_httpFile->setFilename(getFullName());
     m_httpFile->setListener(this);
 
-    return m_download.prepare();
+    return true;
 }
 
 bool Artifact::startDownload()
 {
-    if (m_download.canStart() != TransitionType_Allowed) {
+    if (!Leaf::startDownload())
         return false;
-    }
-
     if (!m_httpFile->send()) {
         m_download.fail();
         return false;
     }
-    return m_download.start();
+    return true;
 }
 
 
@@ -125,15 +119,6 @@ void Artifact::onInstallSubscription(pbnjson::JValue subscriptionPayload)
         getCall().cancel();
         m_update.fail();
     }
-}
-
-bool Artifact::prepareUpdate()
-{
-    enum TransitionType type = m_update.canPrepare();
-    if (type != TransitionType_Allowed) {
-        return State::writeCommonLog(m_update, type, getClassName(), "prepare");
-    }
-    return m_update.prepare();
 }
 
 bool Artifact::startUpdate()
@@ -181,10 +166,10 @@ bool Artifact::fromJson(const JValue& json)
 
 bool Artifact::toJson(JValue& json)
 {
+    Component::toJson(json);
+
     json.put("filename", m_fileName);
     json.put("total", m_total);
     json.put("size", m_curSize);
-    json.put("download", m_download.getStateStr());
-    json.put("update", m_update.getStateStr());
     return true;
 }

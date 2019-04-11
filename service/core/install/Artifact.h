@@ -22,6 +22,7 @@
 
 #include "core/HttpFile.h"
 #include "core/State.h"
+#include "core/experimental/Leaf.h"
 #include "ls2/AppInstaller.h"
 #include "interface/IClassName.h"
 #include "interface/IListener.h"
@@ -35,9 +36,9 @@ class Artifact;
 class Artifact : public IClassName,
                  public HttpFileListener,
                  public AppInstallerListener,
-                 public ISerializable {
+                 public Leaf {
 public:
-    Artifact(const JValue& json);
+    Artifact();
     virtual ~Artifact();
 
     // HttpFileListener
@@ -46,14 +47,13 @@ public:
     virtual void onCompletedDownload(HttpFile* call) override;
     virtual void onFailedDownload(HttpFile* call) override;
 
-    bool prepareDownload();
-    bool startDownload();
+    virtual bool prepareDownload() override;
+    virtual bool startDownload() override;
 
     // AppInstallerListener
     virtual void onInstallSubscription(pbnjson::JValue subscriptionPayload) override;
 
-    bool prepareUpdate();
-    bool startUpdate();
+    virtual bool startUpdate() override;
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
@@ -81,16 +81,6 @@ public:
         return DIRNAME + m_fileName;
     }
 
-    State& getDownload()
-    {
-        return m_download;
-    }
-
-    State& getUpdate()
-    {
-        return m_update;
-    }
-
 private:
     const static string DIRNAME;
 
@@ -110,8 +100,6 @@ private:
     string m_md5sum;
     string m_url;
 
-    State m_download;
-    State m_update;
     bool m_updateInProgress;
 
     shared_ptr<HttpFile> m_httpFile;

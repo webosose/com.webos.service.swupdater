@@ -23,10 +23,8 @@
 
 #include "core/State.h"
 #include "core/install/Artifact.h"
+#include "core/experimental/Composite.h"
 #include "interface/IClassName.h"
-#include "interface/ISerializable.h"
-#include "interface/ISingleton.h"
-#include "interface/IListener.h"
 
 using namespace std;
 using namespace pbnjson;
@@ -39,21 +37,13 @@ enum SoftwareModuleType {
 };
 
 class SoftwareModule : public IClassName,
-                       public ISerializable {
+                       public Composite {
 public:
     static string toString(enum SoftwareModuleType& type);
     static SoftwareModuleType toEnum(const string& type);
 
-    SoftwareModule(JValue& json);
+    SoftwareModule();
     virtual ~SoftwareModule();
-
-    virtual void onDownloadStateChanged(enum StateType prev, enum StateType cur);
-    bool prepareDownload();
-    bool startDownload();
-
-    virtual void onUpdateStateChanged(enum StateType prev, enum StateType cur);
-    bool prepareUpdate();
-    bool startUpdate();
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
@@ -69,16 +59,6 @@ public:
         return m_name;
     }
 
-    State& getDownload()
-    {
-        return m_download;
-    }
-
-    State& getUpdate()
-    {
-        return m_update;
-    }
-
 protected:
     void addCallback();
     void removeCallback();
@@ -86,14 +66,6 @@ protected:
     enum SoftwareModuleType m_type;
     string m_name;
     string m_version;
-
-    // states
-    State m_download;
-    State m_update;
-
-    deque<Artifact> m_artifacts;
-    unsigned int m_curDownload;
-    unsigned int m_curUpdate;
 
 };
 

@@ -21,30 +21,17 @@
 #include <deque>
 #include <map>
 
-#include "core/State.h"
 #include "core/AbsAction.h"
+#include "core/experimental/Composite.h"
 #include "core/install/SoftwareModule.h"
 
 using namespace std;
 
-class DeploymentAction : public AbsAction {
+class DeploymentAction : public AbsAction,
+                         public Composite {
 public:
-    DeploymentAction(JValue& json);
+    DeploymentAction();
     virtual ~DeploymentAction();
-
-    void onDownloadStateChanged(enum StateType prev, enum StateType cur);
-    bool prepareDownload();
-    bool startDownload();
-    bool pauseDownload();
-    bool resumeDownload();
-    bool cancelDownload();
-
-    void onUpdateStateChanged(enum StateType prev, enum StateType cur);
-    bool prepareUpdate();
-    bool startUpdate();
-    bool pauseUpdate();
-    bool resumeUpdate();
-    bool cancelUpdate();
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
@@ -60,39 +47,10 @@ public:
         return m_isForceUpdate;
     }
 
-    bool isComplete()
-    {
-        return (m_download.getState() == StateType_COMPLETED && m_update.getState() == StateType_COMPLETED);
-    }
-
-    bool isFailed()
-    {
-        return (m_download.getState() == StateType_FAILED || m_update.getState() == StateType_FAILED);
-    }
-
-    State& getDownloadState()
-    {
-        return m_download;
-    }
-
-    State& getUpdateState()
-    {
-        return m_update;
-    }
-
 private:
-    void addCallback();
-    void removeCallback();
-
     bool m_isForceDownload;
     bool m_isForceUpdate;
 
-    State m_download;
-    State m_update;
-
-    deque<SoftwareModule> m_modules;
-    unsigned int m_curDownload;
-    unsigned int m_curUpdate;
 };
 
 #endif /* CORE_INSTALL_DEPLOYMENTACTION_H_ */

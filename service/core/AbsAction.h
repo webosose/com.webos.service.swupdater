@@ -32,8 +32,7 @@ enum ActionType {
     ActionType_CANCEL,
 };
 
-class AbsAction : public IClassName,
-                  public ISerializable {
+class AbsAction : public IClassName {
 public:
     AbsAction()
     {
@@ -58,24 +57,10 @@ public:
         return m_type;
     }
 
-    virtual bool fromJson(const JValue& json) override
-    {
-        ISerializable::fromJson(json);
-
-        if (json.hasKey("id") && json["id"].isString()) {
-            m_id = json["id"].asString();
-        }
-        return true;
-    }
-
-    virtual bool toJson(JValue& json) override
-    {
-        json.put("id", m_id);
-        return true;
-    }
+protected:
+    string m_id;
 
 private:
-    string m_id;
     ActionType m_type;
 
 };

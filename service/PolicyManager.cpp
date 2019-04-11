@@ -57,47 +57,41 @@ bool PolicyManager::onFinalization()
     return true;
 }
 
-void PolicyManager::onStateChanged(enum StateType prev, enum StateType cur, void *source)
+void PolicyManager::onChangeStatus()
 {
-    if (prev == StateType_NONE)
+    static JValue prev;
+    JValue cur = pbnjson::Object();
+
+    // post subscription
+    if (m_statusPoint && m_statusPoint->getSubscribersCount() > 0) {
+        if (!m_currentAction) {
+            cur.put("id", nullptr);
+            cur.put("download", nullptr);
+            cur.put("update", nullptr);
+        } else {
+            m_currentAction->toJson(cur);
+        }
+        cur.put("subscribed", true);
+        cur.put("returnValue", true);
+        if (prev != cur) {
+            LS2Handler::writeBLog("Post", "/getStatus", cur);
+            m_statusPoint->post(cur.stringify().c_str());
+            prev = cur.duplicate();
+        }
+    }
+
+    if (!m_currentAction)
         return;
 
-    onChangeStatus();
+    // check installation status
     if (m_currentAction->isComplete()) {
         JValue responsePayload;
         HawkBitClient::getInstance().postDeploymentActionSuccess(responsePayload, m_currentAction->getId());
         m_currentAction = nullptr;
-        onChangeStatus();
     } else if (m_currentAction->isFailed()) {
         JValue responsePayload;
         HawkBitClient::getInstance().postDeploymentActionFailed(responsePayload, m_currentAction->getId());
         m_currentAction = nullptr;
-        onChangeStatus();
-    }
-}
-
-void PolicyManager::onChangeStatus()
-{
-    static JValue prev;
-    JValue current = pbnjson::Object();
-
-    if (!m_statusPoint || m_statusPoint->getSubscribersCount() <= 0) {
-        return;
-    }
-
-    if (!m_currentAction) {
-        current.put("id", nullptr);
-        current.put("download", nullptr);
-        current.put("update", nullptr);
-    } else {
-        m_currentAction->toJson(current);
-    }
-    current.put("subscribed", true);
-    current.put("returnValue", true);
-    if (prev != current) {
-        LS2Handler::writeBLog("Post", "/getStatus", current);
-        m_statusPoint->post(current.stringify().c_str());
-        prev = current.duplicate();
     }
 }
 
@@ -220,11 +214,12 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
         if (m_currentAction->getId() == id) {
             Logger::info(getClassName(), "Update is in progress");
         } else {
-            Logger::error(getClassName(), "Unknown error");
+            Logger::error(getClassName(), "'Id' is not same - " + m_currentAction->getId() + " : " + id);
         }
         return;
     }
-    m_currentAction = make_shared<DeploymentAction>(responsePayload);
+    m_currentAction = make_shared<DeploymentAction>();
+    m_currentAction->fromJson(responsePayload);
     if (!m_currentAction->prepareDownload()) {
         Logger::info(getClassName(), "Failed to download");
         return;
