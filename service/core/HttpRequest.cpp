@@ -182,7 +182,7 @@ bool HttpRequest::setMethod(MethodType method)
         break;
 
     case MethodType_PUT:
-        rc = curl_easy_setopt(m_easyHandle, CURLOPT_PUT, 1L);
+        rc = curl_easy_setopt(m_easyHandle, CURLOPT_CUSTOMREQUEST, "PUT");
         break;
 
     case MethodType_DELETE:
