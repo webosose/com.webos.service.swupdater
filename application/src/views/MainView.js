@@ -33,34 +33,30 @@ class MainView extends React.Component {
         super();
         this.state = {
             id: ID_NONE,
-            statusDownload: STATUS_NONE,
-            statusUpdate: STATUS_NONE,
+            status: STATUS_NONE,
             softwareModules: [],
         };
 
         this.onGetStatus = this.onGetStatus.bind(this);
         this.onRegisterServerStatus = this.onRegisterServerStatus.bind(this);
-
+        this.onApplicationClose = this.onApplicationClose.bind(this);
     }
 
     onGetStatus(res) {
         const id = res.id || ID_NONE;
-        const statusDownload = res.download || STATUS_NONE;
-        const statusUpdate = res.update || STATUS_NONE;
+        const status = res.status || STATUS_NONE;
         const softwareModules = res.softwareModules || [];
 
         if (id !== ID_NONE && this.state.id === ID_NONE) {
             createToast(`Update available<br> ${softwareModules[0].name} (v${softwareModules[0].version})`);
         }
-        if (statusDownload === STATUS_COMPLETED && statusUpdate === STATUS_COMPLETED &&
-                (this.state.statusDownload !== STATUS_COMPLETED || this.state.statusUpdate !== STATUS_COMPLETED)) {
+        if (status === STATUS_COMPLETED && this.state.status !== STATUS_COMPLETED) {
             createToast(`Update completed<br> ${softwareModules[0].name} (v${softwareModules[0].version})`);
         }
 
         this.setState({
             id: id,
-            statusDownload: statusDownload,
-            statusUpdate: statusUpdate,
+            status: status,
             softwareModules: softwareModules,
         });
     }
@@ -74,6 +70,12 @@ class MainView extends React.Component {
                 this.getStatus.cancel();
                 this.getStatus = null;
             }
+        }
+    }
+
+    onApplicationClose() {
+        if (typeof window === 'object') {
+            window.close();
         }
     }
 
@@ -95,15 +97,15 @@ class MainView extends React.Component {
     }
 
     render() {
-        const {statusDownload, statusUpdate, softwareModules} = this.state;
+        const {status, softwareModules} = this.state;
 
         return (
-            <Panels>
+            <Panels onApplicationClose={this.onApplicationClose}>
                 <Panel>
                     <Header title="S/W update demo" />
                     <Layout style={{height: '100%'}}>
                         <Cell size="25%">
-                            <ControlView actionId={this.state.id} statusDownload={statusDownload} statusUpdate={statusUpdate}/>
+                            <ControlView actionId={this.state.id} status={status}/>
                         </Cell>
                         <Cell>
                             <DetailView softwareModules={softwareModules}/>
