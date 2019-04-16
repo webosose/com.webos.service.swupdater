@@ -14,14 +14,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "core/install/Artifact.h"
+#include "core/install/impl/ArtifactLeaf.h"
 
-#include "util/JValueUtil.h"
 #include "PolicyManager.h"
+#include "util/JValueUtil.h"
 
-const string Artifact::DIRNAME = "/home/root/";
+const string ArtifactLeaf::DIRNAME = "/home/root/";
 
-Artifact::Artifact()
+ArtifactLeaf::ArtifactLeaf()
     : m_total(0)
     , m_curSize(0)
     , m_prevSize(0)
@@ -30,18 +30,18 @@ Artifact::Artifact()
     setClassName("Artifact");
 }
 
-Artifact::~Artifact()
+ArtifactLeaf::~ArtifactLeaf()
 {
     m_httpFile = nullptr;
 }
 
-void Artifact::onStartedDownload(HttpFile* call)
+void ArtifactLeaf::onStartedDownload(HttpFile* call)
 {
     Logger::info(getClassName(), m_fileName, __FUNCTION__);
     m_curSize = call->getFilesize();
 }
 
-void Artifact::onProgressDownload(HttpFile* call)
+void ArtifactLeaf::onProgressDownload(HttpFile* call)
 {
     m_curSize = call->getFilesize();
 
@@ -54,7 +54,7 @@ void Artifact::onProgressDownload(HttpFile* call)
     }
 }
 
-void Artifact::onCompletedDownload(HttpFile* call)
+void ArtifactLeaf::onCompletedDownload(HttpFile* call)
 {
     Logger::info(getClassName(), m_fileName, __FUNCTION__);
     if (m_status.canComplete() != TransitionType_Allowed) {
@@ -76,7 +76,7 @@ void Artifact::onCompletedDownload(HttpFile* call)
     }
 }
 
-void Artifact::onFailedDownload(HttpFile* call)
+void ArtifactLeaf::onFailedDownload(HttpFile* call)
 {
     Logger::error(getClassName(), m_fileName, __FUNCTION__);
     if (m_status.canFail() != TransitionType_Allowed) {
@@ -87,7 +87,7 @@ void Artifact::onFailedDownload(HttpFile* call)
     m_status.fail();
 }
 
-void Artifact::onInstallSubscription(pbnjson::JValue subscriptionPayload)
+void ArtifactLeaf::onInstallSubscription(pbnjson::JValue subscriptionPayload)
 {
     string state;
     if (!JValueUtil::getValue(subscriptionPayload, "details", "state", state))
@@ -105,7 +105,7 @@ void Artifact::onInstallSubscription(pbnjson::JValue subscriptionPayload)
     }
 }
 
-bool Artifact::prepare()
+bool ArtifactLeaf::prepare()
 {
     if (!Leaf::prepare())
         return false;
@@ -117,7 +117,7 @@ bool Artifact::prepare()
     return true;
 }
 
-bool Artifact::install()
+bool ArtifactLeaf::install()
 {
     if (!Leaf::install())
         return false;
@@ -128,7 +128,7 @@ bool Artifact::install()
     return true;
 }
 
-bool Artifact::fromJson(const JValue& json)
+bool ArtifactLeaf::fromJson(const JValue& json)
 {
     ISerializable::fromJson(json);
 
@@ -147,7 +147,7 @@ bool Artifact::fromJson(const JValue& json)
     return true;
 }
 
-bool Artifact::toJson(JValue& json)
+bool ArtifactLeaf::toJson(JValue& json)
 {
     Component::toJson(json);
 

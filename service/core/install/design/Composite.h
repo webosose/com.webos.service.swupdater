@@ -15,22 +15,36 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef CORE_EXPERIMENTAL_LEAF_H_
-#define CORE_EXPERIMENTAL_LEAF_H_
+#ifndef CORE_INSTALL_DESIGN_COMPOSITE_H_
+#define CORE_INSTALL_DESIGN_COMPOSITE_H_
 
-#include "core/experimental/Component.h"
+#include <iostream>
+#include <deque>
 
-class Leaf : public Component {
+#include "core/install/design/Component.h"
+
+using namespace std;
+
+class Composite : public Component {
 public:
-    Leaf();
-    virtual ~Leaf();
+    Composite();
+    virtual ~Composite();
 
+    virtual void onChildStatusChanged(enum StatusType prev, enum StatusType cur);
     virtual bool prepare() override;
     virtual bool install() override;
     virtual bool pause() override;
     virtual bool resume() override;
     virtual bool cancel()  override;
 
+protected:
+    void add(shared_ptr<Component> component);
+    void remove(shared_ptr<Component> component);
+
+    deque<shared_ptr<Component>> m_children;
+
+    unsigned int m_current;
+
 };
 
-#endif /* CORE_EXPERIMENTAL_LEAF_H_ */
+#endif /* CORE_INSTALL_DESIGN_COMPOSITE_H_ */

@@ -14,13 +14,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "core/install/SoftwareModule.h"
+#include "core/install/impl/SoftwareModuleComposite.h"
 
 #include "PolicyManager.h"
 #include "ls2/AppInstaller.h"
 #include "util/JValueUtil.h"
 
-string SoftwareModule::toString(enum SoftwareModuleType& type)
+string SoftwareModuleComposite::toString(enum SoftwareModuleType& type)
 {
     switch(type){
     case SoftwareModuleType_Unknown:
@@ -38,7 +38,7 @@ string SoftwareModule::toString(enum SoftwareModuleType& type)
     return "unknown";
 }
 
-SoftwareModuleType SoftwareModule::toEnum(const string& type)
+SoftwareModuleType SoftwareModuleComposite::toEnum(const string& type)
 {
     if (type == "unknown") {
         return SoftwareModuleType_Unknown;
@@ -48,7 +48,7 @@ SoftwareModuleType SoftwareModule::toEnum(const string& type)
     return SoftwareModuleType_Unknown;
 }
 
-SoftwareModule::SoftwareModule()
+SoftwareModuleComposite::SoftwareModuleComposite()
     : m_type(SoftwareModuleType_Unknown)
     , m_name("")
     , m_version("")
@@ -56,11 +56,11 @@ SoftwareModule::SoftwareModule()
     setClassName("SoftwareModule");
 }
 
-SoftwareModule::~SoftwareModule()
+SoftwareModuleComposite::~SoftwareModuleComposite()
 {
 }
 
-bool SoftwareModule::fromJson(const JValue& json)
+bool SoftwareModuleComposite::fromJson(const JValue& json)
 {
     ISerializable::fromJson(json);
 
@@ -73,7 +73,7 @@ bool SoftwareModule::fromJson(const JValue& json)
     JValueUtil::getValue(json, "version", m_version);
     if (json.hasKey("artifacts") && json["artifacts"].isArray()) {
         for (JValue artifact : json["artifacts"].items()) {
-            shared_ptr<Artifact> ptr = make_shared<Artifact>();
+            shared_ptr<ArtifactLeaf> ptr = make_shared<ArtifactLeaf>();
             ptr->fromJson(artifact);
             add(ptr);
         }
@@ -81,7 +81,7 @@ bool SoftwareModule::fromJson(const JValue& json)
     return true;
 }
 
-bool SoftwareModule::toJson(JValue& json)
+bool SoftwareModuleComposite::toJson(JValue& json)
 {
     Component::toJson(json);
 

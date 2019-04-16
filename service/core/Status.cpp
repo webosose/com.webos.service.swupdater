@@ -11,7 +11,8 @@
  * LICENSE@@@
  */
 
-#include <core/Status.h>
+#include "core/Status.h"
+
 #include "PolicyManager.h"
 
 enum TransitionType Status::checkTransition(enum StatusType status)

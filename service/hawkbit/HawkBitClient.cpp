@@ -153,7 +153,7 @@ bool HawkBitClient::postComplete(shared_ptr<AbsAction> action)
     return true;
 }
 
-bool HawkBitClient::postProgress(shared_ptr<DeploymentAction> action, int of, int cnt)
+bool HawkBitClient::postProgress(shared_ptr<DeploymentActionComposite> action, int of, int cnt)
 {
     const string url = m_hawkBitUrl + "/deploymentBase/" + action->getId() + "/feedback";
 

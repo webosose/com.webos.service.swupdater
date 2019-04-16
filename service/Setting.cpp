@@ -15,8 +15,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <string.h>
-#include <Setting.h>
 
+#include "Setting.h"
 #include "util/Logger.h"
 
 Setting::Setting()

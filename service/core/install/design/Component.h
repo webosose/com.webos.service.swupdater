@@ -14,8 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_EXPERIMENTAL_COMPONENT_H_
-#define CORE_EXPERIMENTAL_COMPONENT_H_
+#ifndef CORE_INSTALL_DESIGN_COMPONENT_H_
+#define CORE_INSTALL_DESIGN_COMPONENT_H_
 
 #include "core/Status.h"
 #include "interface/ISerializable.h"
@@ -55,4 +55,4 @@ protected:
 
 };
 
-#endif /* CORE_EXPERIMENTAL_COMPONENT_H_ */
+#endif /* CORE_INSTALL_DESIGN_COMPONENT_H_ */

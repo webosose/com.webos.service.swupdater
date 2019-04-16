@@ -14,15 +14,15 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_INSTALL_ARTIFACT_H_
-#define CORE_INSTALL_ARTIFACT_H_
+#ifndef CORE_INSTALL_IMPL_ARTIFACTLEAF_H_
+#define CORE_INSTALL_IMPL_ARTIFACTLEAF_H_
 
 #include <iostream>
 #include <pbnjson.hpp>
 
-#include <core/Status.h>
+#include "core/Status.h"
 #include "core/HttpFile.h"
-#include "core/experimental/Leaf.h"
+#include "core/install/design/Leaf.h"
 #include "ls2/AppInstaller.h"
 #include "interface/IClassName.h"
 #include "interface/IListener.h"
@@ -31,13 +31,13 @@
 using namespace std;
 using namespace pbnjson;
 
-class Artifact : public IClassName,
+class ArtifactLeaf : public IClassName,
                  public HttpFileListener,
                  public AppInstallerListener,
                  public Leaf {
 public:
-    Artifact();
-    virtual ~Artifact();
+    ArtifactLeaf();
+    virtual ~ArtifactLeaf();
 
     // HttpFileListener
     virtual void onStartedDownload(HttpFile* call) override;
@@ -102,4 +102,4 @@ private:
     shared_ptr<HttpFile> m_httpFile;
 };
 
-#endif /* CORE_INSTALL_ARTIFACT_H_ */
+#endif /* CORE_INSTALL_IMPL_ARTIFACTLEAF_H_ */

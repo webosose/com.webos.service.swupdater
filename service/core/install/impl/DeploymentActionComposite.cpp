@@ -14,13 +14,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "core/install/DeploymentAction.h"
+#include "core/install/impl/DeploymentActionComposite.h"
 
 #include "PolicyManager.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
 
-DeploymentAction::DeploymentAction()
+DeploymentActionComposite::DeploymentActionComposite()
     : AbsAction()
     , m_isForceDownload(false)
     , m_isForceUpdate(false)
@@ -29,11 +29,11 @@ DeploymentAction::DeploymentAction()
     setType(ActionType_INSTALL);
 }
 
-DeploymentAction::~DeploymentAction()
+DeploymentActionComposite::~DeploymentActionComposite()
 {
 }
 
-bool DeploymentAction::fromJson(const JValue& json)
+bool DeploymentActionComposite::fromJson(const JValue& json)
 {
     ISerializable::fromJson(json);
     string dummy;
@@ -49,14 +49,14 @@ bool DeploymentAction::fromJson(const JValue& json)
     }
 
     for (JValue chunk : json["deployment"]["chunks"].items()) {
-        shared_ptr<SoftwareModule> module = make_shared<SoftwareModule>();
+        shared_ptr<SoftwareModuleComposite> module = make_shared<SoftwareModuleComposite>();
         module->fromJson(chunk);
         this->add(module);
     }
     return true;
 }
 
-bool DeploymentAction::toJson(JValue& json)
+bool DeploymentActionComposite::toJson(JValue& json)
 {
     Component::toJson(json);
 

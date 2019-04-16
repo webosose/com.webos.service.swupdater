@@ -174,7 +174,7 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
         }
         return;
     }
-    m_currentAction = make_shared<DeploymentAction>();
+    m_currentAction = make_shared<DeploymentActionComposite>();
     m_currentAction->fromJson(responsePayload);
     if (!m_currentAction->prepare()) {
         Logger::info(getClassName(), "Failed to download");

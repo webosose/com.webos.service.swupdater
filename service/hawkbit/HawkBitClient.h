@@ -19,8 +19,8 @@
 
 #include <pbnjson.hpp>
 
+#include "core/install/impl/DeploymentActionComposite.h"
 #include "core/HttpRequest.h"
-#include "core/install/DeploymentAction.h"
 #include "interface/IInitializable.h"
 #include "interface/IListener.h"
 #include "interface/ISingleton.h"
@@ -59,7 +59,7 @@ public:
     bool resumed();
 
     bool postComplete(shared_ptr<AbsAction> action);
-    bool postProgress(shared_ptr<DeploymentAction> action, int of, int cnt);
+    bool postProgress(shared_ptr<DeploymentActionComposite> action, int of, int cnt);
 
     // HackBit communication APIs
     bool getBase(JValue& responsePayload, const string& url);

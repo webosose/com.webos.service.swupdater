@@ -15,7 +15,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#include "core/experimental/Composite.h"
+#include "core/install/design/Composite.h"
 
 Composite::Composite()
     : m_current(-1)
