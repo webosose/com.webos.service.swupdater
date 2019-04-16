@@ -32,9 +32,9 @@ using namespace std;
 using namespace pbnjson;
 
 class ArtifactLeaf : public IClassName,
-                 public HttpFileListener,
-                 public AppInstallerListener,
-                 public Leaf {
+                     public HttpFileListener,
+                     public AppInstallerListener,
+                     public Leaf {
 public:
     ArtifactLeaf();
     virtual ~ArtifactLeaf();
@@ -51,10 +51,18 @@ public:
     // Leaf
     virtual bool prepare() override;
     virtual bool install() override;
+    virtual bool pause() override;
+    virtual bool resume() override;
+    virtual bool cancel()  override;
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
     virtual bool toJson(JValue& json) override;
+
+    void setMetadata(JValue metadata)
+    {
+        m_metadata = metadata.duplicate();
+    }
 
     const string& getFileName()
     {
@@ -97,9 +105,8 @@ private:
     string m_md5sum;
     string m_url;
 
-    bool m_updateInProgress;
-
     shared_ptr<HttpFile> m_httpFile;
+    JValue m_metadata;
 };
 
 #endif /* CORE_INSTALL_IMPL_ARTIFACTLEAF_H_ */

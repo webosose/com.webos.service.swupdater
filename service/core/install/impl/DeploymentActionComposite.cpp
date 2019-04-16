@@ -25,7 +25,8 @@ DeploymentActionComposite::DeploymentActionComposite()
     , m_isForceDownload(false)
     , m_isForceUpdate(false)
 {
-    setClassName("DeploymentAction");
+    setClassName("DeploymentActionComposite");
+    m_status.setName("DeploymentActionComposite");
     setType(ActionType_INSTALL);
 }
 

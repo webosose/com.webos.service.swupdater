@@ -15,6 +15,7 @@
 #define CORE_STATUS_H_
 
 #include <iostream>
+#include <deque>
 #include <functional>
 
 #include "util/Logger.h"
@@ -222,14 +223,24 @@ public:
         return toString(m_status);
     }
 
+    void setName(const string& name)
+    {
+        m_name = name;
+    }
+
     const string& getName()
     {
         return m_name;
     }
 
-    void setCallback(Callback callbackFunc)
+    void addCallback(Callback callback)
     {
-        m_callbackFunc = std::move(callbackFunc);
+        m_callbacks.push_back(std::move(callback));
+    }
+
+    void clearCallback()
+    {
+        m_callbacks.clear();
     }
 
 private:
@@ -239,7 +250,7 @@ private:
     string m_name;
     enum StatusType m_status;
 
-    Callback m_callbackFunc;
+    deque<Callback> m_callbacks;
 };
 
 #endif /* CORE_STATUS_H_ */

@@ -139,7 +139,7 @@ bool Composite::cancel()
 void Composite::add(shared_ptr<Component> component)
 {
     m_children.push_back(component);
-    component->getStatus().setCallback( // @suppress("Invalid arguments")
+    component->getStatus().addCallback( // @suppress("Invalid arguments")
         std::bind(&Composite::onChildStatusChanged,
                   this,
                   std::placeholders::_1,
@@ -150,5 +150,5 @@ void Composite::add(shared_ptr<Component> component)
 
 void Composite::remove(shared_ptr<Component> component)
 {
-    component->getStatus().setCallback(nullptr);
+    component->getStatus().clearCallback();
 }

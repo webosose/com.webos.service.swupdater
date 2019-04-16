@@ -42,6 +42,8 @@ string ICAS::getEnv(const string& key)
             return Setting::getInstance().getId();
         } else if (!Socket::getMacAddress("wlan0").empty()) {
             return "webOS_" + Socket::getMacAddress("wlan0");
+        } else if (!Socket::getMacAddress("eth0").empty()) {
+            return "webOS_" + Socket::getMacAddress("eth0");
         } else {
             return "webOS_Demo";
         }

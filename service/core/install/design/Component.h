@@ -23,7 +23,7 @@
 class Component : public ISerializable {
 public:
     Component()
-        : m_status("AbsComponent-download")
+        : m_status("Component")
     {
 
     }

@@ -1,7 +1,8 @@
 {
     "swupdate": [
         "com.webos.service.swupdater/getStatus",
-        "com.webos.service.swupdater/install",
+        "com.webos.service.swupdater/setConfig",
+        "com.webos.service.swupdater/start",
         "com.webos.service.swupdater/pause",
         "com.webos.service.swupdater/resume",
         "com.webos.service.swupdater/cancel"

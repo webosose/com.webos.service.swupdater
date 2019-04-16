@@ -25,9 +25,9 @@ ArtifactLeaf::ArtifactLeaf()
     : m_total(0)
     , m_curSize(0)
     , m_prevSize(0)
-    , m_updateInProgress(false)
 {
-    setClassName("Artifact");
+    setClassName("ArtifactLeaf");
+    m_status.setName("ArtifactLeaf");
 }
 
 ArtifactLeaf::~ArtifactLeaf()
@@ -57,33 +57,37 @@ void ArtifactLeaf::onProgressDownload(HttpFile* call)
 void ArtifactLeaf::onCompletedDownload(HttpFile* call)
 {
     Logger::info(getClassName(), m_fileName, __FUNCTION__);
-    if (m_status.canComplete() != TransitionType_Allowed) {
-        return;
-    }
-
     m_curSize = call->getFilesize();
 
     if (m_status.getStatus() != StatusType_RUNNING) {
         return;
     }
 
-
+    string installer = JValueUtil::getMeta(m_metadata, "installer");
     if (getFileExtension() == "ipk") {
-        AppInstaller::getInstance().install(getIpkName(), getFullName(), this);
-    } else {
-        Logger::warning(getClassName(), m_fileName, "Not supported file extension");
-        m_status.complete();
+        if (installer.empty() || installer == "appInstallService") {
+            // TODO: Following is temp code for demo. we need to find better way
+            string command = "opkg remove " + getIpkName();
+            system(command.c_str());
+            AppInstaller::getInstance().install(getIpkName(), getFullName(), this);
+            return;
+        } else if (installer == "opkg") {
+            string command = "opkg install --force-reinstall " + getFullName();
+            if (system(command.c_str()) == 0)
+                m_status.complete();
+            else
+                m_status.fail();
+            return;
+        }
     }
+
+    Logger::warning(getClassName(), m_fileName, "Not supported file extension");
+    m_status.complete();
 }
 
 void ArtifactLeaf::onFailedDownload(HttpFile* call)
 {
     Logger::error(getClassName(), m_fileName, __FUNCTION__);
-    if (m_status.canFail() != TransitionType_Allowed) {
-        return;
-    }
-
-    m_curSize = 0;
     m_status.fail();
 }
 
@@ -93,7 +97,7 @@ void ArtifactLeaf::onInstallSubscription(pbnjson::JValue subscriptionPayload)
     if (!JValueUtil::getValue(subscriptionPayload, "details", "state", state))
         return;
 
-    LS2Handler::writeBLog("Return", "/install", subscriptionPayload);
+    LS2Handler::writeBLog("Return", "/install - " + state, subscriptionPayload);
 
     if (state == "installed") {
         getCall().cancel();
@@ -113,7 +117,6 @@ bool ArtifactLeaf::prepare()
     m_httpFile->open(MethodType_GET, m_url);
     m_httpFile->setFilename(getFullName());
     m_httpFile->setListener(this);
-
     return true;
 }
 
@@ -125,6 +128,30 @@ bool ArtifactLeaf::install()
         m_status.fail();
         return false;
     }
+    return true;
+}
+
+bool ArtifactLeaf::pause()
+{
+    if (!Leaf::pause())
+        return false;
+    // TODO download should be paused
+    return true;
+}
+
+bool ArtifactLeaf::resume()
+{
+    if (!Leaf::resume())
+        return false;
+    // TODO download should be resumed
+    return true;
+}
+
+bool ArtifactLeaf::cancel()
+{
+    if (!Leaf::cancel())
+        return false;
+    // TODO download should be canceled
     return true;
 }
 

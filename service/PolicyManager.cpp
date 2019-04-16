@@ -14,8 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "core/AbsAction.h"
 #include "PolicyManager.h"
+#include "core/AbsAction.h"
 #include "ls2/AppInstaller.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
@@ -23,6 +23,7 @@
 PolicyManager::PolicyManager()
     : m_currentAction(nullptr)
     , m_statusPoint(nullptr)
+    , m_pendingRequest(false)
 {
     setClassName("PolicyManager");
 }
@@ -86,13 +87,24 @@ void PolicyManager::onChangeStatus()
     // check installation status
     if (m_currentAction->getStatus().getStatus() == StatusType_COMPLETED) {
         JValue responsePayload;
-        HawkBitClient::getInstance().postDeploymentActionSuccess(responsePayload, m_currentAction->getId());
+        HawkBitClient::getInstance().postDeploymentAction(responsePayload, m_currentAction->getId(), true);
         m_currentAction = nullptr;
     } else if (m_currentAction->getStatus().getStatus() == StatusType_FAILED) {
         JValue responsePayload;
-        HawkBitClient::getInstance().postDeploymentActionFailed(responsePayload, m_currentAction->getId());
+        HawkBitClient::getInstance().postDeploymentAction(responsePayload, m_currentAction->getId(), false);
         m_currentAction = nullptr;
     }
+
+    if (!m_currentAction && m_pendingRequest) {
+        // TODO need to find better way for reboot
+        Logger::info(getClassName(), "== REBOOT ==");
+        system("reboot");
+    }
+}
+
+void PolicyManager::onPendingRequest(bool reboot)
+{
+    m_pendingRequest = true;
 }
 
 void PolicyManager::onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
@@ -110,7 +122,13 @@ void PolicyManager::onGetStatus(LS::Message& request, JValue& requestPayload, JV
     }
 }
 
-void PolicyManager::onInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+void PolicyManager::onSetConfig(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+{
+    JValue data = requestPayload["data"];
+    HawkBitClient::getInstance().putConfigData(responsePayload, data);
+}
+
+void PolicyManager::onStart(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
         responsePayload.put("errorText", "No active deployment action");

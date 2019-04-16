@@ -44,7 +44,8 @@ bool HttpFile::send(JValue request)
         Logger::error(getClassName(), "'filename' is empty");
         return false;
     }
-    m_file = fopen(m_filename.c_str(), "ab");
+    // m_file = fopen(m_filename.c_str(), "ab");
+    m_file = fopen(m_filename.c_str(), "wb");
     if (m_file == nullptr) {
         Logger::error(getClassName(), "Failed to open file : " + string(strerror(errno)));
         return false;
@@ -53,10 +54,12 @@ bool HttpFile::send(JValue request)
     if (!prepare()) {
         return false;
     }
+    /* Following code should be uncommented after implementing pause/resume operations.
     long position = ftell(m_file);
     if (position > 0) {
         addHeader("Range", "bytes=" + to_string(position) + "-");
-    }
+        m_size = position;
+    }*/
     rc1 = curl_easy_setopt(m_easyHandle, CURLOPT_WRITEDATA, this);
     if (rc1 != CURLE_OK) {
         goto Done;
@@ -78,6 +81,7 @@ Done:
         return false;
     }
     Logger::verbose(getClassName(), "Downloading is started. Try to call 'onStartedDownload'");
+    m_size = 0;
     if (m_listener) {
         m_listener->onStartedDownload(this);
     }
@@ -107,10 +111,10 @@ void HttpFile::onReceiveFileEvent(void* userdata)
         glibcurl_remove(self->m_easyHandle);
 
         Logger::verbose("HttpFile", "Downloading is completed. Try to call 'onCompletedDownload'");
+        self->close();
         if (self->m_listener) {
             self->m_listener->onCompletedDownload(self);
         }
-        self->close();
     }
 }
 
@@ -138,6 +142,5 @@ void HttpFile::close()
         fclose(m_file);
         m_filename = "";
         m_file = nullptr;
-        m_size = 0;
     }
 }

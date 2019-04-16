@@ -247,13 +247,23 @@ bool HawkBitClient::postCancellationAction(JValue& requestPayload, JValue& respo
     return true;
 }
 
-bool HawkBitClient::putConfigData(JValue& requestPayload, JValue& responsePayload)
+bool HawkBitClient::putConfigData(JValue& responsePayload, JValue& data)
 {
     const string url = m_hawkBitUrl + "/configData";
-    HttpRequest httpCall;
-    httpCall.open(MethodType_PUT, url);
 
-    Logger::verbose(getClassName(), "RestAPI", "PUT ConfigData");
+    JValue requestPayload = pbnjson::Object();
+    requestPayload.put("time", Time::getUtcTime());
+    requestPayload.put("status", pbnjson::Object());
+    requestPayload["status"].put("execution", "closed");
+    requestPayload["status"].put("result", pbnjson::Object());
+    requestPayload["status"]["result"].put("finished", "success");
+    requestPayload.put("data", data);
+
+    HttpRequest httpCall;
+    if (!httpCall.open(MethodType_PUT, url) || !httpCall.send(requestPayload)) {
+        Logger::error(getClassName(), "Failed to put config data");
+        return false;
+    }
     return true;
 }
 
@@ -267,7 +277,7 @@ bool HawkBitClient::getDeploymentAction(JValue& requestPayload, JValue& response
     return true;
 }
 
-bool HawkBitClient::postDeploymentActionSuccess(JValue& responsePayload, const string& id)
+bool HawkBitClient::postDeploymentAction(JValue& responsePayload, const string& id, bool success)
 {
     const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
     Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
@@ -278,28 +288,11 @@ bool HawkBitClient::postDeploymentActionSuccess(JValue& responsePayload, const s
     requestPayload.put("status", pbnjson::Object());
     requestPayload["status"].put("execution", "closed");
     requestPayload["status"].put("result", pbnjson::Object());
-    requestPayload["status"]["result"].put("finished", "success");
 
-    HttpRequest httpCall;
-    if (!httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
-        Logger::error(getClassName(), "Failed to post feedback");
-        return false;
-    }
-    return true;
-}
-
-bool HawkBitClient::postDeploymentActionFailed(JValue& responsePayload, const string& id)
-{
-    const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
-    Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
-
-    JValue requestPayload = pbnjson::Object();
-    requestPayload.put("id", id);
-    requestPayload.put("time", Time::getUtcTime());
-    requestPayload.put("status", pbnjson::Object());
-    requestPayload["status"].put("execution", "closed");
-    requestPayload["status"].put("result", pbnjson::Object());
-    requestPayload["status"]["result"].put("finished", "failure");
+    if (success)
+        requestPayload["status"]["result"].put("finished", "success");
+    else
+        requestPayload["status"]["result"].put("finished", "failure");
 
     HttpRequest httpCall;
     if (!httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {

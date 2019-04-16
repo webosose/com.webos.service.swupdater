@@ -37,7 +37,8 @@ public:
     virtual ~LS2HandlerListener() {};
 
     virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
-    virtual void onInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onSetConfig(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onStart(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
     virtual void onPause(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
     virtual void onResume(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
     virtual void onCancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
@@ -69,8 +70,6 @@ private:
 
     static const string NAME;
     static const LSMethod ROOT_METHODS[];
-    static const LSMethod INSTALL_METHODS[];
-    static const LSMethod DOWNLOAD_METHODS[];
 
     queue<LS::Message> m_requests;
 

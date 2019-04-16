@@ -19,6 +19,7 @@
 #include "PolicyManager.h"
 #include "ls2/AppInstaller.h"
 #include "util/JValueUtil.h"
+#include "util/Logger.h"
 
 string SoftwareModuleComposite::toString(enum SoftwareModuleType& type)
 {
@@ -53,11 +54,30 @@ SoftwareModuleComposite::SoftwareModuleComposite()
     , m_name("")
     , m_version("")
 {
-    setClassName("SoftwareModule");
+    setClassName("SoftwareModuleComposite");
+    m_status.setName("SoftwareModuleComposite");
+    m_status.addCallback( // @suppress("Invalid arguments")
+        std::bind(&SoftwareModuleComposite::onStatusChanged,
+                  this,
+                  std::placeholders::_1,
+                  std::placeholders::_2
+        )
+    );
 }
 
 SoftwareModuleComposite::~SoftwareModuleComposite()
 {
+}
+
+void SoftwareModuleComposite::onStatusChanged(enum StatusType prev, enum StatusType cur)
+{
+    if (cur != StatusType_COMPLETED)
+        return;
+
+    string value = JValueUtil::getMeta(m_metadata, "installer");
+    if (value == "opkg") {
+        PolicyManager::getInstance().onPendingRequest(true);
+    }
 }
 
 bool SoftwareModuleComposite::fromJson(const JValue& json)
@@ -71,10 +91,15 @@ bool SoftwareModuleComposite::fromJson(const JValue& json)
     }
     JValueUtil::getValue(json, "name", m_name);
     JValueUtil::getValue(json, "version", m_version);
+    if (json.hasKey("metadata") && json["metadata"].isArray()) {
+        m_metadata = json["metadata"].duplicate();
+    }
     if (json.hasKey("artifacts") && json["artifacts"].isArray()) {
         for (JValue artifact : json["artifacts"].items()) {
             shared_ptr<ArtifactLeaf> ptr = make_shared<ArtifactLeaf>();
             ptr->fromJson(artifact);
+            if (m_metadata.isValid())
+                ptr->setMetadata(m_metadata);
             add(ptr);
         }
     }
@@ -88,6 +113,9 @@ bool SoftwareModuleComposite::toJson(JValue& json)
     json.put("type", toString(m_type));
     json.put("name", m_name);
     json.put("version", m_version);
+
+    if (m_metadata.isValid() && !m_metadata.isNull())
+        json.put("metadata", m_metadata.duplicate());
 
     JValue artifacts = pbnjson::Array();
     for (auto it = m_children.begin(); it != m_children.end(); ++it) {

@@ -36,12 +36,14 @@ public:
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    // IInstallable
+    // global events
     virtual void onChangeStatus();
+    virtual void onPendingRequest(bool reboot);
 
     // LS2HandlerListener
     virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onSetConfig(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onStart(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onPause(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onResume(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onCancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
@@ -56,6 +58,8 @@ private:
 
     shared_ptr<DeploymentActionComposite> m_currentAction;
     LS::SubscriptionPoint *m_statusPoint;
+
+    bool m_pendingRequest;
 
 };
 

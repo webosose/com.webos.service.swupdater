@@ -109,8 +109,8 @@ void Status::changeStatus(enum StatusType nextStatus)
     m_status = nextStatus;
 
     Logger::verbose("ChangeStatus", m_name, toString(prev) + " ==> " + toString(m_status));
-    if (m_callbackFunc) {
-        m_callbackFunc(prev, m_status);
-    }
     PolicyManager::getInstance().onChangeStatus();
+    for (auto it = m_callbacks.begin(); it != m_callbacks.end(); ++it) {
+        (*it)(prev, m_status);
+    }
 }

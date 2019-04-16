@@ -37,13 +37,15 @@ enum SoftwareModuleType {
 };
 
 class SoftwareModuleComposite : public IClassName,
-                       public Composite {
+                                public Composite {
 public:
     static string toString(enum SoftwareModuleType& type);
     static SoftwareModuleType toEnum(const string& type);
 
     SoftwareModuleComposite();
     virtual ~SoftwareModuleComposite();
+
+    virtual void onStatusChanged(enum StatusType prev, enum StatusType cur);
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
@@ -60,12 +62,11 @@ public:
     }
 
 protected:
-    void addCallback();
-    void removeCallback();
-
     enum SoftwareModuleType m_type;
     string m_name;
     string m_version;
+
+    JValue m_metadata;
 
 };
 

@@ -61,7 +61,6 @@ bool HttpRequest::open(const MethodType& methodType, const std::string& url)
 {
     if (!setMethod(methodType) || !setUrl(url))
         return false;
-
     Logger::verbose(getClassName(), __FUNCTION__);
     return true;
 }

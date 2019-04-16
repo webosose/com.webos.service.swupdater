@@ -65,10 +65,9 @@ public:
     bool getBase(JValue& responsePayload, const string& url);
     bool getCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id);
     bool postCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id);
-    bool putConfigData(JValue& requestPayload, JValue& responsePayload);
+    bool putConfigData(JValue& responsePayload, JValue& data);
     bool getDeploymentAction(JValue& requestPayload, JValue& responsePayload, string& id);
-    bool postDeploymentActionSuccess(JValue& responsePayload, const string& id);
-    bool postDeploymentActionFailed(JValue& responsePayload, const string& id);
+    bool postDeploymentAction(JValue& responsePayload, const string& id, bool success);
     bool getSoftwaremodules(JValue& requestPayload, JValue& responsePayload, string& id);
 
 private:

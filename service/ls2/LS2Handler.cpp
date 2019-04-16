@@ -26,23 +26,12 @@
 const string LS2Handler::NAME = "com.webos.service.swupdater";
 const LSMethod LS2Handler::ROOT_METHODS[] = {
     { "getStatus", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { 0, 0 , LUNA_METHOD_FLAGS_NONE }
-};
-
-const LSMethod LS2Handler::INSTALL_METHODS[] = {
+    { "setConfig", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
     { "start", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
     { "pause", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
     { "resume", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
     { "cancel", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { 0, 0 , LUNA_METHOD_FLAGS_NONE }
-};
-
-const LSMethod LS2Handler::DOWNLOAD_METHODS[] = {
-    { "start", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "pause", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "resume", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "cancel", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { 0, 0 , LUNA_METHOD_FLAGS_NONE }
+        { 0, 0 , LUNA_METHOD_FLAGS_NONE }
 };
 
 bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
@@ -72,8 +61,10 @@ bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
             responsePayload.put("errorText", "API handler is null");
         } else if (kind == "/getStatus") {
             PolicyManager::getInstance().onGetStatus(request, requestPayload, responsePayload);
+        } else if (kind == "/setConfig") {
+            PolicyManager::getInstance().onSetConfig(request, requestPayload, responsePayload);
         } else if (kind == "/start") {
-            PolicyManager::getInstance().onInstall(request, requestPayload, responsePayload);
+            PolicyManager::getInstance().onStart(request, requestPayload, responsePayload);
         } else if (kind == "/pause") {
             PolicyManager::getInstance().onPause(request, requestPayload, responsePayload);
         } else if (kind == "/resume") {
@@ -94,8 +85,6 @@ LS2Handler::LS2Handler()
 {
     setClassName("LS2Handler");
     this->registerCategory("/", ROOT_METHODS, NULL, NULL);
-    this->registerCategory("/download", DOWNLOAD_METHODS, NULL, NULL);
-    this->registerCategory("/install", INSTALL_METHODS, NULL, NULL);
 }
 
 LS2Handler::~LS2Handler()
