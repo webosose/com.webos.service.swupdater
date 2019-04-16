@@ -44,7 +44,7 @@ bool HttpFile::send(JValue request)
         Logger::error(getClassName(), "'filename' is empty");
         return false;
     }
-    m_file = fopen(m_filename.c_str(), "wb");
+    m_file = fopen(m_filename.c_str(), "ab");
     if (m_file == nullptr) {
         Logger::error(getClassName(), "Failed to open file : " + string(strerror(errno)));
         return false;
@@ -52,6 +52,10 @@ bool HttpFile::send(JValue request)
     Logger::verbose(getClassName(), "Open file - " + m_filename);
     if (!prepare()) {
         return false;
+    }
+    long position = ftell(m_file);
+    if (position > 0) {
+        addHeader("Range", "bytes=" + to_string(position) + "-");
     }
     rc1 = curl_easy_setopt(m_easyHandle, CURLOPT_WRITEDATA, this);
     if (rc1 != CURLE_OK) {
