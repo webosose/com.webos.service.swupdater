@@ -16,12 +16,13 @@
 
 [Unit]
 Description=webos - "%n"
-Requires=ls-hubd.service
-After=ls-hubd.service
+Requires=ls-hubd.service wpa-supplicant.service
+After=ls-hubd.service wpa-supplicant.service
 
 [Service]
 Type=simple
 OOMScoreAdjust=-1000
 EnvironmentFile=-/var/systemd/system/env/swupdater.env
+ExecStartPre=/bin/sleep 5
 ExecStart=@WEBOS_INSTALL_SBINDIR@/swupdater
 Restart=on-failure

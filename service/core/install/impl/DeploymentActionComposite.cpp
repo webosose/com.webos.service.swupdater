@@ -46,6 +46,9 @@ DeploymentActionComposite::~DeploymentActionComposite()
 
 void DeploymentActionComposite::onStatusChanged(enum StatusType prev, enum StatusType cur)
 {
+    return;
+
+    // TODO currently, reboot is not supported in ICAS3 board.
     if (cur != StatusType_COMPLETED)
         return;
 

@@ -55,8 +55,7 @@ bool PolicyManager::onInitialization()
     m_statusPoint = new LS::SubscriptionPoint();
     m_statusPoint->setServiceHandle(&LS2Handler::getInstance());
 
-    // first polling
-    HawkBitClient::getInstance().poll();
+    onPollingSleepAction(DEFAULT_TICK_INTERVAL);
     return true;
 }
 
