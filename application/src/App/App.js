@@ -23,12 +23,6 @@ class AppBase extends React.Component {
         super();
     }
 
-    onApplicationClose = () => {
-        if (typeof window === 'object') {
-            window.close();
-        }
-    }
-
     render() {
         return <MainView />;
     }

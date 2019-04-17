@@ -31,14 +31,13 @@ const SoftwareModule = kind({
                 type: PropTypes.string,
                 name: PropTypes.string,
                 version: PropTypes.string,
-                download: PropTypes.string,
-                update: PropTypes.string,
+                status: PropTypes.string,
                 artifacts: PropTypes.arrayOf(
                     PropTypes.shape({
                         size: PropTypes.number,
                         total: PropTypes.number,
                         filename: PropTypes.string,
-                        download: PropTypes.string
+                        status: PropTypes.string
                     })
                 )
             })
@@ -62,15 +61,13 @@ const SoftwareModule = kind({
                     <Cell size="10em">
                         <BodyText>name</BodyText>
                         <BodyText>version</BodyText>
-                        <BodyText>download</BodyText>
-                        <BodyText>update</BodyText>
+                        <BodyText>status</BodyText>
                         <BodyText>files</BodyText>
                     </Cell>
                     <Cell>
                         <BodyText>{softwareModule.name}</BodyText>
                         <BodyText>{softwareModule.version}</BodyText>
-                        <BodyText>{softwareModule.download}</BodyText>
-                        <BodyText>{softwareModule.update}</BodyText>
+                        <BodyText>{softwareModule.status}</BodyText>
                         {artifacts}
                     </Cell>
                 </Layout>

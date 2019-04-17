@@ -14,24 +14,26 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_INSTALL_DEPLOYMENTACTION_H_
-#define CORE_INSTALL_DEPLOYMENTACTION_H_
+#ifndef CORE_INSTALL_IMPL_DEPLOYMENTACTIONCOMPOSITE_H_
+#define CORE_INSTALL_IMPL_DEPLOYMENTACTIONCOMPOSITE_H_
 
 #include <iostream>
 #include <deque>
 #include <map>
 
 #include "core/AbsAction.h"
-#include "core/experimental/Composite.h"
-#include "core/install/SoftwareModule.h"
+#include "core/install/design/Composite.h"
+#include "core/install/impl/SoftwareModuleComposite.h"
 
 using namespace std;
 
-class DeploymentAction : public AbsAction,
+class DeploymentActionComposite : public AbsAction,
                          public Composite {
 public:
-    DeploymentAction();
-    virtual ~DeploymentAction();
+    DeploymentActionComposite();
+    virtual ~DeploymentActionComposite();
+
+    void onStatusChanged(enum StatusType prev, enum StatusType cur);
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
@@ -53,4 +55,4 @@ private:
 
 };
 
-#endif /* CORE_INSTALL_DEPLOYMENTACTION_H_ */
+#endif /* CORE_INSTALL_IMPL_DEPLOYMENTACTIONCOMPOSITE_H_ */

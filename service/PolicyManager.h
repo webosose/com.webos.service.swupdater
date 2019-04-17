@@ -30,36 +30,45 @@ class PolicyManager : public ISingleton<PolicyManager>,
                       public HawkBitClientListener {
 friend ISingleton<PolicyManager>;
 public:
+    static gboolean _tick(gpointer user_data);
+
     virtual ~PolicyManager();
 
     // IInitializable
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    // IInstallable
-    virtual void onChangeStatus();
+    // global events
+    virtual void onRequestStatusChange();
+    virtual void onRequestProgressUpdate();
+    virtual void onRequestReboot(int seconds);
 
     // LS2HandlerListener
     virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onStartDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onPauseInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onResumeInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onSetConfig(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onStart(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onPause(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onResume(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onCancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
 
     // HawkBitClientListener
     virtual void onCancellationAction(JValue& responsePayload) override;
     virtual void onInstallationAction(JValue& responsePayload) override;
-    virtual void onConfigDataAction(JValue& responsePayload) override;
+    virtual void onPollingSleepAction(int seconds) override;
 
 private:
     PolicyManager();
 
-    shared_ptr<DeploymentAction> m_currentAction;
+    void postStatus();
+
+    shared_ptr<DeploymentActionComposite> m_currentAction;
     LS::SubscriptionPoint *m_statusPoint;
+
+    int m_tickInterval;
+    guint m_tickSrc;
+
+    // TODO this is a temp solution. it should be changed *queue* before polling
+    bool m_pendingRebootRequest;
 
 };
 

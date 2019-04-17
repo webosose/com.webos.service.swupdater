@@ -14,16 +14,16 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_INSTALL_SOFTWAREMODULE_H_
-#define CORE_INSTALL_SOFTWAREMODULE_H_
+#ifndef CORE_INSTALL_IMPL_SOFTWAREMODULECOMPOSITE_H_
+#define CORE_INSTALL_IMPL_SOFTWAREMODULECOMPOSITE_H_
 
 #include <iostream>
 #include <deque>
 #include <pbnjson.hpp>
 
-#include "core/State.h"
-#include "core/install/Artifact.h"
-#include "core/experimental/Composite.h"
+#include "core/install/design/Composite.h"
+#include "core/install/impl/ArtifactLeaf.h"
+#include "core/Status.h"
 #include "interface/IClassName.h"
 
 using namespace std;
@@ -36,14 +36,14 @@ enum SoftwareModuleType {
     SoftwareModuleType_Mixed
 };
 
-class SoftwareModule : public IClassName,
-                       public Composite {
+class SoftwareModuleComposite : public IClassName,
+                                public Composite {
 public:
     static string toString(enum SoftwareModuleType& type);
     static SoftwareModuleType toEnum(const string& type);
 
-    SoftwareModule();
-    virtual ~SoftwareModule();
+    SoftwareModuleComposite();
+    virtual ~SoftwareModuleComposite();
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
@@ -59,15 +59,19 @@ public:
         return m_name;
     }
 
-protected:
-    void addCallback();
-    void removeCallback();
+    JValue& getMetadata()
+    {
+        return m_metadata;
+    }
 
+protected:
     enum SoftwareModuleType m_type;
     string m_name;
     string m_version;
 
+    JValue m_metadata;
+
 };
 
 
-#endif /* CORE_INSTALL_SOFTWAREMODULE_H_ */
+#endif /* CORE_INSTALL_IMPL_SOFTWAREMODULECOMPOSITE_H_ */

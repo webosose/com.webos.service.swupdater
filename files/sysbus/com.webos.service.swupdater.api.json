@@ -1,31 +1,10 @@
 {
     "swupdate": [
-        "com.webos.service.swupdater/getStatus"
-    ],
-    "swupdate.download": [
         "com.webos.service.swupdater/getStatus",
-        "com.webos.service.swupdater/download/start",
-        "com.webos.service.swupdater/download/pause",
-        "com.webos.service.swupdater/download/resume",
-        "com.webos.service.swupdater/download/cancel"
-    ],
-    "swupdate.install": [
-        "com.webos.service.swupdater/getStatus",
-        "com.webos.service.swupdater/install/start",
-        "com.webos.service.swupdater/install/pause",
-        "com.webos.service.swupdater/install/resume",
-        "com.webos.service.swupdater/install/cancel"
-    ],
-    "swupdate.manage": [
-        "com.webos.service.swupdater/getStatus",
-        "com.webos.service.swupdater/download/start",
-        "com.webos.service.swupdater/download/pause",
-        "com.webos.service.swupdater/download/resume",
-        "com.webos.service.swupdater/download/cancel",
-        "com.webos.service.swupdater/getStatus",
-        "com.webos.service.swupdater/install/start",
-        "com.webos.service.swupdater/install/pause",
-        "com.webos.service.swupdater/install/resume",
-        "com.webos.service.swupdater/install/cancel"
+        "com.webos.service.swupdater/setConfig",
+        "com.webos.service.swupdater/start",
+        "com.webos.service.swupdater/pause",
+        "com.webos.service.swupdater/resume",
+        "com.webos.service.swupdater/cancel"
     ]
 }

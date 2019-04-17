@@ -34,6 +34,8 @@ public:
     static bool getValue(const JValue& json, const string& mainKey, const string& subKey, int& value);
     static bool getValue(const JValue& json, const string& key, string& value);
     static bool getValue(const JValue& json, const string& key, int& value);
+
+    static string getMeta(const JValue& json, const string& key);
 };
 
 #endif /* UTIL_JVALUEUTIL_H_ */

@@ -97,7 +97,7 @@ const string& Logger::toString(const enum LogLevel& level)
 }
 
 Logger::Logger()
-    : m_level(LogLevel_INFO)
+    : m_level(LogLevel_DEBUG)
     , m_type(LogType_PMLOG)
 {
 }
@@ -165,7 +165,7 @@ void Logger::writePmlog(const enum LogLevel& level, const string& log)
 {
     static PmLogContext context = nullptr;
     if (context == nullptr) {
-        context = PmLogGetContextInline("intent");
+        context = PmLogGetContextInline("swupdater");
     }
 
     switch(level) {

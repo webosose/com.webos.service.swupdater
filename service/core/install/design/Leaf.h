@@ -15,27 +15,22 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef CORE_EXPERIMENTAL_LEAF_H_
-#define CORE_EXPERIMENTAL_LEAF_H_
+#ifndef CORE_INSTALL_DESIGN_LEAF_H_
+#define CORE_INSTALL_DESIGN_LEAF_H_
 
-#include <core/experimental/Component.h>
+#include "core/install/design/Component.h"
 
 class Leaf : public Component {
 public:
     Leaf();
     virtual ~Leaf();
 
-    virtual bool prepareDownload() override;
-    virtual bool startDownload() override;
-    virtual bool pauseDownload() override;
-    virtual bool resumeDownload() override;
-    virtual bool cancelDownload()  override;
+    virtual bool prepare() override;
+    virtual bool start() override;
+    virtual bool pause() override;
+    virtual bool resume() override;
+    virtual bool cancel()  override;
 
-    virtual bool prepareUpdate() override;
-    virtual bool startUpdate() override;
-    virtual bool pauseUpdate() override;
-    virtual bool resumeUpdate() override;
-    virtual bool cancelUpdate() override;
 };
 
-#endif /* CORE_EXPERIMENTAL_LEAF_H_ */
+#endif /* CORE_INSTALL_DESIGN_LEAF_H_ */

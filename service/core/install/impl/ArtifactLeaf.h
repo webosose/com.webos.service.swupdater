@@ -14,15 +14,15 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CORE_INSTALL_ARTIFACT_H_
-#define CORE_INSTALL_ARTIFACT_H_
+#ifndef CORE_INSTALL_IMPL_ARTIFACTLEAF_H_
+#define CORE_INSTALL_IMPL_ARTIFACTLEAF_H_
 
 #include <iostream>
 #include <pbnjson.hpp>
 
+#include "core/Status.h"
 #include "core/HttpFile.h"
-#include "core/State.h"
-#include "core/experimental/Leaf.h"
+#include "core/install/design/Leaf.h"
 #include "ls2/AppInstaller.h"
 #include "interface/IClassName.h"
 #include "interface/IListener.h"
@@ -31,15 +31,13 @@
 using namespace std;
 using namespace pbnjson;
 
-class Artifact;
-
-class Artifact : public IClassName,
-                 public HttpFileListener,
-                 public AppInstallerListener,
-                 public Leaf {
+class ArtifactLeaf : public IClassName,
+                     public HttpFileListener,
+                     public AppInstallerListener,
+                     public Leaf {
 public:
-    Artifact();
-    virtual ~Artifact();
+    ArtifactLeaf();
+    virtual ~ArtifactLeaf();
 
     // HttpFileListener
     virtual void onStartedDownload(HttpFile* call) override;
@@ -47,17 +45,24 @@ public:
     virtual void onCompletedDownload(HttpFile* call) override;
     virtual void onFailedDownload(HttpFile* call) override;
 
-    virtual bool prepareDownload() override;
-    virtual bool startDownload() override;
-
     // AppInstallerListener
     virtual void onInstallSubscription(pbnjson::JValue subscriptionPayload) override;
 
-    virtual bool startUpdate() override;
+    // Leaf
+    virtual bool prepare() override;
+    virtual bool start() override;
+    virtual bool pause() override;
+    virtual bool resume() override;
+    virtual bool cancel()  override;
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
     virtual bool toJson(JValue& json) override;
+
+    void setMetadata(JValue metadata)
+    {
+        m_metadata = metadata.duplicate();
+    }
 
     const string& getFileName()
     {
@@ -100,9 +105,8 @@ private:
     string m_md5sum;
     string m_url;
 
-    bool m_updateInProgress;
-
     shared_ptr<HttpFile> m_httpFile;
+    JValue m_metadata;
 };
 
-#endif /* CORE_INSTALL_ARTIFACT_H_ */
+#endif /* CORE_INSTALL_IMPL_ARTIFACTLEAF_H_ */

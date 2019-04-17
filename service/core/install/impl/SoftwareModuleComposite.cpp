@@ -14,13 +14,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "core/install/SoftwareModule.h"
+#include "core/install/impl/SoftwareModuleComposite.h"
 
 #include "PolicyManager.h"
 #include "ls2/AppInstaller.h"
 #include "util/JValueUtil.h"
+#include "util/Logger.h"
 
-string SoftwareModule::toString(enum SoftwareModuleType& type)
+string SoftwareModuleComposite::toString(enum SoftwareModuleType& type)
 {
     switch(type){
     case SoftwareModuleType_Unknown:
@@ -38,7 +39,7 @@ string SoftwareModule::toString(enum SoftwareModuleType& type)
     return "unknown";
 }
 
-SoftwareModuleType SoftwareModule::toEnum(const string& type)
+SoftwareModuleType SoftwareModuleComposite::toEnum(const string& type)
 {
     if (type == "unknown") {
         return SoftwareModuleType_Unknown;
@@ -48,19 +49,20 @@ SoftwareModuleType SoftwareModule::toEnum(const string& type)
     return SoftwareModuleType_Unknown;
 }
 
-SoftwareModule::SoftwareModule()
+SoftwareModuleComposite::SoftwareModuleComposite()
     : m_type(SoftwareModuleType_Unknown)
     , m_name("")
     , m_version("")
 {
-    setClassName("SoftwareModule");
+    setClassName("SoftwareModuleComposite");
+    m_status.setName("SoftwareModuleComposite");
 }
 
-SoftwareModule::~SoftwareModule()
+SoftwareModuleComposite::~SoftwareModuleComposite()
 {
 }
 
-bool SoftwareModule::fromJson(const JValue& json)
+bool SoftwareModuleComposite::fromJson(const JValue& json)
 {
     ISerializable::fromJson(json);
 
@@ -71,23 +73,31 @@ bool SoftwareModule::fromJson(const JValue& json)
     }
     JValueUtil::getValue(json, "name", m_name);
     JValueUtil::getValue(json, "version", m_version);
+    if (json.hasKey("metadata") && json["metadata"].isArray()) {
+        m_metadata = json["metadata"].duplicate();
+    }
     if (json.hasKey("artifacts") && json["artifacts"].isArray()) {
         for (JValue artifact : json["artifacts"].items()) {
-            shared_ptr<Artifact> ptr = make_shared<Artifact>();
+            shared_ptr<ArtifactLeaf> ptr = make_shared<ArtifactLeaf>();
             ptr->fromJson(artifact);
+            if (m_metadata.isValid())
+                ptr->setMetadata(m_metadata);
             add(ptr);
         }
     }
     return true;
 }
 
-bool SoftwareModule::toJson(JValue& json)
+bool SoftwareModuleComposite::toJson(JValue& json)
 {
     Component::toJson(json);
 
     json.put("type", toString(m_type));
     json.put("name", m_name);
     json.put("version", m_version);
+
+    if (m_metadata.isValid() && !m_metadata.isNull())
+        json.put("metadata", m_metadata.duplicate());
 
     JValue artifacts = pbnjson::Array();
     for (auto it = m_children.begin(); it != m_children.end(); ++it) {

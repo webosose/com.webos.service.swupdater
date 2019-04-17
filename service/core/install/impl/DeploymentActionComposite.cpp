@@ -14,26 +14,56 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "core/install/DeploymentAction.h"
+#include "core/install/impl/DeploymentActionComposite.h"
+
+#include <memory>
 
 #include "PolicyManager.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
 
-DeploymentAction::DeploymentAction()
+DeploymentActionComposite::DeploymentActionComposite()
     : AbsAction()
     , m_isForceDownload(false)
     , m_isForceUpdate(false)
 {
-    setClassName("DeploymentAction");
+    setClassName("DeploymentActionComposite");
+    m_status.setName("DeploymentActionComposite");
     setType(ActionType_INSTALL);
+
+    m_status.addCallback( // @suppress("Invalid arguments")
+        std::bind(&DeploymentActionComposite::onStatusChanged,
+                  this,
+                  std::placeholders::_1,
+                  std::placeholders::_2
+        )
+    );
 }
 
-DeploymentAction::~DeploymentAction()
+DeploymentActionComposite::~DeploymentActionComposite()
 {
 }
 
-bool DeploymentAction::fromJson(const JValue& json)
+void DeploymentActionComposite::onStatusChanged(enum StatusType prev, enum StatusType cur)
+{
+    if (cur != StatusType_COMPLETED)
+        return;
+
+    int seconds = -1;
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        JValue metadata = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it)->getMetadata();
+        string value = JValueUtil::getMeta(metadata, "reboot");
+
+        if (!value.empty() && std::atoi(value.c_str()) > seconds) {
+            seconds = std::atoi(value.c_str());
+        }
+    }
+
+    if (seconds > 0)
+        PolicyManager::getInstance().onRequestReboot(seconds);
+}
+
+bool DeploymentActionComposite::fromJson(const JValue& json)
 {
     ISerializable::fromJson(json);
     string dummy;
@@ -49,14 +79,14 @@ bool DeploymentAction::fromJson(const JValue& json)
     }
 
     for (JValue chunk : json["deployment"]["chunks"].items()) {
-        shared_ptr<SoftwareModule> module = make_shared<SoftwareModule>();
+        shared_ptr<SoftwareModuleComposite> module = make_shared<SoftwareModuleComposite>();
         module->fromJson(chunk);
         this->add(module);
     }
     return true;
 }
 
-bool DeploymentAction::toJson(JValue& json)
+bool DeploymentActionComposite::toJson(JValue& json)
 {
     Component::toJson(json);
 

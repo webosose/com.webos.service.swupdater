@@ -61,7 +61,6 @@ bool HttpRequest::open(const MethodType& methodType, const std::string& url)
 {
     if (!setMethod(methodType) || !setUrl(url))
         return false;
-
     Logger::verbose(getClassName(), __FUNCTION__);
     return true;
 }
@@ -182,7 +181,7 @@ bool HttpRequest::setMethod(MethodType method)
         break;
 
     case MethodType_PUT:
-        rc = curl_easy_setopt(m_easyHandle, CURLOPT_PUT, 1L);
+        rc = curl_easy_setopt(m_easyHandle, CURLOPT_CUSTOMREQUEST, "PUT");
         break;
 
     case MethodType_DELETE:

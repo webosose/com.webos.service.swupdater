@@ -87,3 +87,18 @@ bool JValueUtil::getValue(const JValue& json, const string& key, int& value)
     }
     return true;
 }
+
+string JValueUtil::getMeta(const JValue& json, const string& key)
+{
+    if (!json.isValid() || json.isNull() || !json.isArray())
+        return "";
+
+    string tmpKey, value;
+    for (JValue meta : json.items()) {
+        if (!getValue(meta, "key", tmpKey) || !getValue(meta, "value", value))
+            continue;
+        if (tmpKey == key)
+            return value;
+    }
+    return "";
+}
