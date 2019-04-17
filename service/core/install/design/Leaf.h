@@ -26,7 +26,7 @@ public:
     virtual ~Leaf();
 
     virtual bool prepare() override;
-    virtual bool install() override;
+    virtual bool start() override;
     virtual bool pause() override;
     virtual bool resume() override;
     virtual bool cancel()  override;

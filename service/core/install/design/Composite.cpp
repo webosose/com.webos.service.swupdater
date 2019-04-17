@@ -48,7 +48,7 @@ void Composite::onChildStatusChanged(enum StatusType prev, enum StatusType cur)
             m_status.complete();
             break;
         }
-        m_children[++m_current]->install();
+        m_children[++m_current]->start();
         return;
 
     case StatusType_FAILED:
@@ -75,7 +75,7 @@ bool Composite::prepare()
     return m_status.prepare();
 }
 
-bool Composite::install()
+bool Composite::start()
 {
     enum TransitionType type = m_status.canInstall();
     if (type == TransitionType_NotAllowed) {
@@ -84,7 +84,7 @@ bool Composite::install()
         return true;
     }
     m_current = 0;
-    if (!m_children[m_current]->install()) {
+    if (!m_children[m_current]->start()) {
         m_status.fail();
         return false;
     }

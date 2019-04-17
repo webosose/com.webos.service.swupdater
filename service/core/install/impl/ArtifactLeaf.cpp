@@ -49,7 +49,7 @@ void ArtifactLeaf::onProgressDownload(HttpFile* call)
     if ((m_curSize - m_prevSize) > (1024 * 512)) {
         Logger::debug(getClassName(), m_fileName, std::string(__FUNCTION__) + " (" + to_string(m_curSize) + "/" + to_string(m_total) + ")");
         // TODO Need to change progress handler
-        PolicyManager::getInstance().onChangeStatus();
+        PolicyManager::getInstance().onRequestProgressUpdate();
         m_prevSize = m_curSize;
     }
 }
@@ -72,7 +72,7 @@ void ArtifactLeaf::onCompletedDownload(HttpFile* call)
             AppInstaller::getInstance().install(getIpkName(), getFullName(), this);
             return;
         } else if (installer == "opkg") {
-            string command = "opkg install --force-reinstall " + getFullName();
+            string command = "opkg install --force-reinstall --force-downgrade " + getFullName();
             if (system(command.c_str()) == 0)
                 m_status.complete();
             else
@@ -120,9 +120,9 @@ bool ArtifactLeaf::prepare()
     return true;
 }
 
-bool ArtifactLeaf::install()
+bool ArtifactLeaf::start()
 {
-    if (!Leaf::install())
+    if (!Leaf::start())
         return false;
     if (!m_httpFile->send()) {
         m_status.fail();

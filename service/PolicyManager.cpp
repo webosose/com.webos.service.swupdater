@@ -20,10 +20,22 @@
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
 
+gboolean PolicyManager::_tick(gpointer user_data)
+{
+    if (getInstance().m_pendingRebootRequest) {
+        Logger::info(PolicyManager::getInstance().getClassName(), "== REBOOT ==");
+        system("reboot");
+    }
+    HawkBitClient::getInstance().poll();
+    return G_SOURCE_CONTINUE;
+}
+
 PolicyManager::PolicyManager()
     : m_currentAction(nullptr)
     , m_statusPoint(nullptr)
-    , m_pendingRequest(false)
+    , m_tickInterval(0)
+    , m_tickSrc(0)
+    , m_pendingRebootRequest(false)
 {
     setClassName("PolicyManager");
 }
@@ -44,7 +56,7 @@ bool PolicyManager::onInitialization()
     m_statusPoint->setServiceHandle(&LS2Handler::getInstance());
 
     // first polling
-    HawkBitClient::getInstance().poll(&HawkBitClient::getInstance());
+    HawkBitClient::getInstance().poll();
     return true;
 }
 
@@ -58,28 +70,9 @@ bool PolicyManager::onFinalization()
     return true;
 }
 
-void PolicyManager::onChangeStatus()
+void PolicyManager::onRequestStatusChange()
 {
-    static JValue prev;
-    JValue cur = pbnjson::Object();
-
-    // post subscription
-    if (m_statusPoint && m_statusPoint->getSubscribersCount() > 0) {
-        if (!m_currentAction) {
-            cur.put("id", nullptr);
-            cur.put("download", nullptr);
-            cur.put("update", nullptr);
-        } else {
-            m_currentAction->toJson(cur);
-        }
-        cur.put("subscribed", true);
-        cur.put("returnValue", true);
-        if (prev != cur) {
-            LS2Handler::writeBLog("Post", "/getStatus", cur);
-            m_statusPoint->post(cur.stringify().c_str());
-            prev = cur.duplicate();
-        }
-    }
+    postStatus();
 
     if (!m_currentAction)
         return;
@@ -94,25 +87,29 @@ void PolicyManager::onChangeStatus()
         HawkBitClient::getInstance().postDeploymentAction(responsePayload, m_currentAction->getId(), false);
         m_currentAction = nullptr;
     }
-
-    if (!m_currentAction && m_pendingRequest) {
-        // TODO need to find better way for reboot
-        Logger::info(getClassName(), "== REBOOT ==");
-        system("reboot");
-    }
 }
 
-void PolicyManager::onPendingRequest(bool reboot)
+void PolicyManager::onRequestProgressUpdate()
 {
-    m_pendingRequest = true;
+    postStatus();
+}
+
+void PolicyManager::onRequestReboot(int seconds)
+{
+    if (seconds == 0) {
+        Logger::info(getClassName(), "System reboots immediately");
+    } else {
+        Logger::info(getClassName(), "System will reboot after " + std::to_string(seconds) + " seconds");
+    }
+    onPollingSleepAction(seconds);
+    m_pendingRebootRequest = true;
 }
 
 void PolicyManager::onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
         responsePayload.put("id", nullptr);
-        responsePayload.put("download", nullptr);
-        responsePayload.put("update", nullptr);
+        responsePayload.put("status", nullptr);
     } else {
         m_currentAction->toJson(responsePayload);
     }
@@ -125,7 +122,7 @@ void PolicyManager::onGetStatus(LS::Message& request, JValue& requestPayload, JV
 void PolicyManager::onSetConfig(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     JValue data = requestPayload["data"];
-    HawkBitClient::getInstance().putConfigData(responsePayload, data);
+    HawkBitClient::getInstance().putConfigData(data);
 }
 
 void PolicyManager::onStart(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
@@ -134,7 +131,7 @@ void PolicyManager::onStart(LS::Message& request, JValue& requestPayload, JValue
         responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->install()) {
+    if (!m_currentAction->start()) {
         return;
     }
 }
@@ -174,6 +171,26 @@ void PolicyManager::onCancel(LS::Message& request, JValue& requestPayload, JValu
 
 void PolicyManager::onCancellationAction(JValue& responsePayload)
 {
+    string id;
+
+    if (!JValueUtil::getValue(responsePayload, "id", id)) {
+        Logger::error(getClassName(), "'id' does not exist");
+        return;
+    }
+    if (m_currentAction) {
+        if (m_currentAction->getId() != id) {
+            Logger::error(getClassName(), "'Id' is not same - " + m_currentAction->getId() + " : " + id);
+            return;
+        }
+
+        if (m_currentAction->cancel()) {
+            Logger::info(getClassName(), "Update is canceled");
+        } else {
+            Logger::info(getClassName(), "Failed to cancel update");
+        }
+        m_currentAction = nullptr;
+        return;
+    }
 }
 
 void PolicyManager::onInstallationAction(JValue& responsePayload)
@@ -195,15 +212,55 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
     m_currentAction = make_shared<DeploymentActionComposite>();
     m_currentAction->fromJson(responsePayload);
     if (!m_currentAction->prepare()) {
-        Logger::info(getClassName(), "Failed to download");
+        Logger::info(getClassName(), "Failed to prepare update");
         return;
     }
     if (m_currentAction->isForceDownload()) {
-        m_currentAction->install();
+        m_currentAction->start();
     }
 }
 
-void PolicyManager::onConfigDataAction(JValue& responsePayload)
+void PolicyManager::onPollingSleepAction(int seconds)
 {
+    if (m_tickInterval == seconds) {
+        Logger::verbose(getClassName(), "Same polling interval. Ignored");
+        return;
+    }
+    if (m_tickSrc > 0) {
+        g_source_remove(m_tickSrc);
+        m_tickSrc = 0;
+        m_tickInterval = 0;
+        Logger::info(getClassName(), "Tick source was removed");
+    }
+    m_tickSrc = g_timeout_add_seconds(seconds, _tick, nullptr);
+    if (m_tickSrc < 0) {
+        Logger::error(getClassName(), "Failed to start tick timer");
+        return;
+    }
+    Logger::info(getClassName(), "Started tick timer");
+    m_tickInterval = seconds;
+}
 
+void PolicyManager::postStatus()
+{
+    static JValue prev;
+    JValue cur = pbnjson::Object();
+
+    // post subscription
+    if (!m_statusPoint || m_statusPoint->getSubscribersCount() == 0)
+        return;
+
+    if (!m_currentAction) {
+        cur.put("id", nullptr);
+        cur.put("status", nullptr);
+    } else {
+        m_currentAction->toJson(cur);
+    }
+    cur.put("subscribed", true);
+    cur.put("returnValue", true);
+    if (prev != cur) {
+        LS2Handler::writeBLog("Post", "/getStatus", cur);
+        m_statusPoint->post(cur.stringify().c_str());
+        prev = cur.duplicate();
+    }
 }

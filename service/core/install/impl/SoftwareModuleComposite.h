@@ -45,8 +45,6 @@ public:
     SoftwareModuleComposite();
     virtual ~SoftwareModuleComposite();
 
-    virtual void onStatusChanged(enum StatusType prev, enum StatusType cur);
-
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
     virtual bool toJson(JValue& json) override;
@@ -59,6 +57,11 @@ public:
     const string& getName()
     {
         return m_name;
+    }
+
+    JValue& getMetadata()
+    {
+        return m_metadata;
     }
 
 protected:

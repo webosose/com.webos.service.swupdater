@@ -34,7 +34,7 @@ public:
     }
 
     virtual bool prepare() = 0;
-    virtual bool install() = 0;
+    virtual bool start() = 0;
     virtual bool pause() = 0;
     virtual bool resume() = 0;
     virtual bool cancel() = 0;

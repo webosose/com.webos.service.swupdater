@@ -17,6 +17,7 @@
 #include <curl/curl.h>
 #include <glib.h>
 
+#include "PolicyManager.h"
 #include "Setting.h"
 #include "core/HttpRequest.h"
 #include "external/glibcurl.h"
@@ -31,11 +32,7 @@ const string HawkBitClient::HAWKBIT_TENANT = "hawkbit_tenant";
 const string HawkBitClient::HAWKBIT_URL = "hawkbit_url";
 const string HawkBitClient::HAWKBIT_ID = "hawkbit_id";
 
-const int HawkBitClient::SLEEP_DEFAULT = 15;
-
 HawkBitClient::HawkBitClient()
-    : m_pollingSrc(nullptr)
-    , m_sleep(-1)
 {
     setClassName("HawkBitClient");
 }
@@ -53,6 +50,10 @@ bool HawkBitClient::onInitialization()
     string hawkBitTenant = AbsHardware::getHardware().getEnv(HAWKBIT_TENANT);
     string hawkBitId = AbsHardware::getHardware().getEnv(HAWKBIT_ID);
 
+    Logger::info(getClassName(), "HawkBitInfo", hawkBitUrl);
+    Logger::info(getClassName(), "HawkBitInfo", hawkBitTenant);
+    Logger::info(getClassName(), "HawkBitInfo", hawkBitId);
+
     if (hawkBitId.empty()) {
         hawkBitId = Socket::getMacAddress("eth0");
         AbsHardware::getHardware().setEnv(HAWKBIT_ID, hawkBitId);
@@ -65,85 +66,170 @@ bool HawkBitClient::onInitialization()
         return false;
     }
 
-    start(SLEEP_DEFAULT);
     return true;
 }
 
 bool HawkBitClient::onFinalization()
 {
-    stop();
     glibcurl_cleanup();
     return true;
 }
 
-bool HawkBitClient::canceled()
+void HawkBitClient::poll()
+{
+    JValue responsePayload;
+    string sleep = "";
+    string href = "";
+
+    Logger::info(getClassName(), "== POLLING START ==");
+    if (!getBase(responsePayload, m_hawkBitUrl)) {
+        goto Done;
+    }
+
+    if (JValueUtil::getValue(responsePayload, "config", "polling", "sleep", sleep)) {
+        if (m_listener) m_listener->onPollingSleepAction(15); // TODO Time::toSeconds(sleep));
+    }
+
+    if (JValueUtil::getValue(responsePayload, "_links", "deploymentBase", "href", href)) {
+        if (!getBase(responsePayload, href)) {
+            goto Done;
+        }
+        if (m_listener) m_listener->onInstallationAction(responsePayload);
+    }
+    if (JValueUtil::getValue(responsePayload, "_links", "cancelAction", "href", href)) {
+        if (!getBase(responsePayload, href)) {
+            goto Done;
+        }
+        if (m_listener) m_listener->onCancellationAction(responsePayload);
+    }
+    if (JValueUtil::getValue(responsePayload, "_links", "configData", "href", href)) {
+        // TODO: Need to be updated
+    }
+
+Done:
+    Logger::info(getClassName(), "== POLLING END ==");
+}
+
+bool HawkBitClient::canceled(const string& id)
 {
     /*
      * This is send by the target as confirmation of a cancellation request by the update server.
      */
+    const string url = m_hawkBitUrl + "/cancelAction/" + id + "/feedback";
+    HttpRequest httpCall;
+    httpCall.open(MethodType_POST, url);
+
+    Logger::verbose(getClassName(), "RestAPI", "POST Cancellation Action");
     return true;
 }
 
-bool HawkBitClient::rejected()
+bool HawkBitClient::rejected(const string& id)
 {
     /*
      * This is send by the target in case an update of a cancellation is rejected,
      * i.e. cannot be fulfilled at this point in time.
      * Note: the target should send a CLOSED->ERROR if it believes it will not be able to proceed the action at all.
      */
+    const string url = m_hawkBitUrl + "/cancelAction/" + id + "/feedback";
+    HttpRequest httpCall;
+    httpCall.open(MethodType_POST, url);
+
+    Logger::verbose(getClassName(), "RestAPI", "POST Cancellation Action");
     return true;
 }
 
-bool HawkBitClient::closed()
+bool HawkBitClient::closed(const string& id)
 {
     /*
      * Target completes the action either with status.result.finished SUCCESS or FAILURE as result.
      * Note: DDI defines also a status NONE which will not be interpreted by the update server and handled like SUCCESS.
      */
+    const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
+    Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
+
+//    JValue requestPayload = pbnjson::Object();
+//    requestPayload.put("id", id);
+//    requestPayload.put("time", Time::getUtcTime());
+//
+//    if (success)
+//        getStatus(requestPayload, "closed", "success");
+//    else
+//        getStatus(requestPayload, "closed", "failure");
+//
+//    HttpRequest httpCall;
+//    if (!httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
+//        Logger::error(getClassName(), "Failed to post feedback");
+//        return false;
+//    }
     return true;
 }
 
-bool HawkBitClient::proceeding()
+bool HawkBitClient::proceeding(const string& id)
 {
     /*
      * This can be used by the target to inform that it is working on the action.
      */
+    const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
+    Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
+
+//    JValue requestPayload = pbnjson::Object();
+//    requestPayload.put("id", id);
+//    requestPayload.put("time", Time::getUtcTime());
+//
+//    if (success)
+//        getStatus(requestPayload, "closed", "success");
+//    else
+//        getStatus(requestPayload, "closed", "failure");
+//
+//    HttpRequest httpCall;
+//    if (!httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
+//        Logger::error(getClassName(), "Failed to post feedback");
+//        return false;
+//    }
     return true;
 }
 
-bool HawkBitClient::scheduled()
+bool HawkBitClient::scheduled(const string& id)
 {
     /*
      *  This can be used by the target to inform that it scheduled on the action.
      */
+    const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
+    Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
+
+    JValue requestPayload = pbnjson::Object();
+    requestPayload.put("id", id);
+    requestPayload.put("time", Time::getUtcTime());
+
+//    if (success)
+//        getStatus(requestPayload, "closed", "success");
+//    else
+//        getStatus(requestPayload, "closed", "failure");
+//
+//    HttpRequest httpCall;
+//    if (!httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
+//        Logger::error(getClassName(), "Failed to post feedback");
+//        return false;
+//    }
     return true;
 }
 
-bool HawkBitClient::resumed()
+bool HawkBitClient::resumed(const string& id)
 {
     /*
      * This can be used by the target to inform that it continued to work on the action.
      */
-    return true;
-}
+    const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
+    Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
 
-bool HawkBitClient::postComplete(shared_ptr<AbsAction> action)
-{
     JValue requestPayload = pbnjson::Object();
-
-    requestPayload.put("id", action->getId());
+    requestPayload.put("id", id);
     requestPayload.put("time", Time::getUtcTime());
-    requestPayload.put("status", pbnjson::Object());
-    requestPayload["status"].put("execution", "closed");
-    requestPayload["status"].put("result", pbnjson::Object());
-    requestPayload["status"]["result"].put("finished", "success");
 
-    string url;
-    if (action->getType() == ActionType_INSTALL) {
-        url = m_hawkBitUrl + "/deploymentBase/" + action->getId() + "/feedback";
-    } else {
-        url = m_hawkBitUrl + "/cancelAction/" + action->getId() + "/feedback";
-    }
+//    if (success)
+//        getStatus(requestPayload, "closed", "success");
+//    else
+//        getStatus(requestPayload, "closed", "failure");
 
     HttpRequest httpCall;
     if (!httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
@@ -153,57 +239,45 @@ bool HawkBitClient::postComplete(shared_ptr<AbsAction> action)
     return true;
 }
 
-bool HawkBitClient::postProgress(shared_ptr<DeploymentActionComposite> action, int of, int cnt)
+
+bool HawkBitClient::postDeploymentAction(JValue& responsePayload, const string& id, bool success)
 {
-    const string url = m_hawkBitUrl + "/deploymentBase/" + action->getId() + "/feedback";
+    const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
+    Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
 
     JValue requestPayload = pbnjson::Object();
-    requestPayload.put("id", action->getId());
+    requestPayload.put("id", id);
     requestPayload.put("time", Time::getUtcTime());
-    requestPayload.put("status", pbnjson::Object());
-    requestPayload["status"].put("execution", "proceeding");
-    requestPayload["status"].put("result", pbnjson::Object());
-    requestPayload["status"]["result"].put("finished", "none");
-    requestPayload["status"]["result"].put("progress", pbnjson::Object());
-    requestPayload["status"]["result"]["progress"].put("of", of);
-    requestPayload["status"]["result"]["progress"].put("cnt", cnt);
+
+    if (success)
+        getStatus(requestPayload, "closed", "success");
+    else
+        getStatus(requestPayload, "closed", "failure");
 
     HttpRequest httpCall;
-    if (httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
+    if (!httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
         Logger::error(getClassName(), "Failed to post feedback");
         return false;
     }
     return true;
 }
 
-void HawkBitClient::start(int sleep)
+bool HawkBitClient::putConfigData(JValue& data)
 {
-    if (sleep == 0) {
-        sleep = SLEEP_DEFAULT;
-    }
-    if (isStarted() && sleep == m_sleep) {
-        return;
-    }
-    stop();
+    const string url = m_hawkBitUrl + "/configData";
 
-    m_pollingSrc = g_timeout_source_new_seconds(sleep);
-    g_source_set_callback(m_pollingSrc, (GSourceFunc)&HawkBitClient::poll, this, NULL);
-    g_source_attach(m_pollingSrc, g_main_context_default());
-    g_source_unref(m_pollingSrc);
-    m_sleep = sleep;
-}
+    JValue requestPayload = pbnjson::Object();
+    requestPayload.put("time", Time::getUtcTime());
+    requestPayload.put("data", data);
 
-bool HawkBitClient::isStarted()
-{
-    return (m_pollingSrc && !g_source_is_destroyed(m_pollingSrc));
-}
+    getStatus(requestPayload, "closed", "success");
 
-void HawkBitClient::stop()
-{
-    if (isStarted()) {
-        g_source_destroy(m_pollingSrc);
-        m_pollingSrc = nullptr;
+    HttpRequest httpCall;
+    if (!httpCall.open(MethodType_PUT, url) || !httpCall.send(requestPayload)) {
+        Logger::error(getClassName(), "Failed to put config data");
+        return false;
     }
+    return true;
 }
 
 bool HawkBitClient::getBase(JValue& responsePayload, const string& url)
@@ -227,127 +301,18 @@ bool HawkBitClient::getBase(JValue& responsePayload, const string& url)
     return true;
 }
 
-bool HawkBitClient::getCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id)
+void HawkBitClient::getStatus(JValue& json, const string& execution, const string& finished, string detail)
 {
-    const string url = m_hawkBitUrl + "/cancelAction/" + id;
-    HttpRequest httpCall;
-    httpCall.open(MethodType_GET, url);
+    JValue status = pbnjson::Object();
+    status.put("execution", execution);
+    status.put("result", pbnjson::Object());
+    status["result"].put("finished", finished);
 
-    Logger::verbose(getClassName(), "RestAPI", "GET Cancellation Action");
-    return true;
-}
-
-bool HawkBitClient::postCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id)
-{
-    const string url = m_hawkBitUrl + "/cancelAction/" + id + "/feedback";
-    HttpRequest httpCall;
-    httpCall.open(MethodType_POST, url);
-
-    Logger::verbose(getClassName(), "RestAPI", "POST Cancellation Action");
-    return true;
-}
-
-bool HawkBitClient::putConfigData(JValue& responsePayload, JValue& data)
-{
-    const string url = m_hawkBitUrl + "/configData";
-
-    JValue requestPayload = pbnjson::Object();
-    requestPayload.put("time", Time::getUtcTime());
-    requestPayload.put("status", pbnjson::Object());
-    requestPayload["status"].put("execution", "closed");
-    requestPayload["status"].put("result", pbnjson::Object());
-    requestPayload["status"]["result"].put("finished", "success");
-    requestPayload.put("data", data);
-
-    HttpRequest httpCall;
-    if (!httpCall.open(MethodType_PUT, url) || !httpCall.send(requestPayload)) {
-        Logger::error(getClassName(), "Failed to put config data");
-        return false;
-    }
-    return true;
-}
-
-bool HawkBitClient::getDeploymentAction(JValue& requestPayload, JValue& responsePayload, string& id)
-{
-    const string url = m_hawkBitUrl + "/deploymentBase/" + id;
-    HttpRequest httpCall;
-    httpCall.open(MethodType_GET, url);
-
-    Logger::verbose(getClassName(), "RestAPI", "GET Deployment Action");
-    return true;
-}
-
-bool HawkBitClient::postDeploymentAction(JValue& responsePayload, const string& id, bool success)
-{
-    const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
-    Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
-
-    JValue requestPayload = pbnjson::Object();
-    requestPayload.put("id", id);
-    requestPayload.put("time", Time::getUtcTime());
-    requestPayload.put("status", pbnjson::Object());
-    requestPayload["status"].put("execution", "closed");
-    requestPayload["status"].put("result", pbnjson::Object());
-
-    if (success)
-        requestPayload["status"]["result"].put("finished", "success");
-    else
-        requestPayload["status"]["result"].put("finished", "failure");
-
-    HttpRequest httpCall;
-    if (!httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
-        Logger::error(getClassName(), "Failed to post feedback");
-        return false;
-    }
-    return true;
-}
-
-bool HawkBitClient::getSoftwaremodules(JValue& requestPayload, JValue& responsePayload, string& id)
-{
-    const string url = m_hawkBitUrl + "/softwaremodules/" + id + "/artifacts";
-    HttpRequest httpCall;
-    httpCall.open(MethodType_GET, url);
-
-    Logger::info(getClassName(), "RestAPI", "GET Softwaremodules");
-    return true;
-}
-
-guint HawkBitClient::poll(gpointer data)
-{
-    HawkBitClient* self = (HawkBitClient*) data;
-    shared_ptr<AbsAction> action;
-    JValue responsePayload;
-    string sleep = "";
-    string href = "";
-
-    Logger::info(self->getClassName(), "== POLLING START ==");
-    if (!self->getBase(responsePayload, self->m_hawkBitUrl)) {
-        goto Done;
+    // TODO details is array.
+    if (!detail.empty()) {
+        status.put("details", pbnjson::Array());
+        status["details"].append(detail);
     }
 
-    if (JValueUtil::getValue(responsePayload, "config", "polling", "sleep", sleep)) {
-        if (self->m_sleep != Time::toSeconds(sleep)) {
-            // TODO
-        }
-    }
-
-    if (JValueUtil::getValue(responsePayload, "_links", "deploymentBase", "href", href)) {
-        if (!self->getBase(responsePayload, href)) {
-            goto Done;
-        }
-        if (self->m_listener)self-> m_listener->onInstallationAction(responsePayload);
-    }
-    if (JValueUtil::getValue(responsePayload, "_links", "cancelAction", "href", href)) {
-        if (!self->getBase(responsePayload, href)) {
-            goto Done;
-        }
-        if (self->m_listener) self->m_listener->onCancellationAction(responsePayload);
-    }
-    if (JValueUtil::getValue(responsePayload, "_links", "configData", "href", href)) {
-        // TODO: Need to be updated
-    }
-
-Done:
-    Logger::info(self->getClassName(), "== POLLING END ==");
-    return G_SOURCE_CONTINUE;
+    json.put("status", status);
 }

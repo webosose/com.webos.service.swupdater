@@ -33,6 +33,8 @@ public:
     DeploymentActionComposite();
     virtual ~DeploymentActionComposite();
 
+    void onStatusChanged(enum StatusType prev, enum StatusType cur);
+
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
     virtual bool toJson(JValue& json) override;

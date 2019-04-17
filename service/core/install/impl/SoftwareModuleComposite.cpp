@@ -56,28 +56,10 @@ SoftwareModuleComposite::SoftwareModuleComposite()
 {
     setClassName("SoftwareModuleComposite");
     m_status.setName("SoftwareModuleComposite");
-    m_status.addCallback( // @suppress("Invalid arguments")
-        std::bind(&SoftwareModuleComposite::onStatusChanged,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2
-        )
-    );
 }
 
 SoftwareModuleComposite::~SoftwareModuleComposite()
 {
-}
-
-void SoftwareModuleComposite::onStatusChanged(enum StatusType prev, enum StatusType cur)
-{
-    if (cur != StatusType_COMPLETED)
-        return;
-
-    string value = JValueUtil::getMeta(m_metadata, "installer");
-    if (value == "opkg") {
-        PolicyManager::getInstance().onPendingRequest(true);
-    }
 }
 
 bool SoftwareModuleComposite::fromJson(const JValue& json)

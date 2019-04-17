@@ -36,7 +36,7 @@ bool Leaf::prepare()
     return m_status.prepare();
 }
 
-bool Leaf::install()
+bool Leaf::start()
 {
     enum TransitionType type = m_status.canInstall();
     if (type == TransitionType_NotAllowed) {

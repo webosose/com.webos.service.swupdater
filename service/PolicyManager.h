@@ -30,6 +30,8 @@ class PolicyManager : public ISingleton<PolicyManager>,
                       public HawkBitClientListener {
 friend ISingleton<PolicyManager>;
 public:
+    static gboolean _tick(gpointer user_data);
+
     virtual ~PolicyManager();
 
     // IInitializable
@@ -37,8 +39,9 @@ public:
     virtual bool onFinalization() override;
 
     // global events
-    virtual void onChangeStatus();
-    virtual void onPendingRequest(bool reboot);
+    virtual void onRequestStatusChange();
+    virtual void onRequestProgressUpdate();
+    virtual void onRequestReboot(int seconds);
 
     // LS2HandlerListener
     virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
@@ -51,15 +54,21 @@ public:
     // HawkBitClientListener
     virtual void onCancellationAction(JValue& responsePayload) override;
     virtual void onInstallationAction(JValue& responsePayload) override;
-    virtual void onConfigDataAction(JValue& responsePayload) override;
+    virtual void onPollingSleepAction(int seconds) override;
 
 private:
     PolicyManager();
 
+    void postStatus();
+
     shared_ptr<DeploymentActionComposite> m_currentAction;
     LS::SubscriptionPoint *m_statusPoint;
 
-    bool m_pendingRequest;
+    int m_tickInterval;
+    guint m_tickSrc;
+
+    // TODO this is a temp solution. it should be changed *queue* before polling
+    bool m_pendingRebootRequest;
 
 };
 

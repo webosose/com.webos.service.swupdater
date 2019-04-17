@@ -16,6 +16,8 @@
 
 #include "core/install/impl/DeploymentActionComposite.h"
 
+#include <memory>
+
 #include "PolicyManager.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
@@ -28,10 +30,37 @@ DeploymentActionComposite::DeploymentActionComposite()
     setClassName("DeploymentActionComposite");
     m_status.setName("DeploymentActionComposite");
     setType(ActionType_INSTALL);
+
+    m_status.addCallback( // @suppress("Invalid arguments")
+        std::bind(&DeploymentActionComposite::onStatusChanged,
+                  this,
+                  std::placeholders::_1,
+                  std::placeholders::_2
+        )
+    );
 }
 
 DeploymentActionComposite::~DeploymentActionComposite()
 {
+}
+
+void DeploymentActionComposite::onStatusChanged(enum StatusType prev, enum StatusType cur)
+{
+    if (cur != StatusType_COMPLETED)
+        return;
+
+    int seconds = -1;
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        JValue metadata = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it)->getMetadata();
+        string value = JValueUtil::getMeta(metadata, "reboot");
+
+        if (!value.empty() && std::atoi(value.c_str()) > seconds) {
+            seconds = std::atoi(value.c_str());
+        }
+    }
+
+    if (seconds > 0)
+        PolicyManager::getInstance().onRequestReboot(seconds);
 }
 
 bool DeploymentActionComposite::fromJson(const JValue& json)

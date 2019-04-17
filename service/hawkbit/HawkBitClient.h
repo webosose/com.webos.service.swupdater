@@ -34,7 +34,7 @@ public:
 
     virtual void onCancellationAction(JValue& responsePayload) = 0;
     virtual void onInstallationAction(JValue& responsePayload) = 0;
-    virtual void onConfigDataAction(JValue& responsePayload) = 0;
+    virtual void onPollingSleepAction(int seconds) = 0;
 };
 
 class HawkBitClient : public IInitializable,
@@ -42,40 +42,32 @@ class HawkBitClient : public IInitializable,
                       public ISingleton<HawkBitClient> {
 friend ISingleton<HawkBitClient>;
 public:
-    static guint poll(gpointer data);
-
     virtual ~HawkBitClient();
 
     // IInitializable
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    // See : https://www.eclipse.org/hawkbit/apis/ddi_api/
-    bool canceled();
-    bool rejected();
-    bool closed();
-    bool proceeding();
-    bool scheduled();
-    bool resumed();
+    void poll();
 
-    bool postComplete(shared_ptr<AbsAction> action);
-    bool postProgress(shared_ptr<DeploymentActionComposite> action, int of, int cnt);
+    // See : https://www.eclipse.org/hawkbit/apis/ddi_api/
+    bool canceled(const string& id);
+    bool rejected(const string& id);
+    bool closed(const string& id);
+    bool proceeding(const string& id);
+    bool scheduled(const string& id);
+    bool resumed(const string& id);
 
     // HackBit communication APIs
-    bool getBase(JValue& responsePayload, const string& url);
-    bool getCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id);
     bool postCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id);
-    bool putConfigData(JValue& responsePayload, JValue& data);
-    bool getDeploymentAction(JValue& requestPayload, JValue& responsePayload, string& id);
     bool postDeploymentAction(JValue& responsePayload, const string& id, bool success);
-    bool getSoftwaremodules(JValue& requestPayload, JValue& responsePayload, string& id);
+    bool putConfigData(JValue& data);
 
 private:
     HawkBitClient();
 
-    void start(int seconds = 0);
-    bool isStarted();
-    void stop();
+    bool getBase(JValue& responsePayload, const string& url);
+    void getStatus(JValue& json, const string& execution, const string& finished, string detail = "");
 
     static const string HAWKBIT_TENANT;
     static const string HAWKBIT_URL;
@@ -84,9 +76,6 @@ private:
     static const int SLEEP_DEFAULT;
 
     string m_hawkBitUrl;
-
-    GSource* m_pollingSrc;
-    int m_sleep;
 
 };
 
