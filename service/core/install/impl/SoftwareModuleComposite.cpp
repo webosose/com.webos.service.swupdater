@@ -60,6 +60,7 @@ SoftwareModuleComposite::SoftwareModuleComposite()
 
 SoftwareModuleComposite::~SoftwareModuleComposite()
 {
+    disbleCallback();
 }
 
 bool SoftwareModuleComposite::fromJson(const JValue& json)
@@ -82,8 +83,9 @@ bool SoftwareModuleComposite::fromJson(const JValue& json)
             ptr->fromJson(artifact);
             if (m_metadata.isValid())
                 ptr->setMetadata(m_metadata);
-            add(ptr);
+            m_children.push_back(ptr);
         }
+        enableCallback();
     }
     return true;
 }

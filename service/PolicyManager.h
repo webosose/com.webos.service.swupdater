@@ -41,7 +41,6 @@ public:
     // global events
     virtual void onRequestStatusChange();
     virtual void onRequestProgressUpdate();
-    virtual void onRequestReboot(int seconds);
 
     // LS2HandlerListener
     virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
@@ -70,7 +69,7 @@ private:
     guint m_tickSrc;
 
     // TODO this is a temp solution. it should be changed *queue* before polling
-    bool m_pendingRebootRequest;
+    bool m_pendingClearRequest;
 
 };
 

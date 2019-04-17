@@ -42,28 +42,26 @@ DeploymentActionComposite::DeploymentActionComposite()
 
 DeploymentActionComposite::~DeploymentActionComposite()
 {
+    disbleCallback();
+    m_status.clearCallback();
 }
 
 void DeploymentActionComposite::onStatusChanged(enum StatusType prev, enum StatusType cur)
 {
-    return;
-
-    // TODO currently, reboot is not supported in ICAS3 board.
     if (cur != StatusType_COMPLETED)
         return;
 
-    int seconds = -1;
     for (auto it = m_children.begin(); it != m_children.end(); ++it) {
         JValue metadata = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it)->getMetadata();
-        string value = JValueUtil::getMeta(metadata, "reboot");
+        string value = JValueUtil::getMeta(metadata, "installer");
 
-        if (!value.empty() && std::atoi(value.c_str()) > seconds) {
-            seconds = std::atoi(value.c_str());
+        if (value == "opkg") {
+            // TODO need to find better solution
+            system("systemctl restart surface-manager");
+            system("systemctl restart sam");
+            break;
         }
     }
-
-    if (seconds > 0)
-        PolicyManager::getInstance().onRequestReboot(seconds);
 }
 
 bool DeploymentActionComposite::fromJson(const JValue& json)
@@ -84,8 +82,9 @@ bool DeploymentActionComposite::fromJson(const JValue& json)
     for (JValue chunk : json["deployment"]["chunks"].items()) {
         shared_ptr<SoftwareModuleComposite> module = make_shared<SoftwareModuleComposite>();
         module->fromJson(chunk);
-        this->add(module);
+        m_children.push_back(module);
     }
+    enableCallback();
     return true;
 }
 
