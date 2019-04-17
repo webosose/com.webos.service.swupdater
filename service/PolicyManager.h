@@ -61,6 +61,8 @@ private:
 
     void postStatus();
 
+    static const int DEFAULT_TICK_INTERVAL = 15;
+
     shared_ptr<DeploymentActionComposite> m_currentAction;
     LS::SubscriptionPoint *m_statusPoint;
 

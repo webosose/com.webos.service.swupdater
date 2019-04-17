@@ -73,8 +73,6 @@ private:
     static const string HAWKBIT_URL;
     static const string HAWKBIT_ID;
 
-    static const int SLEEP_DEFAULT;
-
     string m_hawkBitUrl;
 
 };
