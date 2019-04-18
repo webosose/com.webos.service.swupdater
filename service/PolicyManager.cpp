@@ -22,9 +22,9 @@
 
 gboolean PolicyManager::_tick(gpointer user_data)
 {
-    if (getInstance().m_pendingRebootRequest) {
-        Logger::info(PolicyManager::getInstance().getClassName(), "== REBOOT ==");
-        system("reboot");
+    if (getInstance().m_pendingClearRequest) {
+        Logger::info(getInstance().getClassName(), "Current Action is cleared");
+        getInstance().m_currentAction = nullptr;
     }
     HawkBitClient::getInstance().poll();
     return G_SOURCE_CONTINUE;
@@ -35,7 +35,7 @@ PolicyManager::PolicyManager()
     , m_statusPoint(nullptr)
     , m_tickInterval(0)
     , m_tickSrc(0)
-    , m_pendingRebootRequest(false)
+    , m_pendingClearRequest(false)
 {
     setClassName("PolicyManager");
 }
@@ -78,13 +78,13 @@ void PolicyManager::onRequestStatusChange()
 
     // check installation status
     if (m_currentAction->getStatus().getStatus() == StatusType_COMPLETED) {
-        JValue responsePayload;
-        HawkBitClient::getInstance().postDeploymentAction(responsePayload, m_currentAction->getId(), true);
-        m_currentAction = nullptr;
+        HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), true);
+        m_pendingClearRequest = true;
+        Logger::info(getClassName(), "Update completed.");
     } else if (m_currentAction->getStatus().getStatus() == StatusType_FAILED) {
-        JValue responsePayload;
-        HawkBitClient::getInstance().postDeploymentAction(responsePayload, m_currentAction->getId(), false);
-        m_currentAction = nullptr;
+        HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), false);
+        m_pendingClearRequest = true;
+        Logger::info(getClassName(), "Update failed.");
     }
 }
 
@@ -93,26 +93,18 @@ void PolicyManager::onRequestProgressUpdate()
     postStatus();
 }
 
-void PolicyManager::onRequestReboot(int seconds)
-{
-    if (seconds == 0) {
-        Logger::info(getClassName(), "System reboots immediately");
-    } else {
-        Logger::info(getClassName(), "System will reboot after " + std::to_string(seconds) + " seconds");
-    }
-    onPollingSleepAction(seconds);
-    m_pendingRebootRequest = true;
-}
-
 void PolicyManager::onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
-    if (!m_currentAction) {
+    if (m_currentAction) {
+        Logger::debug(getClassName(), "Try to post current action status");
+        m_currentAction->toJson(responsePayload);
+    } else {
+        Logger::debug(getClassName(), "Current is null.");
         responsePayload.put("id", nullptr);
         responsePayload.put("status", nullptr);
-    } else {
-        m_currentAction->toJson(responsePayload);
     }
-    if (request.isSubscription()) {
+    if (m_statusPoint && request.isSubscription()) {
+        Logger::debug(getClassName(), "Add subscription");
         m_statusPoint->subscribe(request);
         responsePayload.put("subscribed", true);
     }

@@ -93,6 +93,7 @@ public:
         if (m_status == StatusType_PAUSED || m_status == StatusType_RUNNING) {
             cancel();
         }
+        m_callbacks.clear();
     }
 
     enum TransitionType canPrepare()

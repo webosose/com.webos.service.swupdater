@@ -38,8 +38,8 @@ public:
     virtual bool cancel()  override;
 
 protected:
-    void add(shared_ptr<Component> component);
-    void remove(shared_ptr<Component> component);
+    void enableCallback();
+    void disbleCallback();
 
     deque<shared_ptr<Component>> m_children;
 

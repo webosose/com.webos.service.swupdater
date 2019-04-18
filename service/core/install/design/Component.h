@@ -30,7 +30,7 @@ public:
 
     virtual ~Component()
     {
-
+        m_status.clearCallback();
     }
 
     virtual bool prepare() = 0;

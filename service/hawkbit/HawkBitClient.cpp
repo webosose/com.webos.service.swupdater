@@ -240,7 +240,7 @@ bool HawkBitClient::resumed(const string& id)
 }
 
 
-bool HawkBitClient::postDeploymentAction(JValue& responsePayload, const string& id, bool success)
+bool HawkBitClient::postDeploymentAction(const string& id, bool success)
 {
     const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
     Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");

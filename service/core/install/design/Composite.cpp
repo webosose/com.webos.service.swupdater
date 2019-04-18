@@ -136,19 +136,22 @@ bool Composite::cancel()
     return m_status.cancel();
 }
 
-void Composite::add(shared_ptr<Component> component)
+void Composite::enableCallback()
 {
-    m_children.push_back(component);
-    component->getStatus().addCallback( // @suppress("Invalid arguments")
-        std::bind(&Composite::onChildStatusChanged,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2
-        )
-    );
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        (*it)->getStatus().addCallback( // @suppress("Invalid arguments")
+            std::bind(&Composite::onChildStatusChanged,
+                      this,
+                      std::placeholders::_1,
+                      std::placeholders::_2
+            )
+        );
+    }
 }
 
-void Composite::remove(shared_ptr<Component> component)
+void Composite::disbleCallback()
 {
-    component->getStatus().clearCallback();
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        (*it)->getStatus().clearCallback();
+    }
 }

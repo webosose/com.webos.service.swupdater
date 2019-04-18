@@ -60,7 +60,7 @@ public:
 
     // HackBit communication APIs
     bool postCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id);
-    bool postDeploymentAction(JValue& responsePayload, const string& id, bool success);
+    bool postDeploymentAction(const string& id, bool success);
     bool putConfigData(JValue& data);
 
 private:
