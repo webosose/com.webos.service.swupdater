@@ -54,6 +54,7 @@ public:
     virtual void onCancellationAction(JValue& responsePayload) override;
     virtual void onInstallationAction(JValue& responsePayload) override;
     virtual void onPollingSleepAction(int seconds) override;
+    virtual void onSettingConfigData() override;
 
 private:
     PolicyManager();

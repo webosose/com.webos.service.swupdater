@@ -90,6 +90,10 @@ void HawkBitClient::poll()
         if (m_listener) m_listener->onPollingSleepAction(15); // TODO Time::toSeconds(sleep));
     }
 
+    if (JValueUtil::getValue(responsePayload, "_links", "configData", "href", href)) {
+        if (m_listener) m_listener->onSettingConfigData();
+    }
+
     if (JValueUtil::getValue(responsePayload, "_links", "deploymentBase", "href", href)) {
         if (!getBase(responsePayload, href)) {
             goto Done;
@@ -101,9 +105,6 @@ void HawkBitClient::poll()
             goto Done;
         }
         if (m_listener) m_listener->onCancellationAction(responsePayload);
-    }
-    if (JValueUtil::getValue(responsePayload, "_links", "configData", "href", href)) {
-        // TODO: Need to be updated
     }
 
 Done:

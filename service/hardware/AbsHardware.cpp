@@ -20,8 +20,8 @@
 
 AbsHardware& AbsHardware::getHardware()
 {
-    static ICAS icas;
-    return icas;
+    static RPi3 rpi3;
+    return rpi3;
 }
 
 AbsHardware::AbsHardware()

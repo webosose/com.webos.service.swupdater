@@ -17,6 +17,7 @@
 #include "PolicyManager.h"
 #include "core/AbsAction.h"
 #include "ls2/AppInstaller.h"
+#include "ls2/SystemService.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
 
@@ -230,6 +231,24 @@ void PolicyManager::onPollingSleepAction(int seconds)
     }
     Logger::info(getClassName(), "Started tick timer");
     m_tickInterval = seconds;
+}
+
+void PolicyManager::onSettingConfigData()
+{
+    JValue osInfo = pbnjson::Object();
+    JValue deviceInfo = pbnjson::Object();
+
+    if (!SystemService::getInstance().queryOSInfo(osInfo) ||
+        !SystemService::getInstance().queryDeviceInfo(deviceInfo)) {
+        return;
+    }
+
+    JValue configData = pbnjson::Object();
+    configData.put("device_name", deviceInfo["device_name"]);
+    configData.put("webos_release_codename", osInfo["webos_release_codename"]);
+    configData.put("webos_build_id", osInfo["webos_build_id"]);
+
+    HawkBitClient::getInstance().putConfigData(configData);
 }
 
 void PolicyManager::postStatus()
