@@ -54,6 +54,10 @@ pkg_check_modules(PMLOG PmLogLib)
 include_directories(${PMLOG_INCLUDE_DIRS})
 webos_add_compiler_flags(ALL ${PMLOG_CFLAGS_OTHER})
 
+pkg_check_modules(OSTREE REQUIRED ostree-1)
+include_directories(${OSTREE_INCLUDE_DIRS})
+webos_add_compiler_flags(ALL ${OSTREE_CFLAGS_OTHER})
+
 # Environment
 set(BIN_NAME swupdater)
 file(GLOB_RECURSE SRC_CPP ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
@@ -75,9 +79,10 @@ set(LIBS
     ${PMLOG_LDFLAGS}
     ${PBNJSON_C_LDFLAGS}
     ${PBNJSON_CPP_LDFLAGS}
+    ${OSTREE_LDFLAGS}
 )
 target_link_libraries(${BIN_NAME} ${LIBS})
 
 # Install
 install(TARGETS ${BIN_NAME} DESTINATION ${WEBOS_INSTALL_SBINDIR})
-webos_build_configured_file(files/launch/swupdater.service SYSCONFDIR systemd/system/webos-cbd.target.wants)
+webos_build_configured_file(files/launch/swupdater.service SYSCONFDIR systemd/system)

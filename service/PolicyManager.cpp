@@ -79,9 +79,10 @@ void PolicyManager::onRequestStatusChange()
 
     // check installation status
     if (m_currentAction->getStatus().getStatus() == StatusType_COMPLETED) {
-        HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), true);
-        m_pendingClearRequest = true;
-        Logger::info(getClassName(), "Update completed.");
+        // TODO send feedback after reboot
+        // HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), true);
+        // m_pendingClearRequest = true;
+        Logger::info(getClassName(), "Update installed, but reboot required.");
     } else if (m_currentAction->getStatus().getStatus() == StatusType_FAILED) {
         HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), false);
         m_pendingClearRequest = true;

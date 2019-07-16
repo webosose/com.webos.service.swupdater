@@ -17,6 +17,7 @@
 #include "core/install/impl/ArtifactLeaf.h"
 
 #include "PolicyManager.h"
+#include "ostree/OSTree.h"
 #include "util/JValueUtil.h"
 
 const string ArtifactLeaf::DIRNAME = "/home/root/";
@@ -63,8 +64,8 @@ void ArtifactLeaf::onCompletedDownload(HttpFile* call)
         return;
     }
 
-    string installer = JValueUtil::getMeta(m_metadata, "installer");
     if (getFileExtension() == "ipk") {
+        string installer = JValueUtil::getMeta(m_metadata, "installer");
         if (installer.empty() || installer == "appInstallService") {
             // TODO: Following is temp code for demo. we need to find better way
             string command = "opkg remove " + getIpkName();
@@ -79,6 +80,14 @@ void ArtifactLeaf::onCompletedDownload(HttpFile* call)
                 m_status.fail();
             return;
         }
+    } else if (getFileExtension() == "delta") {
+        if (OSTree::deployDelta(getFullName())) {
+            OSTree::printDebug();
+            m_status.complete();
+        } else {
+            m_status.fail();
+        }
+        return;
     }
 
     Logger::warning(getClassName(), m_fileName, "Not supported file extension");
