@@ -81,8 +81,8 @@ void ArtifactLeaf::onCompletedDownload(HttpFile* call)
             return;
         }
     } else if (getFileExtension() == "delta") {
-        if (OSTree::deployDelta(getFullName())) {
-            OSTree::printDebug();
+        if (OSTree::getInstance().deployDelta(getFullName())) {
+            OSTree::getInstance().printDebug();
             m_status.complete();
         } else {
             m_status.fail();

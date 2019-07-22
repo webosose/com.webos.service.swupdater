@@ -17,9 +17,9 @@
 #ifndef POLICYMANAGER_H_
 #define POLICYMANAGER_H_
 
+#include "bootloader/AbsBootloader.h"
 #include "core/AbsAction.h"
 #include "hawkbit/HawkBitClient.h"
-#include "hardware/AbsHardware.h"
 #include "interface/IInitializable.h"
 #include "interface/ISingleton.h"
 #include "ls2/LS2Handler.h"

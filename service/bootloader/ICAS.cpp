@@ -14,7 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "ICAS.h"
+#include "bootloader/ICAS.h"
+
 #include "Setting.h"
 #include "util/Socket.h"
 
@@ -51,4 +52,18 @@ string ICAS::getEnv(const string& key)
         return "007eecfb134343209cb882d45becd8d7";
     }
     return "";
+}
+
+
+void ICAS::notifyUpdate()
+{
+}
+
+void ICAS::setRebootOK()
+{
+}
+
+bool ICAS::isRebootAfterUpdate()
+{
+    return false;
 }

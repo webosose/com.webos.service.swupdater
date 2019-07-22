@@ -18,6 +18,7 @@
 #include "core/AbsAction.h"
 #include "ls2/AppInstaller.h"
 #include "ls2/SystemService.h"
+#include "ostree/OSTree.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
 
@@ -52,9 +53,21 @@ bool PolicyManager::onInitialization()
 {
     HawkBitClient::getInstance().setListener(this);
     LS2Handler::getInstance().setListener(this);
+    OSTree::getInstance().initialize(NULL);
 
     m_statusPoint = new LS::SubscriptionPoint();
     m_statusPoint->setServiceHandle(&LS2Handler::getInstance());
+
+    if (AbsBootloader::getBootloader().isRebootAfterUpdate()) {
+        const string& actionId = AbsBootloader::getBootloader().getEnv("action_id");
+        if (OSTree::getInstance().isUpdated()) {
+            HawkBitClient::getInstance().postDeploymentAction(actionId, true);
+        } else {
+            HawkBitClient::getInstance().postDeploymentAction(actionId, false);
+        }
+        AbsBootloader::getBootloader().setEnv("action_id", "");
+        AbsBootloader::getBootloader().setRebootOK();
+    }
 
     onPollingSleepAction(DEFAULT_TICK_INTERVAL);
     return true;
@@ -64,6 +77,7 @@ bool PolicyManager::onFinalization()
 {
     delete m_statusPoint;
     m_statusPoint = nullptr;
+    OSTree::getInstance().finalize();
     LS2Handler::getInstance().setListener(nullptr);
     HawkBitClient::getInstance().setListener(nullptr);
 
@@ -79,9 +93,8 @@ void PolicyManager::onRequestStatusChange()
 
     // check installation status
     if (m_currentAction->getStatus().getStatus() == StatusType_COMPLETED) {
-        // TODO send feedback after reboot
-        // HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), true);
-        // m_pendingClearRequest = true;
+        AbsBootloader::getBootloader().setEnv("action_id", m_currentAction->getId());
+        AbsBootloader::getBootloader().notifyUpdate();
         Logger::info(getClassName(), "Update installed, but reboot required.");
     } else if (m_currentAction->getStatus().getStatus() == StatusType_FAILED) {
         HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), false);

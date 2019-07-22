@@ -14,19 +14,19 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "RPi3.h"
+#include "bootloader/UBoot.h"
 
 #include <string.h>
 
-RPi3::RPi3()
+UBoot::UBoot()
 {
 }
 
-RPi3::~RPi3()
+UBoot::~UBoot()
 {
 }
 
-void RPi3::setEnv(const string& key, const string& value)
+void UBoot::setEnv(const string& key, const string& value)
 {
     string command = "/sbin/fw_setenv " + key + " " + value;
 
@@ -38,7 +38,7 @@ void RPi3::setEnv(const string& key, const string& value)
     pclose(file);
 }
 
-string RPi3::getEnv(const string& key)
+string UBoot::getEnv(const string& key)
 {
     char buff[256];
     stringstream ss;
@@ -57,4 +57,26 @@ string RPi3::getEnv(const string& key)
 
     pclose(file);
     return ss.str();
+}
+
+void UBoot::notifyUpdate()
+{
+    // 'bootcount' is increased only when 'upgrade_available' is set.
+    setEnv("upgrade_available", "1");
+    setEnv("bootcount", "0");
+    setEnv("rollback", "0");
+}
+
+void UBoot::setRebootOK()
+{
+    setEnv("upgrade_available", "0");
+    setEnv("bootcount", "0");
+    // Do not set 'rollback' to 0.
+    // 'rollback = 1' means, update is failed and booted into alternative deployment.
+    // so next boot up, boot directly into alternative deployment.
+}
+
+bool UBoot::isRebootAfterUpdate()
+{
+    return getEnv("bootcount") != "0";
 }

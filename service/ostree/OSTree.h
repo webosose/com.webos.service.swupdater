@@ -20,20 +20,30 @@
 #include <iostream>
 #include <ostree-1/ostree.h>
 
-#include "interface/IClassName.h"
+#include "interface/IInitializable.h"
+#include "interface/ISingleton.h"
 
 using namespace std;
 
-class OSTree : public IClassName {
+class OSTree : public IInitializable,
+               public ISingleton<OSTree> {
+friend ISingleton<OSTree>;
 public:
-    static bool deployDelta(const string& path);
-    static void printDebug();
-
-private:
-    OSTree(bool writeLock);
     virtual ~OSTree();
 
-    bool m_isInitialized;
+    virtual bool onInitialization() override;
+    virtual bool onFinalization() override;
+
+    bool deployDelta(const string& path);
+    bool isUpdated();
+    void printDebug();
+
+private:
+    OSTree();
+
+    bool lock();
+    void unlock();
+
     OstreeSysroot* m_sysroot;
 
 };

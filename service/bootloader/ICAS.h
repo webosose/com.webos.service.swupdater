@@ -14,20 +14,27 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "AbsHardware.h"
-#include "ICAS.h"
-#include "RPi3.h"
+#ifndef HARDWARE_ICAS_H_
+#define HARDWARE_ICAS_H_
 
-AbsHardware& AbsHardware::getHardware()
-{
-    static RPi3 rpi3;
-    return rpi3;
-}
+#include <iostream>
+#include <sstream>
 
-AbsHardware::AbsHardware()
-{
-}
+#include "bootloader/AbsBootloader.h"
 
-AbsHardware::~AbsHardware()
-{
-}
+using namespace std;
+
+class ICAS : public AbsBootloader {
+public:
+    ICAS();
+    virtual ~ICAS();
+
+    virtual void setEnv(const string& key, const string& value) override;
+    virtual string getEnv(const string& key) override;
+
+    virtual void notifyUpdate() override;
+    virtual void setRebootOK() override;
+    virtual bool isRebootAfterUpdate() override;
+};
+
+#endif /* HARDWARE_ICAS_H_ */
