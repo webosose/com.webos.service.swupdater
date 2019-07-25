@@ -14,34 +14,45 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef LS2_SYSTEMSERVICE_H_
-#define LS2_SYSTEMSERVICE_H_
+#ifndef LS2_CONNECTIONMANAGER_H_
+#define LS2_CONNECTIONMANAGER_H_
 
 #include <iostream>
 #include <pbnjson.hpp>
 #include <luna-service2/lunaservice.hpp>
 
-#include "interface/IClassName.h"
+#include "interface/IInitializable.h"
 #include "interface/ISingleton.h"
 
 using namespace std;
 using namespace pbnjson;
 
-class SystemService : public IClassName,
-                      public ISingleton<SystemService> {
-friend ISingleton<SystemService>;
+class ConnectionManagerListener {
 public:
-    virtual ~SystemService();
+    ConnectionManagerListener() {}
+    virtual ~ConnectionManagerListener() {}
 
-    bool queryOSInfo(JValue& responsePayload);
-    bool queryDeviceInfo(JValue& responsePayload);
+    virtual void onGetStatusSubscription(pbnjson::JValue subscriptionPayload) = 0;
+};
+
+class ConnectionManager : public IInitializable,
+                          public ISingleton<ConnectionManager> {
+friend ISingleton<ConnectionManager>;
+public:
+    virtual ~ConnectionManager();
+
+    // IInitializable
+    virtual bool onInitialization() override;
+    virtual bool onFinalization() override;
+
+    static bool _getStatus(LSHandle* sh, LSMessage* reply, void* ctx);
+    bool getStatus(ConnectionManagerListener* listener);
 
 private:
-    SystemService();
+    ConnectionManager();
 
-    static const string SERVICE_NAME;
-    static const unsigned long LSCALL_TIMEOUT;
+    LS::Call m_getStatusCall;
 
 };
 
-#endif /* LS2_SYSTEMSERVICE_H_ */
+#endif /* LS2_CONNECTIONMANAGER_H_ */

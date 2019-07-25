@@ -31,15 +31,6 @@ SystemService::~SystemService()
 {
 }
 
-bool SystemService::onInitialization()
-{
-    return true;
-}
-bool SystemService::onFinalization()
-{
-    return true;
-}
-
 bool SystemService::queryOSInfo(JValue& responsePayload)
 {
     static const string API = "luna://" + SERVICE_NAME + "/osInfo/query";

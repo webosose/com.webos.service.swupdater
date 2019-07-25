@@ -54,6 +54,7 @@ bool PolicyManager::onInitialization()
     HawkBitClient::getInstance().setListener(this);
     LS2Handler::getInstance().setListener(this);
     OSTree::getInstance().initialize(NULL);
+    ConnectionManager::getInstance().getStatus(this);
 
     m_statusPoint = new LS::SubscriptionPoint();
     m_statusPoint->setServiceHandle(&LS2Handler::getInstance());
@@ -106,6 +107,21 @@ void PolicyManager::onRequestStatusChange()
 void PolicyManager::onRequestProgressUpdate()
 {
     postStatus();
+}
+
+void PolicyManager::onGetStatusSubscription(pbnjson::JValue subscriptionPayload)
+{
+    string wifiState;
+    string wifiOnInternet;
+    if (subscriptionPayload["returnValue"].asBool() &&
+        JValueUtil::getValue(subscriptionPayload, "wifi", "state", wifiState) &&
+        wifiState == "connected" &&
+        JValueUtil::getValue(subscriptionPayload, "wifi", "onInternet", wifiOnInternet) &&
+        wifiOnInternet == "yes") {
+        Logger::info(getClassName(), "WiFi ON");
+    } else {
+        Logger::info(getClassName(), "WiFi OFF");
+    }
 }
 
 void PolicyManager::onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload)

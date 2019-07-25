@@ -22,10 +22,12 @@
 #include "hawkbit/HawkBitClient.h"
 #include "interface/IInitializable.h"
 #include "interface/ISingleton.h"
+#include "ls2/ConnectionManager.h"
 #include "ls2/LS2Handler.h"
 
 class PolicyManager : public ISingleton<PolicyManager>,
                       public IInitializable,
+                      public ConnectionManagerListener,
                       public LS2HandlerListener,
                       public HawkBitClientListener {
 friend ISingleton<PolicyManager>;
@@ -41,6 +43,9 @@ public:
     // global events
     virtual void onRequestStatusChange();
     virtual void onRequestProgressUpdate();
+
+    // ConnectionManagerListener
+    virtual void onGetStatusSubscription(pbnjson::JValue subscriptionPayload) override;
 
     // LS2HandlerListener
     virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
