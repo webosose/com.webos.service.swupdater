@@ -28,7 +28,7 @@
 using namespace std;
 
 class DeploymentActionComposite : public AbsAction,
-                         public Composite {
+                                  public Composite {
 public:
     DeploymentActionComposite();
     virtual ~DeploymentActionComposite();
@@ -39,6 +39,9 @@ public:
     virtual bool fromJson(const JValue& json) override;
     virtual bool toJson(JValue& json) override;
 
+    // Composite
+    virtual bool start() override;
+
     const bool isForceDownload()
     {
         return m_isForceDownload;
@@ -48,6 +51,9 @@ public:
     {
         return m_isForceUpdate;
     }
+
+    bool hasOSModule();
+    bool hasApplicationModule();
 
 private:
     bool m_isForceDownload;

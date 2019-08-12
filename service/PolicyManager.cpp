@@ -94,9 +94,15 @@ void PolicyManager::onRequestStatusChange()
 
     // check installation status
     if (m_currentAction->getStatus().getStatus() == StatusType_COMPLETED) {
-        AbsBootloader::getBootloader().setEnv("action_id", m_currentAction->getId());
-        AbsBootloader::getBootloader().notifyUpdate();
-        Logger::info(getClassName(), "Update installed, but reboot required.");
+        if (m_currentAction->hasOSModule()) {
+            AbsBootloader::getBootloader().setEnv("action_id", m_currentAction->getId());
+            AbsBootloader::getBootloader().notifyUpdate();
+            Logger::info(getClassName(), "Update installed, but reboot required.");
+        } else if (m_currentAction->hasApplicationModule()) {
+            HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), true);
+            m_pendingClearRequest = true;
+            Logger::info(getClassName(), "Update completed.");
+        }
     } else if (m_currentAction->getStatus().getStatus() == StatusType_FAILED) {
         HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), false);
         m_pendingClearRequest = true;
