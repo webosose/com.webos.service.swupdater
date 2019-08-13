@@ -14,29 +14,27 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef OSTREE_OSTREE_H_
-#define OSTREE_OSTREE_H_
+#ifndef UPDATER_OSTREE_OSTREE_H_
+#define UPDATER_OSTREE_OSTREE_H_
 
 #include <iostream>
 #include <ostree-1/ostree.h>
 
-#include "interface/IInitializable.h"
-#include "interface/ISingleton.h"
+#include "updater/AbsUpdater.h"
 
 using namespace std;
 
-class OSTree : public IInitializable,
-               public ISingleton<OSTree> {
-friend ISingleton<OSTree>;
+class OSTree : public AbsUpdater {
+friend class AbsUpdaterFactory;
 public:
     virtual ~OSTree();
 
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    bool deployDelta(const string& path);
-    bool isUpdated();
-    void printDebug();
+    virtual bool deploy(const string& path) override;
+    virtual bool isUpdated() override;
+    virtual void printDebug() override;
 
 private:
     OSTree();
@@ -48,4 +46,4 @@ private:
 
 };
 
-#endif /* OSTREE_OSTREE_H_ */
+#endif /* UPDATER_OSTREE_OSTREE_H_ */

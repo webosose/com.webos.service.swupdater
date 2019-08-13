@@ -17,7 +17,7 @@
 #include "core/install/impl/ArtifactLeaf.h"
 
 #include "PolicyManager.h"
-#include "ostree/OSTree.h"
+#include "updater/AbsUpdater.h"
 #include "util/JValueUtil.h"
 
 const string ArtifactLeaf::DIRNAME = "/home/root/";
@@ -81,8 +81,8 @@ void ArtifactLeaf::onCompletedDownload(HttpFile* call)
             return;
         }
     } else if (getFileExtension() == "delta") {
-        if (OSTree::getInstance().deployDelta(getFullName())) {
-            OSTree::getInstance().printDebug();
+        if (AbsUpdaterFactory::getInstance().deploy(getFullName())) {
+            AbsUpdaterFactory::getInstance().printDebug();
             m_status.complete();
         } else {
             m_status.fail();

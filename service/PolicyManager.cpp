@@ -18,7 +18,7 @@
 #include "core/AbsAction.h"
 #include "ls2/AppInstaller.h"
 #include "ls2/SystemService.h"
-#include "ostree/OSTree.h"
+#include "updater/AbsUpdater.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
 
@@ -53,7 +53,7 @@ bool PolicyManager::onInitialization()
 {
     HawkBitClient::getInstance().setListener(this);
     LS2Handler::getInstance().setListener(this);
-    OSTree::getInstance().initialize(NULL);
+    AbsUpdaterFactory::getInstance().initialize(NULL);
     ConnectionManager::getInstance().getStatus(this);
 
     m_statusPoint = new LS::SubscriptionPoint();
@@ -61,7 +61,7 @@ bool PolicyManager::onInitialization()
 
     if (AbsBootloader::getBootloader().isRebootAfterUpdate()) {
         const string& actionId = AbsBootloader::getBootloader().getEnv("action_id");
-        if (OSTree::getInstance().isUpdated()) {
+        if (AbsUpdaterFactory::getInstance().isUpdated()) {
             HawkBitClient::getInstance().postDeploymentAction(actionId, true);
         } else {
             HawkBitClient::getInstance().postDeploymentAction(actionId, false);
@@ -78,7 +78,7 @@ bool PolicyManager::onFinalization()
 {
     delete m_statusPoint;
     m_statusPoint = nullptr;
-    OSTree::getInstance().finalize();
+    AbsUpdaterFactory::getInstance().finalize();
     LS2Handler::getInstance().setListener(nullptr);
     HawkBitClient::getInstance().setListener(nullptr);
 

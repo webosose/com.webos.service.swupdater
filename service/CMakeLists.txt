@@ -16,6 +16,8 @@
 #
 # LICENSE@@@
 
+option(LIBOSTREE "Build with libostree" ON)
+
 include(FindPkgConfig)
 
 pkg_check_modules(CURL REQUIRED libcurl)
@@ -54,13 +56,18 @@ pkg_check_modules(PMLOG PmLogLib)
 include_directories(${PMLOG_INCLUDE_DIRS})
 webos_add_compiler_flags(ALL ${PMLOG_CFLAGS_OTHER})
 
-pkg_check_modules(OSTREE REQUIRED ostree-1)
-include_directories(${OSTREE_INCLUDE_DIRS})
-webos_add_compiler_flags(ALL ${OSTREE_CFLAGS_OTHER})
+if (LIBOSTREE)
+    pkg_check_modules(OSTREE REQUIRED ostree-1)
+    include_directories(${OSTREE_INCLUDE_DIRS})
+    webos_add_compiler_flags(ALL ${OSTREE_CFLAGS_OTHER} -DLIBOSTREE)
+endif()
 
 # Environment
 set(BIN_NAME swupdater)
 file(GLOB_RECURSE SRC_CPP ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+if (NOT LIBOSTREE)
+    list(REMOVE_ITEM SRC_CPP ${CMAKE_CURRENT_SOURCE_DIR}/updater/ostree/OSTree.cpp)
+endif()
 file(GLOB_RECURSE SRC_C ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
 
 webos_add_compiler_flags(ALL CXX -std=c++0x)
@@ -79,8 +86,10 @@ set(LIBS
     ${PMLOG_LDFLAGS}
     ${PBNJSON_C_LDFLAGS}
     ${PBNJSON_CPP_LDFLAGS}
-    ${OSTREE_LDFLAGS}
 )
+if (LIBOSTREE)
+    set (LIBS ${LIBS} ${OSTREE_LDFLAGS})
+endif()
 target_link_libraries(${BIN_NAME} ${LIBS})
 
 # Install

@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "ostree/OSTree.h"
+#include "updater/ostree/OSTree.h"
 
 #include "util/Logger.h"
 
@@ -73,7 +73,7 @@ void OSTree::unlock()
     ostree_sysroot_unlock(m_sysroot);
 }
 
-bool OSTree::deployDelta(const string& path)
+bool OSTree::deploy(const string& path)
 {
     Logger::verbose(getClassName(), __FUNCTION__);
 
