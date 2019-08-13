@@ -16,12 +16,11 @@
 
 #include <curl/curl.h>
 #include <glib.h>
-
 #include "PolicyManager.h"
 #include "Setting.h"
+#include "bootloader/AbsBootloader.h"
 #include "core/HttpRequest.h"
 #include "external/glibcurl.h"
-#include "hardware/AbsHardware.h"
 #include "hawkbit/HawkBitClient.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
@@ -46,9 +45,9 @@ bool HawkBitClient::onInitialization()
     glibcurl_init();
 
     // hawkBit configuration
-    string hawkBitUrl = AbsHardware::getHardware().getEnv(HAWKBIT_URL);
-    string hawkBitTenant = AbsHardware::getHardware().getEnv(HAWKBIT_TENANT);
-    string hawkBitId = AbsHardware::getHardware().getEnv(HAWKBIT_ID);
+    string hawkBitUrl = AbsBootloader::getBootloader().getEnv(HAWKBIT_URL);
+    string hawkBitTenant = AbsBootloader::getBootloader().getEnv(HAWKBIT_TENANT);
+    string hawkBitId = AbsBootloader::getBootloader().getEnv(HAWKBIT_ID);
 
     Logger::info(getClassName(), "HawkBitInfo", hawkBitUrl);
     Logger::info(getClassName(), "HawkBitInfo", hawkBitTenant);
@@ -56,7 +55,7 @@ bool HawkBitClient::onInitialization()
 
     if (hawkBitId.empty()) {
         hawkBitId = Socket::getMacAddress("eth0");
-        AbsHardware::getHardware().setEnv(HAWKBIT_ID, hawkBitId);
+        AbsBootloader::getBootloader().setEnv(HAWKBIT_ID, hawkBitId);
     }
 
     m_hawkBitUrl = hawkBitUrl + "/" + hawkBitTenant + "/controller/v1/" + hawkBitId;
@@ -90,6 +89,10 @@ void HawkBitClient::poll()
         if (m_listener) m_listener->onPollingSleepAction(15); // TODO Time::toSeconds(sleep));
     }
 
+    if (JValueUtil::getValue(responsePayload, "_links", "configData", "href", href)) {
+        if (m_listener) m_listener->onSettingConfigData();
+    }
+
     if (JValueUtil::getValue(responsePayload, "_links", "deploymentBase", "href", href)) {
         if (!getBase(responsePayload, href)) {
             goto Done;
@@ -101,9 +104,6 @@ void HawkBitClient::poll()
             goto Done;
         }
         if (m_listener) m_listener->onCancellationAction(responsePayload);
-    }
-    if (JValueUtil::getValue(responsePayload, "_links", "configData", "href", href)) {
-        // TODO: Need to be updated
     }
 
 Done:

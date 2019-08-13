@@ -14,7 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "ICAS.h"
+#include "bootloader/ICAS.h"
+
 #include "Setting.h"
 #include "util/Socket.h"
 
@@ -36,7 +37,7 @@ string ICAS::getEnv(const string& key)
     if (key == "hawkbit_tenant") {
         return "DEFAULT";
     } else if (key == "hawkbit_url") {
-        return "https://maas-ota-server.apps.na.vwapps.io";
+        return "http://52.231.103.225";
     } else if (key == "hawkbit_id") {
         if (!Setting::getInstance().getId().empty()) {
             return Setting::getInstance().getId();
@@ -48,7 +49,21 @@ string ICAS::getEnv(const string& key)
             return "webOS_Demo";
         }
     } else if (key == "hawkbit_token") {
-        return "007eecfb134343209cb882d45becd8d7";
+        return "421fc0de2f60a06fb34e83409c806b67";
     }
     return "";
+}
+
+
+void ICAS::notifyUpdate()
+{
+}
+
+void ICAS::setRebootOK()
+{
+}
+
+bool ICAS::isRebootAfterUpdate()
+{
+    return false;
 }

@@ -103,3 +103,35 @@ bool DeploymentActionComposite::toJson(JValue& json)
     json.put("softwareModules", softwareModules);
     return true;
 }
+
+bool DeploymentActionComposite::start()
+{
+    if (hasOSModule() && hasApplicationModule()) {
+        // TODO I don't know how to implement this yet.
+        Logger::warning(getClassName(), "Not implemented yet");
+        m_status.fail();
+        return false;
+    }
+
+    return Composite::start();
+}
+
+bool DeploymentActionComposite::hasOSModule()
+{
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        SoftwareModuleType type = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it)->getType();
+        if (type == SoftwareModuleType_OS)
+            return true;
+    }
+    return false;
+}
+
+bool DeploymentActionComposite::hasApplicationModule()
+{
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        SoftwareModuleType type = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it)->getType();
+        if (type == SoftwareModuleType_Application)
+            return true;
+    }
+    return false;
+}

@@ -35,6 +35,7 @@ public:
     virtual void onCancellationAction(JValue& responsePayload) = 0;
     virtual void onInstallationAction(JValue& responsePayload) = 0;
     virtual void onPollingSleepAction(int seconds) = 0;
+    virtual void onSettingConfigData() = 0;
 };
 
 class HawkBitClient : public IInitializable,

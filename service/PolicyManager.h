@@ -17,15 +17,17 @@
 #ifndef POLICYMANAGER_H_
 #define POLICYMANAGER_H_
 
+#include "bootloader/AbsBootloader.h"
 #include "core/AbsAction.h"
 #include "hawkbit/HawkBitClient.h"
-#include "hardware/AbsHardware.h"
 #include "interface/IInitializable.h"
 #include "interface/ISingleton.h"
+#include "ls2/ConnectionManager.h"
 #include "ls2/LS2Handler.h"
 
 class PolicyManager : public ISingleton<PolicyManager>,
                       public IInitializable,
+                      public ConnectionManagerListener,
                       public LS2HandlerListener,
                       public HawkBitClientListener {
 friend ISingleton<PolicyManager>;
@@ -42,6 +44,9 @@ public:
     virtual void onRequestStatusChange();
     virtual void onRequestProgressUpdate();
 
+    // ConnectionManagerListener
+    virtual void onGetStatusSubscription(pbnjson::JValue subscriptionPayload) override;
+
     // LS2HandlerListener
     virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onSetConfig(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
@@ -54,6 +59,7 @@ public:
     virtual void onCancellationAction(JValue& responsePayload) override;
     virtual void onInstallationAction(JValue& responsePayload) override;
     virtual void onPollingSleepAction(int seconds) override;
+    virtual void onSettingConfigData() override;
 
 private:
     PolicyManager();

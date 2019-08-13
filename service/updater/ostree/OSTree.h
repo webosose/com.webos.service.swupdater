@@ -14,23 +14,36 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef HARDWARE_RPI3_H_
-#define HARDWARE_RPI3_H_
+#ifndef UPDATER_OSTREE_OSTREE_H_
+#define UPDATER_OSTREE_OSTREE_H_
 
 #include <iostream>
-#include <sstream>
+#include <ostree-1/ostree.h>
 
-#include "AbsHardware.h"
+#include "updater/AbsUpdater.h"
 
 using namespace std;
 
-class RPi3 : public AbsHardware {
+class OSTree : public AbsUpdater {
+friend class AbsUpdaterFactory;
 public:
-    RPi3();
-    virtual ~RPi3();
+    virtual ~OSTree();
 
-    virtual void setEnv(const string& key, const string& value) override;
-    virtual string getEnv(const string& key) override;
+    virtual bool onInitialization() override;
+    virtual bool onFinalization() override;
+
+    virtual bool deploy(const string& path) override;
+    virtual bool isUpdated() override;
+    virtual void printDebug() override;
+
+private:
+    OSTree();
+
+    bool lock();
+    void unlock();
+
+    OstreeSysroot* m_sysroot;
+
 };
 
-#endif /* HARDWARE_RPI3_H_ */
+#endif /* UPDATER_OSTREE_OSTREE_H_ */

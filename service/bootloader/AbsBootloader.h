@@ -14,23 +14,27 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef HARDWARE_ABSHARDWARE_H_
-#define HARDWARE_ABSHARDWARE_H_
+#ifndef BOOTLOADER_ABSBOOTLOADER_H_
+#define BOOTLOADER_ABSBOOTLOADER_H_
 
 #include <iostream>
 
 using namespace std;
 
-class AbsHardware {
+class AbsBootloader {
 public:
-    static AbsHardware& getHardware();
+    static AbsBootloader& getBootloader();
 
-    AbsHardware();
-    virtual ~AbsHardware();
+    AbsBootloader();
+    virtual ~AbsBootloader();
 
     virtual void setEnv(const string& key, const string& value) = 0;
     virtual string getEnv(const string& key) = 0;
 
+    virtual void notifyUpdate() = 0;
+    virtual void setRebootOK() = 0;
+    virtual bool isRebootAfterUpdate() = 0;
+
 };
 
-#endif /* HARDWARE_ABSHARDWARE_H_ */
+#endif /* BOOTLOADER_ABSBOOTLOADER_H_ */

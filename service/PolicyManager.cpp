@@ -17,6 +17,8 @@
 #include "PolicyManager.h"
 #include "core/AbsAction.h"
 #include "ls2/AppInstaller.h"
+#include "ls2/SystemService.h"
+#include "updater/AbsUpdater.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
 
@@ -51,9 +53,22 @@ bool PolicyManager::onInitialization()
 {
     HawkBitClient::getInstance().setListener(this);
     LS2Handler::getInstance().setListener(this);
+    AbsUpdaterFactory::getInstance().initialize(NULL);
+    ConnectionManager::getInstance().getStatus(this);
 
     m_statusPoint = new LS::SubscriptionPoint();
     m_statusPoint->setServiceHandle(&LS2Handler::getInstance());
+
+    if (AbsBootloader::getBootloader().isRebootAfterUpdate()) {
+        const string& actionId = AbsBootloader::getBootloader().getEnv("action_id");
+        if (AbsUpdaterFactory::getInstance().isUpdated()) {
+            HawkBitClient::getInstance().postDeploymentAction(actionId, true);
+        } else {
+            HawkBitClient::getInstance().postDeploymentAction(actionId, false);
+        }
+        AbsBootloader::getBootloader().setEnv("action_id", "");
+        AbsBootloader::getBootloader().setRebootOK();
+    }
 
     onPollingSleepAction(DEFAULT_TICK_INTERVAL);
     return true;
@@ -63,6 +78,7 @@ bool PolicyManager::onFinalization()
 {
     delete m_statusPoint;
     m_statusPoint = nullptr;
+    AbsUpdaterFactory::getInstance().finalize();
     LS2Handler::getInstance().setListener(nullptr);
     HawkBitClient::getInstance().setListener(nullptr);
 
@@ -78,9 +94,15 @@ void PolicyManager::onRequestStatusChange()
 
     // check installation status
     if (m_currentAction->getStatus().getStatus() == StatusType_COMPLETED) {
-        HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), true);
-        m_pendingClearRequest = true;
-        Logger::info(getClassName(), "Update completed.");
+        if (m_currentAction->hasOSModule()) {
+            AbsBootloader::getBootloader().setEnv("action_id", m_currentAction->getId());
+            AbsBootloader::getBootloader().notifyUpdate();
+            Logger::info(getClassName(), "Update installed, but reboot required.");
+        } else if (m_currentAction->hasApplicationModule()) {
+            HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), true);
+            m_pendingClearRequest = true;
+            Logger::info(getClassName(), "Update completed.");
+        }
     } else if (m_currentAction->getStatus().getStatus() == StatusType_FAILED) {
         HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), false);
         m_pendingClearRequest = true;
@@ -91,6 +113,21 @@ void PolicyManager::onRequestStatusChange()
 void PolicyManager::onRequestProgressUpdate()
 {
     postStatus();
+}
+
+void PolicyManager::onGetStatusSubscription(pbnjson::JValue subscriptionPayload)
+{
+    string wifiState;
+    string wifiOnInternet;
+    if (subscriptionPayload["returnValue"].asBool() &&
+        JValueUtil::getValue(subscriptionPayload, "wifi", "state", wifiState) &&
+        wifiState == "connected" &&
+        JValueUtil::getValue(subscriptionPayload, "wifi", "onInternet", wifiOnInternet) &&
+        wifiOnInternet == "yes") {
+        Logger::info(getClassName(), "WiFi ON");
+    } else {
+        Logger::info(getClassName(), "WiFi OFF");
+    }
 }
 
 void PolicyManager::onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
@@ -230,6 +267,24 @@ void PolicyManager::onPollingSleepAction(int seconds)
     }
     Logger::info(getClassName(), "Started tick timer");
     m_tickInterval = seconds;
+}
+
+void PolicyManager::onSettingConfigData()
+{
+    JValue osInfo = pbnjson::Object();
+    JValue deviceInfo = pbnjson::Object();
+
+    if (!SystemService::getInstance().queryOSInfo(osInfo) ||
+        !SystemService::getInstance().queryDeviceInfo(deviceInfo)) {
+        return;
+    }
+
+    JValue configData = pbnjson::Object();
+    configData.put("device_name", deviceInfo["device_name"]);
+    configData.put("webos_release_codename", osInfo["webos_release_codename"]);
+    configData.put("webos_build_id", osInfo["webos_build_id"]);
+
+    HawkBitClient::getInstance().putConfigData(configData);
 }
 
 void PolicyManager::postStatus()

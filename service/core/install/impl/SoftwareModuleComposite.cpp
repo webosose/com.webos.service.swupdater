@@ -45,7 +45,10 @@ SoftwareModuleType SoftwareModuleComposite::toEnum(const string& type)
         return SoftwareModuleType_Unknown;
     } else if (type == "bApp") {
         return SoftwareModuleType_Application;
+    } else if (type == "os") {
+        return SoftwareModuleType_OS;
     }
+
     return SoftwareModuleType_Unknown;
 }
 

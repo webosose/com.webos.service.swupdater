@@ -15,8 +15,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "core/HttpRequest.h"
-#include "hardware/AbsHardware.h"
+
 #include "Setting.h"
+#include "bootloader/AbsBootloader.h"
 
 string HttpRequest::toString(long responseCode)
 {
@@ -46,7 +47,7 @@ HttpRequest::HttpRequest()
 
     addHeader("Accept", "application/hal+json");
     addHeader("Content-Type", "application/json;charset=UTF-8");
-    addHeader("Authorization", "GatewayToken " + AbsHardware::getHardware().getEnv("hawkbit_token"));
+    addHeader("Authorization", "GatewayToken " + AbsBootloader::getBootloader().getEnv("hawkbit_token"));
 }
 
 HttpRequest::~HttpRequest()
