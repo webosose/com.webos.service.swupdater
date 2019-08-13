@@ -20,8 +20,8 @@
 
 AbsBootloader& AbsBootloader::getBootloader()
 {
-    static UBoot uboot;
-    return uboot;
+    static ICAS icas;
+    return icas;
 }
 
 AbsBootloader::AbsBootloader()
