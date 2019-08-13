@@ -41,6 +41,8 @@ string ICAS::getEnv(const string& key)
     } else if (key == "hawkbit_id") {
         if (!Setting::getInstance().getId().empty()) {
             return Setting::getInstance().getId();
+        } else if (!Socket::getMacAddress("enp0s20f0u3").empty()) {
+            return "webOS_" + Socket::getMacAddress("enp0s20f0u3");
         } else if (!Socket::getMacAddress("wlan0").empty()) {
             return "webOS_" + Socket::getMacAddress("wlan0");
         } else if (!Socket::getMacAddress("eth0").empty()) {
