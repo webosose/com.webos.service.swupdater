@@ -27,6 +27,7 @@ gboolean PolicyManager::_tick(gpointer user_data)
     if (getInstance().m_pendingClearRequest) {
         Logger::info(getInstance().getClassName(), "Current Action is cleared");
         getInstance().m_currentAction = nullptr;
+        getInstance().m_pendingClearRequest = false;
     }
     HawkBitClient::getInstance().poll();
     return G_SOURCE_CONTINUE;
