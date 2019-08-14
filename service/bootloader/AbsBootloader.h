@@ -28,6 +28,8 @@ public:
     AbsBootloader();
     virtual ~AbsBootloader();
 
+    string getHawkBitId();
+
     virtual void setEnv(const string& key, const string& value) = 0;
     virtual string getEnv(const string& key) = 0;
 
