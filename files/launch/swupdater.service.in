@@ -22,7 +22,7 @@ After=ls-hubd.service wpa-supplicant.service
 [Service]
 Type=simple
 OOMScoreAdjust=-1000
-EnvironmentFile=-/var/systemd/system/env/swupdater.env
+EnvironmentFile=-/var/mcvp_settings.env
 ExecStartPre=/bin/sleep 5
 ExecStart=@WEBOS_INSTALL_SBINDIR@/swupdater
 Restart=on-failure
