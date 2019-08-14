@@ -32,15 +32,15 @@ Setting::~Setting()
 void Setting::printHelp()
 {
     cout << "Usage) ENV_OPTIONS /usr/sbin/swupdater"<< endl;
-    cout << "Option) ID=webOS_XXXX"<< endl;
+    cout << "Option) DEVICE_ID=webOS_XXXX"<< endl;
     cout << "Option) LOG_TYPE=[pmlog|console]"<< endl;
     cout << "Option) LOG_LEVEL=[verbose|debug|info|warning|error]"<< endl;
-    cout << "Example) ID=webOS_kkangeva LOG_TYPE=console LOG_LEVEL=verbose /usr/sbin/swupdater"<< endl;
+    cout << "Example) DEVICE_ID=webOS_kkangeva LOG_TYPE=console LOG_LEVEL=verbose /usr/sbin/swupdater"<< endl;
 }
 
 bool Setting::onInitialization()
 {
-    char* env = std::getenv("ID");
+    char* env = std::getenv("DEVICE_ID");
     if (env) {
         m_id = env;
     }

@@ -47,7 +47,7 @@ bool HawkBitClient::onInitialization()
     // hawkBit configuration
     string hawkBitUrl = AbsBootloader::getBootloader().getEnv(HAWKBIT_URL);
     string hawkBitTenant = AbsBootloader::getBootloader().getEnv(HAWKBIT_TENANT);
-    string hawkBitId = AbsBootloader::getBootloader().getEnv(HAWKBIT_ID);
+    string hawkBitId = AbsBootloader::getBootloader().getHawkBitId();
 
     Logger::info(getClassName(), "HawkBitInfo", hawkBitUrl);
     Logger::info(getClassName(), "HawkBitInfo", hawkBitTenant);

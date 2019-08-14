@@ -36,7 +36,9 @@ bool SystemService::queryOSInfo(JValue& responsePayload)
     static const string API = "luna://" + SERVICE_NAME + "/osInfo/query";
     pbnjson::JValue requestPayload = pbnjson::Object();
     pbnjson::JValue parameters = pbnjson::Array();
+    parameters.append("webos_build_datetime");
     parameters.append("webos_build_id");
+    parameters.append("webos_prerelease");
     parameters.append("webos_release_codename");
     requestPayload.put("parameters", parameters);
 

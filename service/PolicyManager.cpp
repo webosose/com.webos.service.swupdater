@@ -282,9 +282,10 @@ void PolicyManager::onSettingConfigData()
 
     JValue configData = pbnjson::Object();
     configData.put("device_name", deviceInfo["device_name"]);
+    configData.put("webos_prerelease", osInfo["webos_prerelease"]);
     configData.put("webos_release_codename", osInfo["webos_release_codename"]);
     configData.put("webos_build_id", osInfo["webos_build_id"]);
-
+    configData.put("webos_build_datetime", osInfo["webos_build_datetime"]);
     HawkBitClient::getInstance().putConfigData(configData);
 }
 

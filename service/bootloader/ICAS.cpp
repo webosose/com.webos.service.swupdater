@@ -16,9 +16,6 @@
 
 #include "bootloader/ICAS.h"
 
-#include "Setting.h"
-#include "util/Socket.h"
-
 ICAS::ICAS()
 {
 }
@@ -38,18 +35,6 @@ string ICAS::getEnv(const string& key)
         return "DEFAULT";
     } else if (key == "hawkbit_url") {
         return "http://52.231.103.225";
-    } else if (key == "hawkbit_id") {
-        if (!Setting::getInstance().getId().empty()) {
-            return Setting::getInstance().getId();
-        } else if (!Socket::getMacAddress("enp0s20f0u3").empty()) {
-            return "webOS_" + Socket::getMacAddress("enp0s20f0u3");
-        } else if (!Socket::getMacAddress("wlan0").empty()) {
-            return "webOS_" + Socket::getMacAddress("wlan0");
-        } else if (!Socket::getMacAddress("eth0").empty()) {
-            return "webOS_" + Socket::getMacAddress("eth0");
-        } else {
-            return "webOS_Demo";
-        }
     } else if (key == "hawkbit_token") {
         return "421fc0de2f60a06fb34e83409c806b67";
     }
