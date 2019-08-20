@@ -19,6 +19,7 @@
 #include <memory>
 
 #include "PolicyManager.h"
+#include "ls2/NotificationManager.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
 
@@ -51,17 +52,41 @@ void DeploymentActionComposite::onStatusChanged(enum StatusType prev, enum Statu
     if (cur != StatusType_COMPLETED)
         return;
 
+    bool isRebootRequired = false;
     for (auto it = m_children.begin(); it != m_children.end(); ++it) {
         JValue metadata = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it)->getMetadata();
         string value = JValueUtil::getMeta(metadata, "installer");
 
         if (value == "opkg") {
             // TODO need to find better solution
-            system("systemctl restart surface-manager");
-            system("systemctl restart sam");
+            isRebootRequired = true;
             break;
         }
     }
+
+    if (!isRebootRequired) {
+        return;
+    }
+
+    string title = "System has been updated. Reboot required!";
+    string message;
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        std::shared_ptr<SoftwareModuleComposite> module = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it);
+        message += " - " + module->getName() + " (" + module->getVersion() + ")<br>";
+    }
+
+    JValue buttons = pbnjson::Array();
+    JValue button = pbnjson::Object();
+    button.put("label", "Reboot");
+    button.put("onclick", "luna://com.webos.service.power2/reboot");
+
+    JValue params = pbnjson::Object();
+    params.put("reason", "ota");
+    button.put("params", params);
+
+    buttons.append(button);
+
+    NotificationManager::getInstance().createAlert(title, message, buttons);
 }
 
 bool DeploymentActionComposite::fromJson(const JValue& json)

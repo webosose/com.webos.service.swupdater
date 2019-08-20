@@ -18,22 +18,31 @@
 #define LS2_NOTIFICATIONMANAGER_H_
 
 #include <iostream>
+#include <pbnjson.hpp>
 
 #include "interface/IInitializable.h"
 #include "interface/ISingleton.h"
 
+using namespace pbnjson;
 using namespace std;
 
 class NotificationManager : public IInitializable,
                             public ISingleton<NotificationManager> {
 friend ISingleton<NotificationManager>;
 public:
-    NotificationManager();
     virtual ~NotificationManager();
 
     // IInitializable
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
+
+    bool createAlert(const string& title, const string& message, JValue buttonArray);
+    bool createToast(const string& message);
+
+private:
+    NotificationManager();
+
+    static const unsigned long LSCALL_TIMEOUT;
 };
 
 #endif /* LS2_NOTIFICATIONMANAGER_H_ */
