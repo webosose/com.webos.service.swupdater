@@ -59,6 +59,11 @@ public:
         return m_name;
     }
 
+    const string& getVersion()
+    {
+        return m_version;
+    }
+
     JValue& getMetadata()
     {
         return m_metadata;
