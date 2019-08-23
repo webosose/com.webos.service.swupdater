@@ -55,6 +55,8 @@ public:
     bool hasOSModule();
     bool hasApplicationModule();
 
+    bool toProceedingJson(JValue& json);
+
 private:
     bool m_isForceDownload;
     bool m_isForceUpdate;

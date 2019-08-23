@@ -18,7 +18,6 @@
 
 #include <memory>
 
-#include "PolicyManager.h"
 #include "ls2/NotificationManager.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
@@ -159,4 +158,19 @@ bool DeploymentActionComposite::hasApplicationModule()
             return true;
     }
     return false;
+}
+
+bool DeploymentActionComposite::toProceedingJson(JValue& json)
+{
+    Component::toJson(json);
+
+    int index = 0;
+    int size = m_children.size();
+    for ( ; index < size; index++) {
+        if (m_children[index]->getStatus().getStatus() != StatusType_COMPLETED) {
+            break;
+        }
+    }
+    json.put("completedSoftwareModule", index);
+    return true;
 }
