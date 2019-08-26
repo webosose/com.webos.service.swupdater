@@ -56,6 +56,7 @@ public:
     bool hasApplicationModule();
 
     bool toProceedingJson(JValue& json);
+    bool restore(const JValue& json);
 
 private:
     bool m_isForceDownload;

@@ -174,3 +174,24 @@ bool DeploymentActionComposite::toProceedingJson(JValue& json)
     json.put("completedSoftwareModule", index);
     return true;
 }
+
+bool DeploymentActionComposite::restore(const JValue& json)
+{
+    string status = json["status"].asString();
+    m_current = json["completedSoftwareModule"].asNumber<int>();
+
+    int size = m_children.size();
+    for (int i = 0; i < size; i++) {
+        shared_ptr<SoftwareModuleComposite> softwareModule = std::dynamic_pointer_cast<SoftwareModuleComposite>(m_children[i]);
+        if (i < m_current) {
+            softwareModule->restore(StatusType_COMPLETED);
+        } else {
+            softwareModule->restore(StatusType_READY);
+        }
+    }
+    getStatus().prepare();
+    resume();
+    // TODO consider 'paused'
+
+    return true;
+}

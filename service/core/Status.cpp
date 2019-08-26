@@ -100,7 +100,7 @@ enum TransitionType Status::checkTransition(enum StatusType status)
     return TransitionType_Unknown;
 }
 
-void Status::changeStatus(enum StatusType nextStatus)
+void Status::changeStatus(enum StatusType nextStatus, bool notify)
 {
     if (m_status == nextStatus)
         return;
@@ -111,7 +111,9 @@ void Status::changeStatus(enum StatusType nextStatus)
     Logger::verbose("ChangeStatus", m_name, toString(prev) + " ==> " + toString(m_status));
     PolicyManager::getInstance().onRequestStatusChange();
 
-    for (auto it = m_callbacks.begin(); it != m_callbacks.end(); ++it) {
-        (*it)(prev, m_status);
+    if (notify) {
+        for (auto it = m_callbacks.begin(); it != m_callbacks.end(); ++it) {
+            (*it)(prev, m_status);
+        }
     }
 }

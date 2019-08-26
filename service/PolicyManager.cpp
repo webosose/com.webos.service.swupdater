@@ -259,7 +259,7 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
         responsePayload["actionHistory"]["messages"].arraySize() > 0) {
         JValue message = JDomParser::fromString(responsePayload["actionHistory"]["messages"][0].asString());
         Logger::info(getClassName(), "Restore", message.stringify());
-        // TODO restore
+        m_currentAction->restore(message);
         return;
     }
 

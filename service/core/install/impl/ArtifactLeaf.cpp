@@ -152,7 +152,14 @@ bool ArtifactLeaf::resume()
 {
     if (!Leaf::resume())
         return false;
-    // TODO download should be resumed
+    m_httpFile = make_shared<HttpFile>();
+    m_httpFile->open(MethodType_GET, m_url);
+    m_httpFile->setFilename(getFullName());
+    m_httpFile->setListener(this);
+    if (!m_httpFile->send()) {
+        m_status.fail();
+        return false;
+    }
     return true;
 }
 
