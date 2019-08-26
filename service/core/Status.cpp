@@ -45,7 +45,7 @@ enum TransitionType Status::checkTransition(enum StatusType status)
         } else if (status == StatusType_RUNNING) {
             return TransitionType_Allowed;
         } else if (status == StatusType_PAUSED) {
-            return TransitionType_NotAllowed;
+            return TransitionType_Allowed;
         } else {
             return TransitionType_Unknown;
         }

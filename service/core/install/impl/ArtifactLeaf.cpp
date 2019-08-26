@@ -20,6 +20,7 @@
 #include "updater/AbsUpdater.h"
 #include "util/JValueUtil.h"
 
+// TODO change to /media/internal/downloads and delete downloaded files.
 const string ArtifactLeaf::DIRNAME = "/home/root/";
 
 ArtifactLeaf::ArtifactLeaf()
@@ -70,28 +71,28 @@ void ArtifactLeaf::onCompletedDownload(HttpFile* call)
             // TODO: Following is temp code for demo. we need to find better way
             string command = "opkg remove " + getIpkName();
             system(command.c_str());
-            AppInstaller::getInstance().install(getIpkName(), getFullName(), this);
+            AppInstaller::getInstance().install(getIpkName(), getDownloadName(), this);
             return;
         } else if (installer == "opkg") {
-            string command = "opkg install --force-reinstall --force-downgrade " + getFullName();
+            string command = "opkg install --force-reinstall --force-downgrade " + getDownloadName();
             if (system(command.c_str()) == 0)
-                m_status.complete();
+                completeStatus(true);
             else
-                m_status.fail();
+                completeStatus(false);
             return;
         }
     } else if (getFileExtension() == "delta") {
-        if (AbsUpdaterFactory::getInstance().deploy(getFullName())) {
+        if (AbsUpdaterFactory::getInstance().deploy(getDownloadName())) {
             AbsUpdaterFactory::getInstance().printDebug();
-            m_status.complete();
+            completeStatus(true);
         } else {
-            m_status.fail();
+            completeStatus(false);
         }
         return;
     }
 
     Logger::warning(getClassName(), m_fileName, "Not supported file extension");
-    m_status.complete();
+    completeStatus(true);
 }
 
 void ArtifactLeaf::onFailedDownload(HttpFile* call)
@@ -110,11 +111,11 @@ void ArtifactLeaf::onInstallSubscription(pbnjson::JValue subscriptionPayload)
 
     if (state == "installed") {
         getCall().cancel();
-        m_status.complete();
+        completeStatus(true);
     } else if (state == "install failed") {
         Logger::error(getClassName(), m_fileName, "Failed to install artifact");
         getCall().cancel();
-        m_status.fail();
+        completeStatus(false);
     }
 }
 
@@ -124,7 +125,7 @@ bool ArtifactLeaf::prepare()
         return false;
     m_httpFile = make_shared<HttpFile>();
     m_httpFile->open(MethodType_GET, m_url);
-    m_httpFile->setFilename(getFullName());
+    m_httpFile->setFilename(getDownloadName());
     m_httpFile->setListener(this);
     return true;
 }
@@ -144,7 +145,7 @@ bool ArtifactLeaf::pause()
 {
     if (!Leaf::pause())
         return false;
-    // TODO download should be paused
+    m_httpFile = nullptr;
     return true;
 }
 
@@ -154,7 +155,7 @@ bool ArtifactLeaf::resume()
         return false;
     m_httpFile = make_shared<HttpFile>();
     m_httpFile->open(MethodType_GET, m_url);
-    m_httpFile->setFilename(getFullName());
+    m_httpFile->setFilename(getDownloadName());
     m_httpFile->setListener(this);
     if (!m_httpFile->send()) {
         m_status.fail();
@@ -198,4 +199,17 @@ bool ArtifactLeaf::toJson(JValue& json)
     json.put("total", m_total);
     json.put("size", m_curSize);
     return true;
+}
+
+void ArtifactLeaf::completeStatus(bool success)
+{
+    // If installation has already started, it will not pause.
+    // So, this prevents the status to be changed, even if the installation is completed in the background.
+    if (m_status.getStatus() == StatusType_PAUSED)
+        return;
+
+    if (success)
+        m_status.complete();
+    else
+        m_status.fail();
 }

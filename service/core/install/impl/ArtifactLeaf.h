@@ -81,10 +81,12 @@ public:
         return ipkName;
     }
 
-    const string getFullName()
+    const string getDownloadName()
     {
-        return DIRNAME + m_fileName;
+        return DIRNAME + m_fileName.substr(0, m_fileName.find_last_of(".")) + "." + m_sha1 + "." + getFileExtension();
     }
+
+    void completeStatus(bool success = true);
 
 private:
     const static string DIRNAME;

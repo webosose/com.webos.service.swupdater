@@ -190,8 +190,10 @@ bool DeploymentActionComposite::restore(const JValue& json)
         }
     }
     getStatus().prepare();
-    resume();
-    // TODO consider 'paused'
+    if (status == Status::toString(StatusType_RUNNING))
+        resume();
+    else if (status == Status::toString(StatusType_PAUSED))
+        pause();
 
     return true;
 }
