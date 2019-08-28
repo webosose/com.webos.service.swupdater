@@ -77,10 +77,10 @@ void DeploymentActionComposite::onStatusChanged(enum StatusType prev, enum Statu
     JValue buttons = pbnjson::Array();
     JValue button = pbnjson::Object();
     button.put("label", "Reboot");
-    button.put("onclick", "luna://com.webos.service.power2/reboot");
+    button.put("onclick", "luna://com.webos.service.mcvpclient/call");
 
     JValue params = pbnjson::Object();
-    params.put("reason", "ota");
+    params.put("command", "reboot");
     button.put("params", params);
 
     buttons.append(button);
