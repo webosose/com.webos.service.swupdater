@@ -19,7 +19,6 @@
 
 #include <pbnjson.hpp>
 
-#include "core/install/impl/DeploymentActionComposite.h"
 #include "core/HttpRequest.h"
 #include "interface/IInitializable.h"
 #include "interface/IListener.h"
@@ -55,7 +54,7 @@ public:
     bool canceled(const string& id);
     bool rejected(const string& id);
     bool closed(const string& id);
-    bool proceeding(const string& id);
+    bool proceeding(const string& id, const string& detail);
     bool scheduled(const string& id);
     bool resumed(const string& id);
 

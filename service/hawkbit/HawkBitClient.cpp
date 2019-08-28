@@ -94,7 +94,7 @@ void HawkBitClient::poll()
     }
 
     if (JValueUtil::getValue(responsePayload, "_links", "deploymentBase", "href", href)) {
-        if (!getBase(responsePayload, href)) {
+        if (!getBase(responsePayload, href + "&actionHistory=10")) {
             goto Done;
         }
         if (m_listener) m_listener->onInstallationAction(responsePayload);
@@ -164,28 +164,26 @@ bool HawkBitClient::closed(const string& id)
     return true;
 }
 
-bool HawkBitClient::proceeding(const string& id)
+bool HawkBitClient::proceeding(const string& id, const string& detail)
 {
     /*
      * This can be used by the target to inform that it is working on the action.
      */
     const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
     Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
+    Logger::info(getClassName(), __FUNCTION__, detail);
 
-//    JValue requestPayload = pbnjson::Object();
-//    requestPayload.put("id", id);
-//    requestPayload.put("time", Time::getUtcTime());
-//
-//    if (success)
-//        getStatus(requestPayload, "closed", "success");
-//    else
-//        getStatus(requestPayload, "closed", "failure");
-//
-//    HttpRequest httpCall;
-//    if (!httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
-//        Logger::error(getClassName(), "Failed to post feedback");
-//        return false;
-//    }
+    JValue requestPayload = pbnjson::Object();
+    requestPayload.put("id", id);
+    requestPayload.put("time", Time::getUtcTime());
+
+    getStatus(requestPayload, "proceeding", "none", detail);
+
+    HttpRequest httpCall;
+    if (!httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
+        Logger::error(getClassName(), "Failed to post feedback");
+        return false;
+    }
     return true;
 }
 

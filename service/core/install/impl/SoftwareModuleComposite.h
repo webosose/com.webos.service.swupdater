@@ -69,6 +69,8 @@ public:
         return m_metadata;
     }
 
+    bool restore(StatusType lastStatus);
+
 protected:
     enum SoftwareModuleType m_type;
     string m_name;

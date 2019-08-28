@@ -35,6 +35,7 @@ gboolean PolicyManager::_tick(gpointer user_data)
 
 PolicyManager::PolicyManager()
     : m_currentAction(nullptr)
+    , m_proceedingJson(pbnjson::Object())
     , m_statusPoint(nullptr)
     , m_tickInterval(0)
     , m_tickSrc(0)
@@ -92,6 +93,17 @@ void PolicyManager::onRequestStatusChange()
 
     if (!m_currentAction)
         return;
+
+    // Feedback install status to hawkbit
+    if (m_currentAction->getStatus().getStatus() == StatusType_RUNNING ||
+        m_currentAction->getStatus().getStatus() == StatusType_PAUSED) {
+        JValue proceedingJson = pbnjson::Object();
+        m_currentAction->toProceedingJson(proceedingJson);
+        if (proceedingJson != m_proceedingJson) {
+            HawkBitClient::getInstance().proceeding(m_currentAction->getId(), proceedingJson.stringify());
+            m_proceedingJson = proceedingJson.duplicate();
+        }
+    }
 
     // check installation status
     if (m_currentAction->getStatus().getStatus() == StatusType_COMPLETED) {
@@ -240,6 +252,17 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
     }
     m_currentAction = make_shared<DeploymentActionComposite>();
     m_currentAction->fromJson(responsePayload);
+
+    // process actionHistory
+    if (JValueUtil::hasKey(responsePayload, "actionHistory", "messages") &&
+        responsePayload["actionHistory"]["messages"].isArray() &&
+        responsePayload["actionHistory"]["messages"].arraySize() > 0) {
+        JValue message = JDomParser::fromString(responsePayload["actionHistory"]["messages"][0].asString());
+        Logger::info(getClassName(), "Restore", message.stringify());
+        m_currentAction->restore(message);
+        return;
+    }
+
     if (!m_currentAction->prepare()) {
         Logger::info(getClassName(), "Failed to prepare update");
         return;

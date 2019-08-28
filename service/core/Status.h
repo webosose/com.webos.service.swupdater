@@ -166,7 +166,7 @@ public:
         return checkTransition(StatusType_COMPLETED);
     }
 
-    bool complete()
+    bool complete(bool notify = true)
     {
         if (canComplete() == TransitionType_NotAllowed)
             return false;
@@ -246,7 +246,7 @@ public:
 
 private:
     enum TransitionType checkTransition(enum StatusType status);
-    void changeStatus(enum StatusType nextStatus);
+    void changeStatus(enum StatusType nextStatus, bool notify = true);
 
     string m_name;
     enum StatusType m_status;

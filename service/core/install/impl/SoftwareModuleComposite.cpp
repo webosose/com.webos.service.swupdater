@@ -16,7 +16,6 @@
 
 #include "core/install/impl/SoftwareModuleComposite.h"
 
-#include "PolicyManager.h"
 #include "ls2/AppInstaller.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
@@ -111,5 +110,20 @@ bool SoftwareModuleComposite::toJson(JValue& json)
         artifacts.append(artifact);
     }
     json.put("artifacts", artifacts);
+    return true;
+}
+
+bool SoftwareModuleComposite::restore(StatusType lastStatus)
+{
+    m_current = 0;
+    if (lastStatus == StatusType_READY) {
+        return prepare();
+    } else if (lastStatus == StatusType_COMPLETED) {
+        for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+            shared_ptr<ArtifactLeaf> artifact = std::dynamic_pointer_cast<ArtifactLeaf>(*it);
+            artifact->getStatus().complete(false);
+        }
+        getStatus().complete(false);
+    }
     return true;
 }

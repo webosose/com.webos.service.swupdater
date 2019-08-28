@@ -18,7 +18,6 @@
 
 #include <memory>
 
-#include "PolicyManager.h"
 #include "ls2/NotificationManager.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
@@ -78,10 +77,10 @@ void DeploymentActionComposite::onStatusChanged(enum StatusType prev, enum Statu
     JValue buttons = pbnjson::Array();
     JValue button = pbnjson::Object();
     button.put("label", "Reboot");
-    button.put("onclick", "luna://com.webos.service.power2/reboot");
+    button.put("onclick", "luna://com.webos.service.mcvpclient/call");
 
     JValue params = pbnjson::Object();
-    params.put("reason", "ota");
+    params.put("command", "reboot");
     button.put("params", params);
 
     buttons.append(button);
@@ -159,4 +158,42 @@ bool DeploymentActionComposite::hasApplicationModule()
             return true;
     }
     return false;
+}
+
+bool DeploymentActionComposite::toProceedingJson(JValue& json)
+{
+    Component::toJson(json);
+
+    int index = 0;
+    int size = m_children.size();
+    for ( ; index < size; index++) {
+        if (m_children[index]->getStatus().getStatus() != StatusType_COMPLETED) {
+            break;
+        }
+    }
+    json.put("completedSoftwareModule", index);
+    return true;
+}
+
+bool DeploymentActionComposite::restore(const JValue& json)
+{
+    string status = json["status"].asString();
+    m_current = json["completedSoftwareModule"].asNumber<int>();
+
+    int size = m_children.size();
+    for (int i = 0; i < size; i++) {
+        shared_ptr<SoftwareModuleComposite> softwareModule = std::dynamic_pointer_cast<SoftwareModuleComposite>(m_children[i]);
+        if (i < m_current) {
+            softwareModule->restore(StatusType_COMPLETED);
+        } else {
+            softwareModule->restore(StatusType_READY);
+        }
+    }
+    getStatus().prepare();
+    if (status == Status::toString(StatusType_RUNNING))
+        resume();
+    else if (status == Status::toString(StatusType_PAUSED))
+        pause();
+
+    return true;
 }

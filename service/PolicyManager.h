@@ -19,6 +19,7 @@
 
 #include "bootloader/AbsBootloader.h"
 #include "core/AbsAction.h"
+#include "core/install/impl/DeploymentActionComposite.h"
 #include "hawkbit/HawkBitClient.h"
 #include "interface/IInitializable.h"
 #include "interface/ISingleton.h"
@@ -69,6 +70,7 @@ private:
     static const int DEFAULT_TICK_INTERVAL = 15;
 
     shared_ptr<DeploymentActionComposite> m_currentAction;
+    JValue m_proceedingJson;
     LS::SubscriptionPoint *m_statusPoint;
 
     int m_tickInterval;
