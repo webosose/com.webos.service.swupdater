@@ -44,6 +44,8 @@ void Composite::onChildStatusChanged(enum StatusType prev, enum StatusType cur)
         return;
 
     case StatusType_COMPLETED:
+        if (m_status.isWaitingReboot())
+            return;
         if (m_current == m_children.size() -1) {
             m_status.complete();
             break;
@@ -93,6 +95,10 @@ bool Composite::start()
 
 bool Composite::pause()
 {
+    // pause is not allowed while waiting reboot.
+    // if allow pause, need to consider state.
+    if (m_status.isWaitingReboot())
+        return false;
     enum TransitionType type = m_status.canPause();
     if (type == TransitionType_NotAllowed) {
         return false;
@@ -134,6 +140,17 @@ bool Composite::cancel()
         return false;
     }
     return m_status.cancel();
+}
+
+bool Composite::setWaitingReboot()
+{
+    enum TransitionType type = m_status.canWaitingReboot();
+    if (type == TransitionType_NotAllowed) {
+        return false;
+    } else if (type == TransitionType_Same) {
+        return true;
+    }
+    return m_status.setWaitingReboot();
 }
 
 void Composite::enableCallback()

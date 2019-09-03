@@ -106,7 +106,10 @@ bool DeploymentActionComposite::fromJson(const JValue& json)
     for (JValue chunk : json["deployment"]["chunks"].items()) {
         shared_ptr<SoftwareModuleComposite> module = make_shared<SoftwareModuleComposite>();
         module->fromJson(chunk);
-        m_children.push_back(module);
+        if (module->getType() == SoftwareModuleType_OS) // process OS type first
+            m_children.push_front(module);
+        else
+            m_children.push_back(module);
     }
     enableCallback();
     return true;
@@ -128,18 +131,6 @@ bool DeploymentActionComposite::toJson(JValue& json)
     return true;
 }
 
-bool DeploymentActionComposite::start()
-{
-    if (hasOSModule() && hasApplicationModule()) {
-        // TODO I don't know how to implement this yet.
-        Logger::warning(getClassName(), "Not implemented yet");
-        m_status.fail();
-        return false;
-    }
-
-    return Composite::start();
-}
-
 bool DeploymentActionComposite::hasOSModule()
 {
     for (auto it = m_children.begin(); it != m_children.end(); ++it) {
@@ -158,6 +149,29 @@ bool DeploymentActionComposite::hasApplicationModule()
             return true;
     }
     return false;
+}
+
+bool DeploymentActionComposite::isOnlyOSModuleCompleted()
+{
+    bool hasOSModule = false;
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        SoftwareModuleType type = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it)->getType();
+        if (type == SoftwareModuleType_OS) {
+            hasOSModule = true;
+            break;
+        }
+    }
+    if (!hasOSModule)
+        return false;
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        shared_ptr<SoftwareModuleComposite> module = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it);
+        if (module->getType() == SoftwareModuleType_OS && module->getStatus().getStatus() == StatusType_COMPLETED)
+            continue;
+        if (module->getType() == SoftwareModuleType_Application && module->getStatus().getStatus() == StatusType_READY)
+            continue;
+        return false;
+    }
+    return true;
 }
 
 bool DeploymentActionComposite::toProceedingJson(JValue& json)

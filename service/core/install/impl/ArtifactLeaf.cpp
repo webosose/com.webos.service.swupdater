@@ -172,6 +172,11 @@ bool ArtifactLeaf::cancel()
     return true;
 }
 
+bool ArtifactLeaf::setWaitingReboot()
+{
+    return true;
+}
+
 bool ArtifactLeaf::fromJson(const JValue& json)
 {
     ISerializable::fromJson(json);

@@ -77,9 +77,9 @@ bool OSTree::deploy(const string& path)
 {
     Logger::verbose(getClassName(), __FUNCTION__);
 
-    // extract revision from filename : ostree-630d1ec5-fc6a8911.delta
+    // extract revision from filename : ostree-630d1ec5-fc6a8911.{HASH}.delta
     // TODO if we know the file format, it will be able to extract the revision.
-    string filename = path.substr(0, path.find_last_of("."));
+    string filename = path.substr(0, path.find_first_of("."));
     string toRevision = filename.substr(filename.find_last_of("-") + 1);
 
     gboolean changed;

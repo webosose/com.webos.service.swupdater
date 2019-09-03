@@ -94,12 +94,32 @@ void PolicyManager::onRequestStatusChange()
     if (!m_currentAction)
         return;
 
-    // Feedback install status to hawkbit
+    if (m_currentAction->getStatus().isWaitingReboot()) {
+        // feedback proceeding message only when running status
+        if (m_currentAction->getStatus().getStatus() == StatusType_RUNNING) {
+            JValue proceedingJson = pbnjson::Object();
+            m_currentAction->toProceedingJson(proceedingJson);
+            if (proceedingJson != m_proceedingJson) {
+                HawkBitClient::getInstance().proceeding(m_currentAction->getId(), proceedingJson.stringify());
+                m_proceedingJson = proceedingJson.duplicate();
+            }
+            AbsBootloader::getBootloader().setEnv("action_id", m_currentAction->getId());
+            AbsBootloader::getBootloader().notifyUpdate();
+            Logger::info(getClassName(), "Update installed, but reboot required.");
+            // TODO reboot
+        }
+        return;
+    }
+
     if (m_currentAction->getStatus().getStatus() == StatusType_RUNNING ||
         m_currentAction->getStatus().getStatus() == StatusType_PAUSED) {
         JValue proceedingJson = pbnjson::Object();
         m_currentAction->toProceedingJson(proceedingJson);
-        if (proceedingJson != m_proceedingJson) {
+        if (proceedingJson != m_proceedingJson) { // softwaremodule status changed.
+            if (m_currentAction->isOnlyOSModuleCompleted()) {
+                m_currentAction->setWaitingReboot();
+                return;
+            }
             HawkBitClient::getInstance().proceeding(m_currentAction->getId(), proceedingJson.stringify());
             m_proceedingJson = proceedingJson.duplicate();
         }

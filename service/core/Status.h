@@ -85,6 +85,7 @@ public:
     Status(const string& name)
         : m_name(name)
         , m_status(StatusType_NONE)
+        , m_waitingReboot(false)
     {
     }
 
@@ -187,6 +188,20 @@ public:
         return true;
     }
 
+    enum TransitionType canWaitingReboot()
+    {
+        if (m_waitingReboot)
+            return TransitionType_Same;
+        return TransitionType_Allowed;
+    }
+
+    bool setWaitingReboot();
+
+    bool isWaitingReboot()
+    {
+        return m_waitingReboot;
+    }
+
     bool transit(enum StatusType status)
     {
         switch (status) {
@@ -250,6 +265,7 @@ private:
 
     string m_name;
     enum StatusType m_status;
+    bool m_waitingReboot;
 
     deque<Callback> m_callbacks;
 };
