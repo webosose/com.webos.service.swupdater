@@ -157,6 +157,31 @@ Error:
     return false;
 }
 
+bool OSTree::setReadWriteMode()
+{
+    Logger::verbose(getClassName(), __FUNCTION__);
+
+    gboolean changed;
+    g_autoptr(GError) gerror = NULL;
+    OstreeDeployment* bootedDeployment = NULL;
+
+    if (!ostree_sysroot_load_if_changed(m_sysroot, &changed, NULL, &gerror)) {
+        Logger::error(getClassName(), __FUNCTION__, "Failed to load sysroot: " + string(gerror->message));
+        return false;
+    }
+    bootedDeployment = ostree_sysroot_get_booted_deployment(m_sysroot);
+    OstreeDeploymentUnlockedState unlocked = ostree_deployment_get_unlocked(bootedDeployment);
+    if (unlocked == OSTREE_DEPLOYMENT_UNLOCKED_HOTFIX) {
+        Logger::info(getClassName(), "Already in Hotfix mode!");
+        return true;
+    }
+    if (!ostree_sysroot_deployment_unlock (m_sysroot, bootedDeployment, OSTREE_DEPLOYMENT_UNLOCKED_HOTFIX, NULL, &gerror)) {
+        Logger::error(getClassName(), __FUNCTION__, "Failed to deployment unlock: " + string(gerror->message));
+        return false;
+    }
+    return true;
+}
+
 bool OSTree::isUpdated()
 {
     Logger::verbose(getClassName(), __FUNCTION__);
