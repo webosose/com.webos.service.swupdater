@@ -131,26 +131,6 @@ bool DeploymentActionComposite::toJson(JValue& json)
     return true;
 }
 
-bool DeploymentActionComposite::hasOSModule()
-{
-    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
-        SoftwareModuleType type = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it)->getType();
-        if (type == SoftwareModuleType_OS)
-            return true;
-    }
-    return false;
-}
-
-bool DeploymentActionComposite::hasApplicationModule()
-{
-    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
-        SoftwareModuleType type = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it)->getType();
-        if (type == SoftwareModuleType_Application)
-            return true;
-    }
-    return false;
-}
-
 bool DeploymentActionComposite::isOnlyOSModuleCompleted()
 {
     bool hasOSModule = false;
@@ -189,13 +169,12 @@ bool DeploymentActionComposite::toProceedingJson(JValue& json)
     return true;
 }
 
-bool DeploymentActionComposite::restore(const JValue& json)
-{
+bool DeploymentActionComposite::restoreActionHistory(const JValue& json, bool isRebootDetected) {
+    bool waitingReboot = json["waitingReboot"].asBool();
     string status = json["status"].asString();
     m_current = json["completedSoftwareModule"].asNumber<int>();
-
-    int size = m_children.size();
-    for (int i = 0; i < size; i++) {
+    unsigned int size = m_children.size();
+    for (unsigned int i = 0; i < size; i++) {
         shared_ptr<SoftwareModuleComposite> softwareModule = std::dynamic_pointer_cast<SoftwareModuleComposite>(m_children[i]);
         if (i < m_current) {
             softwareModule->restore(StatusType_COMPLETED);
@@ -204,7 +183,12 @@ bool DeploymentActionComposite::restore(const JValue& json)
         }
     }
     getStatus().prepare();
-    if (status == Status::toString(StatusType_RUNNING))
+    if (waitingReboot && !isRebootDetected) {
+        setWaitingReboot();
+    }
+    if (m_current == m_children.size())
+        getStatus().complete();
+    else if (status == Status::toString(StatusType_RUNNING))
         resume();
     else if (status == Status::toString(StatusType_PAUSED))
         pause();

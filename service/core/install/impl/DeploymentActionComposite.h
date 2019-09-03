@@ -49,11 +49,9 @@ public:
         return m_isForceUpdate;
     }
 
-    bool hasOSModule();
-    bool hasApplicationModule();
     bool isOnlyOSModuleCompleted();
     bool toProceedingJson(JValue& json);
-    bool restore(const JValue& json);
+    bool restoreActionHistory(const JValue& json, bool isRebootDetected);
 
 private:
     bool m_isForceDownload;
