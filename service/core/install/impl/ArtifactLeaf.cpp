@@ -74,6 +74,7 @@ void ArtifactLeaf::onCompletedDownload(HttpFile* call)
             AppInstaller::getInstance().install(getIpkName(), getDownloadName(), this);
             return;
         } else if (installer == "opkg") {
+            AbsUpdaterFactory::getInstance().setReadWriteMode();
             string command = "opkg install --force-reinstall --force-downgrade " + getDownloadName();
             if (system(command.c_str()) == 0)
                 completeStatus(true);
@@ -169,6 +170,11 @@ bool ArtifactLeaf::cancel()
     if (!Leaf::cancel())
         return false;
     // TODO download should be canceled
+    return true;
+}
+
+bool ArtifactLeaf::setWaitingReboot()
+{
     return true;
 }
 

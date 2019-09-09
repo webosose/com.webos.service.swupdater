@@ -53,7 +53,8 @@ public:
     virtual bool start() override;
     virtual bool pause() override;
     virtual bool resume() override;
-    virtual bool cancel()  override;
+    virtual bool cancel() override;
+    virtual bool setWaitingReboot() override;
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;

@@ -77,10 +77,10 @@ void DeploymentActionComposite::onStatusChanged(enum StatusType prev, enum Statu
     JValue buttons = pbnjson::Array();
     JValue button = pbnjson::Object();
     button.put("label", "Reboot");
-    button.put("onclick", "luna://com.webos.service.mcvpclient/call");
+    button.put("onclick", "luna://com.webos.service.power/shutdown/machineReboot");
 
     JValue params = pbnjson::Object();
-    params.put("command", "reboot");
+    params.put("reason", "ota");
     button.put("params", params);
 
     buttons.append(button);
@@ -106,7 +106,10 @@ bool DeploymentActionComposite::fromJson(const JValue& json)
     for (JValue chunk : json["deployment"]["chunks"].items()) {
         shared_ptr<SoftwareModuleComposite> module = make_shared<SoftwareModuleComposite>();
         module->fromJson(chunk);
-        m_children.push_back(module);
+        if (module->getType() == SoftwareModuleType_OS) // process OS type first
+            m_children.push_front(module);
+        else
+            m_children.push_back(module);
     }
     enableCallback();
     return true;
@@ -128,36 +131,27 @@ bool DeploymentActionComposite::toJson(JValue& json)
     return true;
 }
 
-bool DeploymentActionComposite::start()
+bool DeploymentActionComposite::isOnlyOSModuleCompleted()
 {
-    if (hasOSModule() && hasApplicationModule()) {
-        // TODO I don't know how to implement this yet.
-        Logger::warning(getClassName(), "Not implemented yet");
-        m_status.fail();
+    bool hasOSModule = false;
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        SoftwareModuleType type = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it)->getType();
+        if (type == SoftwareModuleType_OS) {
+            hasOSModule = true;
+            break;
+        }
+    }
+    if (!hasOSModule)
+        return false;
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        shared_ptr<SoftwareModuleComposite> module = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it);
+        if (module->getType() == SoftwareModuleType_OS && module->getStatus().getStatus() == StatusType_COMPLETED)
+            continue;
+        if (module->getType() == SoftwareModuleType_Application && module->getStatus().getStatus() == StatusType_READY)
+            continue;
         return false;
     }
-
-    return Composite::start();
-}
-
-bool DeploymentActionComposite::hasOSModule()
-{
-    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
-        SoftwareModuleType type = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it)->getType();
-        if (type == SoftwareModuleType_OS)
-            return true;
-    }
-    return false;
-}
-
-bool DeploymentActionComposite::hasApplicationModule()
-{
-    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
-        SoftwareModuleType type = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it)->getType();
-        if (type == SoftwareModuleType_Application)
-            return true;
-    }
-    return false;
+    return true;
 }
 
 bool DeploymentActionComposite::toProceedingJson(JValue& json)
@@ -175,13 +169,12 @@ bool DeploymentActionComposite::toProceedingJson(JValue& json)
     return true;
 }
 
-bool DeploymentActionComposite::restore(const JValue& json)
-{
+bool DeploymentActionComposite::restoreActionHistory(const JValue& json, bool isRebootDetected) {
+    bool waitingReboot = json["waitingReboot"].asBool();
     string status = json["status"].asString();
     m_current = json["completedSoftwareModule"].asNumber<int>();
-
-    int size = m_children.size();
-    for (int i = 0; i < size; i++) {
+    unsigned int size = m_children.size();
+    for (unsigned int i = 0; i < size; i++) {
         shared_ptr<SoftwareModuleComposite> softwareModule = std::dynamic_pointer_cast<SoftwareModuleComposite>(m_children[i]);
         if (i < m_current) {
             softwareModule->restore(StatusType_COMPLETED);
@@ -190,7 +183,12 @@ bool DeploymentActionComposite::restore(const JValue& json)
         }
     }
     getStatus().prepare();
-    if (status == Status::toString(StatusType_RUNNING))
+    if (waitingReboot && !isRebootDetected) {
+        setWaitingReboot();
+    }
+    if (m_current == m_children.size())
+        getStatus().complete();
+    else if (status == Status::toString(StatusType_RUNNING))
         resume();
     else if (status == Status::toString(StatusType_PAUSED))
         pause();

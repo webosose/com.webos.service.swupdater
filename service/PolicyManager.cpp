@@ -21,6 +21,10 @@
 #include "updater/AbsUpdater.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
+#include "util/Util.h"
+
+const string PolicyManager::FILE_NON_VOLITILE_REBOOTCHECK = "/var/luna/preferences/swupdater_reboot_required";
+const string PolicyManager::FILE_VOLITILE_REBOOTCHECK = "/tmp/swupdater_reboot_required";
 
 gboolean PolicyManager::_tick(gpointer user_data)
 {
@@ -61,18 +65,14 @@ bool PolicyManager::onInitialization()
     m_statusPoint = new LS::SubscriptionPoint();
     m_statusPoint->setServiceHandle(&LS2Handler::getInstance());
 
-    if (AbsBootloader::getBootloader().isRebootAfterUpdate()) {
-        const string& actionId = AbsBootloader::getBootloader().getEnv("action_id");
-        if (AbsUpdaterFactory::getInstance().isUpdated()) {
-            HawkBitClient::getInstance().postDeploymentAction(actionId, true);
-        } else {
-            HawkBitClient::getInstance().postDeploymentAction(actionId, false);
-        }
-        AbsBootloader::getBootloader().setEnv("action_id", "");
-        AbsBootloader::getBootloader().setRebootOK();
+    onPollingSleepAction(DEFAULT_TICK_INTERVAL);
+
+    if (Util::isFileExist(FILE_NON_VOLITILE_REBOOTCHECK) &&
+        !Util::isFileExist(FILE_VOLITILE_REBOOTCHECK)) {
+        // poll now, os update is in progress.
+        HawkBitClient::getInstance().poll();
     }
 
-    onPollingSleepAction(DEFAULT_TICK_INTERVAL);
     return true;
 }
 
@@ -94,28 +94,43 @@ void PolicyManager::onRequestStatusChange()
     if (!m_currentAction)
         return;
 
-    // Feedback install status to hawkbit
+    if (m_currentAction->getStatus().isWaitingReboot()) {
+        // feedback proceeding message only when running status
+        if (m_currentAction->getStatus().getStatus() == StatusType_RUNNING) {
+            JValue proceedingJson = pbnjson::Object();
+            m_currentAction->toProceedingJson(proceedingJson);
+            if (proceedingJson != m_proceedingJson) {
+                HawkBitClient::getInstance().proceeding(m_currentAction->getId(), proceedingJson.stringify());
+                m_proceedingJson = proceedingJson.duplicate();
+            }
+            AbsBootloader::getBootloader().setEnv("action_id", m_currentAction->getId());
+            AbsBootloader::getBootloader().notifyUpdate();
+            Logger::info(getClassName(), "Update installed, but reboot required.");
+            Util::touchFile(FILE_NON_VOLITILE_REBOOTCHECK);
+            Util::touchFile(FILE_VOLITILE_REBOOTCHECK);
+            Util::reboot();
+        }
+        return;
+    }
+
     if (m_currentAction->getStatus().getStatus() == StatusType_RUNNING ||
         m_currentAction->getStatus().getStatus() == StatusType_PAUSED) {
         JValue proceedingJson = pbnjson::Object();
         m_currentAction->toProceedingJson(proceedingJson);
-        if (proceedingJson != m_proceedingJson) {
+        if (proceedingJson != m_proceedingJson) { // softwaremodule status changed.
+            if (m_currentAction->isOnlyOSModuleCompleted()) {
+                m_currentAction->setWaitingReboot();
+                return;
+            }
             HawkBitClient::getInstance().proceeding(m_currentAction->getId(), proceedingJson.stringify());
             m_proceedingJson = proceedingJson.duplicate();
         }
     }
 
-    // check installation status
     if (m_currentAction->getStatus().getStatus() == StatusType_COMPLETED) {
-        if (m_currentAction->hasOSModule()) {
-            AbsBootloader::getBootloader().setEnv("action_id", m_currentAction->getId());
-            AbsBootloader::getBootloader().notifyUpdate();
-            Logger::info(getClassName(), "Update installed, but reboot required.");
-        } else if (m_currentAction->hasApplicationModule()) {
-            HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), true);
-            m_pendingClearRequest = true;
-            Logger::info(getClassName(), "Update completed.");
-        }
+        HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), true);
+        m_pendingClearRequest = true;
+        Logger::info(getClassName(), "Update completed.");
     } else if (m_currentAction->getStatus().getStatus() == StatusType_FAILED) {
         HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), false);
         m_pendingClearRequest = true;
@@ -258,8 +273,20 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
         responsePayload["actionHistory"]["messages"].isArray() &&
         responsePayload["actionHistory"]["messages"].arraySize() > 0) {
         JValue message = JDomParser::fromString(responsePayload["actionHistory"]["messages"][0].asString());
-        Logger::info(getClassName(), "Restore", message.stringify());
-        m_currentAction->restore(message);
+        Logger::info(getClassName(), "ActionHistory", message.stringify());
+        // restore previous proceeding message
+        m_proceedingJson = message.duplicate();
+        if (Util::isFileExist(FILE_NON_VOLITILE_REBOOTCHECK) &&
+            !Util::isFileExist(FILE_VOLITILE_REBOOTCHECK)) {
+            Logger::info(getClassName(), "Reboot detected!");
+            m_currentAction->restoreActionHistory(message, true);
+            AbsBootloader::getBootloader().setEnv("action_id", "");
+            AbsBootloader::getBootloader().setRebootOK();
+            Util::removeFile(FILE_NON_VOLITILE_REBOOTCHECK);
+        } else{
+            Logger::info(getClassName(), "Waiting reboot..");
+            m_currentAction->restoreActionHistory(message, false);
+        }
         return;
     }
 

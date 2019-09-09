@@ -100,6 +100,15 @@ enum TransitionType Status::checkTransition(enum StatusType status)
     return TransitionType_Unknown;
 }
 
+bool Status::setWaitingReboot()
+{
+    m_waitingReboot = true;
+    // TODO Not sure if need to add state for waitingReboot
+    Logger::verbose("ChangeStatus", m_name, __FUNCTION__);
+    PolicyManager::getInstance().onRequestStatusChange();
+    return true;
+}
+
 void Status::changeStatus(enum StatusType nextStatus, bool notify)
 {
     if (m_status == nextStatus)

@@ -68,6 +68,8 @@ private:
     void postStatus();
 
     static const int DEFAULT_TICK_INTERVAL = 15;
+    static const string FILE_NON_VOLITILE_REBOOTCHECK;
+    static const string FILE_VOLITILE_REBOOTCHECK;
 
     shared_ptr<DeploymentActionComposite> m_currentAction;
     JValue m_proceedingJson;

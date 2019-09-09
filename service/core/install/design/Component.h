@@ -38,6 +38,7 @@ public:
     virtual bool pause() = 0;
     virtual bool resume() = 0;
     virtual bool cancel() = 0;
+    virtual bool setWaitingReboot() = 0;
 
     Status& getStatus()
     {
@@ -47,6 +48,8 @@ public:
     virtual bool toJson(JValue& json) override
     {
         json.put("status", m_status.getStatusStr());
+        if (m_status.isWaitingReboot())
+            json.put("waitingReboot", true);
         return true;
     }
 

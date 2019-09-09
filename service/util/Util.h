@@ -14,37 +14,22 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef UPDATER_OSTREE_OSTREE_H_
-#define UPDATER_OSTREE_OSTREE_H_
+#ifndef UTIL_UTIL_H_
+#define UTIL_UTIL_H_
 
 #include <iostream>
-#include <ostree-1/ostree.h>
-
-#include "updater/AbsUpdater.h"
 
 using namespace std;
 
-class OSTree : public AbsUpdater {
-friend class AbsUpdaterFactory;
+class Util {
 public:
-    virtual ~OSTree();
+    Util() {}
+    virtual ~Util() {}
 
-    virtual bool onInitialization() override;
-    virtual bool onFinalization() override;
-
-    virtual bool deploy(const string& path) override;
-    virtual bool setReadWriteMode() override;
-    virtual bool isUpdated() override;
-    virtual void printDebug() override;
-
-private:
-    OSTree();
-
-    bool lock();
-    void unlock();
-
-    OstreeSysroot* m_sysroot;
-
+    static bool isFileExist(const string& filename);
+    static bool touchFile(const string& filename);
+    static bool removeFile(const string& filename);
+    static bool reboot();
 };
 
-#endif /* UPDATER_OSTREE_OSTREE_H_ */
+#endif /* UTIL_FILEUTIL_H_ */

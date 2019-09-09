@@ -31,6 +31,7 @@ public:
     virtual ~AbsUpdater() {}
 
     virtual bool deploy(const string& path) = 0;
+    virtual bool setReadWriteMode() = 0;
     virtual bool isUpdated() = 0;
     virtual void printDebug() = 0;
 
@@ -53,6 +54,10 @@ public:
     }
 
     virtual bool deploy(const string& path) override
+    {
+        return true;
+    }
+    virtual bool setReadWriteMode() override
     {
         return true;
     }
