@@ -33,6 +33,17 @@ void exitDaemon(int signo)
     g_main_loop_quit(s_mainloop);
 }
 
+gboolean checkHawkBitInfoSet(gpointer data)
+{
+    Logger::info("Main", __FUNCTION__);
+    if (!HawkBitInfo::getInstance().isHawkBitInfoSet()) {
+        Logger::warning("Main", __FUNCTION__, "HawkBitInfo is NOT set. So terminating.");
+        g_main_loop_quit(s_mainloop);
+    }
+
+    return G_SOURCE_REMOVE;
+}
+
 int main(int argc, char* argv[])
 {
     signal(SIGTERM, exitDaemon);
@@ -52,6 +63,7 @@ int main(int argc, char* argv[])
     HawkBitClient::getInstance().initialize(s_mainloop);
     PolicyManager::getInstance().initialize(s_mainloop);
 
+    g_timeout_add_seconds(10, checkHawkBitInfoSet, NULL);
     Logger::verbose("Main", "Start g_mainloop");
     g_main_loop_run(s_mainloop);
     Logger::verbose("Main", "Stop g_mainloop");
