@@ -16,6 +16,7 @@
 
 #include "PolicyManager.h"
 #include "core/AbsAction.h"
+#include "hawkbit/HawkBitInfo.h"
 #include "ls2/AppInstaller.h"
 #include "ls2/SystemService.h"
 #include "updater/AbsUpdater.h"
@@ -155,6 +156,26 @@ void PolicyManager::onGetStatusSubscription(pbnjson::JValue subscriptionPayload)
         Logger::info(getClassName(), "WiFi ON");
     } else {
         Logger::info(getClassName(), "WiFi OFF");
+    }
+}
+
+void PolicyManager::onConnect(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+{
+    string tmp;
+    if (!JValueUtil::getValue(requestPayload, "deviceId", tmp) || tmp.empty()) {
+        responsePayload.put("errorText", "'deviceId' does not exist");
+        return;
+    }
+    if (!JValueUtil::getValue(requestPayload, "address", tmp) || tmp.empty()) {
+        responsePayload.put("errorText", "'address' does not exist");
+        return;
+    }
+    if (!JValueUtil::getValue(requestPayload, "token", tmp) || tmp.empty()) {
+        responsePayload.put("errorText", "'token' does not exist");
+        return;
+    }
+    if (!HawkBitInfo::getInstance().setJson(requestPayload)) {
+        responsePayload.put("errorText", "Fail to write payload");
     }
 }
 

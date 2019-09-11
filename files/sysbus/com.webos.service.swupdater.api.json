@@ -1,5 +1,6 @@
 {
     "swupdate": [
+        "com.webos.service.swupdater/connect",
         "com.webos.service.swupdater/getStatus",
         "com.webos.service.swupdater/setConfig",
         "com.webos.service.swupdater/start",

@@ -14,22 +14,20 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "hawkbit/HawkBitClient.h"
+
 #include <curl/curl.h>
 #include <glib.h>
+
 #include "PolicyManager.h"
 #include "Setting.h"
-#include "bootloader/AbsBootloader.h"
 #include "core/HttpRequest.h"
 #include "external/glibcurl.h"
-#include "hawkbit/HawkBitClient.h"
+#include "hawkbit/HawkBitInfo.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
 #include "util/Socket.h"
 #include "util/Time.h"
-
-const string HawkBitClient::HAWKBIT_TENANT = "hawkbit_tenant";
-const string HawkBitClient::HAWKBIT_URL = "hawkbit_url";
-const string HawkBitClient::HAWKBIT_ID = "hawkbit_id";
 
 HawkBitClient::HawkBitClient()
 {
@@ -43,28 +41,6 @@ HawkBitClient::~HawkBitClient()
 bool HawkBitClient::onInitialization()
 {
     glibcurl_init();
-
-    // hawkBit configuration
-    string hawkBitUrl = AbsBootloader::getBootloader().getEnv(HAWKBIT_URL);
-    string hawkBitTenant = AbsBootloader::getBootloader().getEnv(HAWKBIT_TENANT);
-    string hawkBitId = AbsBootloader::getBootloader().getHawkBitId();
-
-    Logger::info(getClassName(), "HawkBitInfo", hawkBitUrl);
-    Logger::info(getClassName(), "HawkBitInfo", hawkBitTenant);
-    Logger::info(getClassName(), "HawkBitInfo", hawkBitId);
-
-    if (hawkBitId.empty()) {
-        hawkBitId = Socket::getMacAddress("eth0");
-        AbsBootloader::getBootloader().setEnv(HAWKBIT_ID, hawkBitId);
-    }
-
-    m_hawkBitUrl = hawkBitUrl + "/" + hawkBitTenant + "/controller/v1/" + hawkBitId;
-
-    if (hawkBitUrl.empty() || hawkBitTenant.empty()) {
-        Logger::error(getClassName(), "HawkBit connection info could not be found");
-        return false;
-    }
-
     return true;
 }
 
@@ -81,7 +57,7 @@ void HawkBitClient::poll()
     string href = "";
 
     Logger::info(getClassName(), "== POLLING START ==");
-    if (!getBase(responsePayload, m_hawkBitUrl)) {
+    if (!getBase(responsePayload, HawkBitInfo::getInstance().getBaseUrl())) {
         goto Done;
     }
 
@@ -115,7 +91,7 @@ bool HawkBitClient::canceled(const string& id)
     /*
      * This is send by the target as confirmation of a cancellation request by the update server.
      */
-    const string url = m_hawkBitUrl + "/cancelAction/" + id + "/feedback";
+    const string url = HawkBitInfo::getInstance().getBaseUrl() + "/cancelAction/" + id + "/feedback";
     HttpRequest httpCall;
     httpCall.open(MethodType_POST, url);
 
@@ -130,7 +106,7 @@ bool HawkBitClient::rejected(const string& id)
      * i.e. cannot be fulfilled at this point in time.
      * Note: the target should send a CLOSED->ERROR if it believes it will not be able to proceed the action at all.
      */
-    const string url = m_hawkBitUrl + "/cancelAction/" + id + "/feedback";
+    const string url = HawkBitInfo::getInstance().getBaseUrl() + "/cancelAction/" + id + "/feedback";
     HttpRequest httpCall;
     httpCall.open(MethodType_POST, url);
 
@@ -144,7 +120,7 @@ bool HawkBitClient::closed(const string& id)
      * Target completes the action either with status.result.finished SUCCESS or FAILURE as result.
      * Note: DDI defines also a status NONE which will not be interpreted by the update server and handled like SUCCESS.
      */
-    const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
+    const string url = HawkBitInfo::getInstance().getBaseUrl() + "/deploymentBase/" + id + "/feedback";
     Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
 
 //    JValue requestPayload = pbnjson::Object();
@@ -169,7 +145,7 @@ bool HawkBitClient::proceeding(const string& id, const string& detail)
     /*
      * This can be used by the target to inform that it is working on the action.
      */
-    const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
+    const string url = HawkBitInfo::getInstance().getBaseUrl() + "/deploymentBase/" + id + "/feedback";
     Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
     Logger::info(getClassName(), __FUNCTION__, detail);
 
@@ -192,7 +168,7 @@ bool HawkBitClient::scheduled(const string& id)
     /*
      *  This can be used by the target to inform that it scheduled on the action.
      */
-    const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
+    const string url = HawkBitInfo::getInstance().getBaseUrl() + "/deploymentBase/" + id + "/feedback";
     Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
 
     JValue requestPayload = pbnjson::Object();
@@ -217,7 +193,7 @@ bool HawkBitClient::resumed(const string& id)
     /*
      * This can be used by the target to inform that it continued to work on the action.
      */
-    const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
+    const string url = HawkBitInfo::getInstance().getBaseUrl() + "/deploymentBase/" + id + "/feedback";
     Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
 
     JValue requestPayload = pbnjson::Object();
@@ -240,7 +216,7 @@ bool HawkBitClient::resumed(const string& id)
 
 bool HawkBitClient::postDeploymentAction(const string& id, bool success)
 {
-    const string url = m_hawkBitUrl + "/deploymentBase/" + id + "/feedback";
+    const string url = HawkBitInfo::getInstance().getBaseUrl() + "/deploymentBase/" + id + "/feedback";
     Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
 
     JValue requestPayload = pbnjson::Object();
@@ -262,7 +238,7 @@ bool HawkBitClient::postDeploymentAction(const string& id, bool success)
 
 bool HawkBitClient::putConfigData(JValue& data)
 {
-    const string url = m_hawkBitUrl + "/configData";
+    const string url = HawkBitInfo::getInstance().getBaseUrl() + "/configData";
 
     JValue requestPayload = pbnjson::Object();
     requestPayload.put("time", Time::getUtcTime());

@@ -49,6 +49,7 @@ public:
     virtual void onGetStatusSubscription(pbnjson::JValue subscriptionPayload) override;
 
     // LS2HandlerListener
+    virtual void onConnect(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onSetConfig(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onStart(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;

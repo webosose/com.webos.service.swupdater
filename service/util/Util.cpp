@@ -17,6 +17,7 @@
 #include "util/Util.h"
 
 #include <fcntl.h>
+#include <fstream>
 #include <unistd.h>
 #include <stdlib.h>
 
@@ -42,6 +43,23 @@ bool Util::touchFile(const string& filename)
 bool Util::removeFile(const string& filename)
 {
     return remove(filename.c_str()) == 0;
+}
+
+bool Util::writeFile(const string& filename, const string& contents)
+{
+    ofstream file(filename);
+    if (!file.good()) {
+        return false;
+    }
+    file << contents;
+    return true;
+}
+
+bool Util::makeDir(const string& dir)
+{
+    std::string command = "mkdir -p " + dir;
+    int rc = ::system(command.c_str());
+    return WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
 }
 
 bool Util::reboot()

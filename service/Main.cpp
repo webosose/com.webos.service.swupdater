@@ -15,11 +15,13 @@
 #include <glib.h>
 #include <pbnjson.hpp>
 
-#include "hawkbit/HawkBitClient.h"
-#include "ls2/LS2Handler.h"
 #include "PolicyManager.h"
 #include "Setting.h"
+#include "hawkbit/HawkBitClient.h"
+#include "hawkbit/HawkBitInfo.h"
+#include "ls2/LS2Handler.h"
 #include "updater/FOSSInstaller.h"
+#include "util/Logger.h"
 
 using namespace std;
 using namespace pbnjson;
@@ -46,6 +48,7 @@ int main(int argc, char* argv[])
     Setting::getInstance().initialize(s_mainloop);
     LS2Handler::getInstance().initialize(s_mainloop);
     // FOSSInstaller::getInstance().initialize(s_mainloop);
+    HawkBitInfo::getInstance().initialize(s_mainloop);
     HawkBitClient::getInstance().initialize(s_mainloop);
     PolicyManager::getInstance().initialize(s_mainloop);
 
@@ -56,6 +59,7 @@ int main(int argc, char* argv[])
     // xxx: DON'T change finalize order.
     PolicyManager::getInstance().finalize();
     HawkBitClient::getInstance().finalize();
+    HawkBitInfo::getInstance().finalize();
     // FOSSInstaller::getInstance().finalize();
     LS2Handler::getInstance().finalize();
     Setting::getInstance().finalize();

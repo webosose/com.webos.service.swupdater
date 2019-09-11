@@ -27,13 +27,14 @@
 
 const string LS2Handler::NAME = "com.webos.service.swupdater";
 const LSMethod LS2Handler::ROOT_METHODS[] = {
-    { "getStatus", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "setConfig", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "start", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "pause", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "resume", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "cancel", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-        { 0, 0 , LUNA_METHOD_FLAGS_NONE }
+    { "connect", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "getStatus", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "setConfig", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "start", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "pause", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "resume", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "cancel", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { 0, 0, LUNA_METHOD_FLAGS_NONE }
 };
 
 bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
@@ -61,6 +62,8 @@ bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
 
         if (LS2Handler::getInstance().m_listener == nullptr) {
             responsePayload.put("errorText", "API handler is null");
+        } else if (kind == "/connect") {
+            PolicyManager::getInstance().onConnect(request, requestPayload, responsePayload);
         } else if (kind == "/getStatus") {
             PolicyManager::getInstance().onGetStatus(request, requestPayload, responsePayload);
         } else if (kind == "/setConfig") {

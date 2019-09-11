@@ -36,6 +36,7 @@ public:
     LS2HandlerListener() {};
     virtual ~LS2HandlerListener() {};
 
+    virtual void onConnect(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
     virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
     virtual void onSetConfig(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
     virtual void onStart(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
