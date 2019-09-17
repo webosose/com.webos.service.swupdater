@@ -163,8 +163,19 @@ void PolicyManager::onConnect(LS::Message& request, JValue& requestPayload, JVal
 {
     string tmp;
     if (!JValueUtil::getValue(requestPayload, "deviceId", tmp) || tmp.empty()) {
-        responsePayload.put("errorText", "'deviceId' does not exist");
-        return;
+        JValue getInfoPayload = Object();
+        if (!ConnectionManager::getInstance().getinfo(getInfoPayload)) {
+            responsePayload.put("errorText", "Fail to get MAC address");
+            return;
+        }
+        if (JValueUtil::getValue(getInfoPayload, "wiredInfo", "macAddress", tmp) && !tmp.empty()) {
+            requestPayload.put("deviceId", "webOS_" + tmp);
+        } else if (JValueUtil::getValue(getInfoPayload, "wifiInfo", "macAddress", tmp) && !tmp.empty()) {
+            requestPayload.put("deviceId", "webOS_" + tmp);
+        } else {
+            responsePayload.put("errorText", "Fail to find wired/wireless MAC address");
+            return;
+        }
     }
     if (!JValueUtil::getValue(requestPayload, "address", tmp) || tmp.empty()) {
         responsePayload.put("errorText", "'address' does not exist");

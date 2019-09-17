@@ -57,6 +57,8 @@ public:
 
     virtual ~LS2Handler();
 
+    static const unsigned long LSCALL_TIMEOUT;
+
     // IInitializable
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;

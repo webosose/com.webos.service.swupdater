@@ -74,3 +74,33 @@ bool ConnectionManager::getStatus(ConnectionManagerListener* listener)
     }
     return true;
 }
+
+bool ConnectionManager::getinfo(JValue& responsePayload)
+{
+    static const string API = "luna://com.webos.service.connectionmanager/getinfo";
+    pbnjson::JValue requestPayload = pbnjson::Object();
+
+    try {
+        LS::Call call = LS2Handler::getInstance().callOneReply(
+            API.c_str(),
+            requestPayload.stringify().c_str()
+        );
+        LS2Handler::writeBLog("Call", "/getinfo", requestPayload);
+        LS::Message reply = call.get(LS2Handler::LSCALL_TIMEOUT);
+        if (!reply) {
+            Logger::error(getClassName(), "Timeout to get MAC address");
+            return false;
+        }
+        responsePayload = JDomParser::fromString(reply.getPayload());
+        LS2Handler::writeBLog("Return", "/getinfo", responsePayload);
+        if (!responsePayload["returnValue"].asBool()) {
+            Logger::error(getClassName(), responsePayload["errorText"].asString());
+            return false;
+        }
+    }
+    catch (const LS::Error &e) {
+        Logger::error(getClassName(), e.what());
+        return false;
+    }
+    return true;
+}

@@ -25,6 +25,7 @@
 #include "ls2/SystemService.h"
 #include "util/Logger.h"
 
+const unsigned long LS2Handler::LSCALL_TIMEOUT = 5000;
 const string LS2Handler::NAME = "com.webos.service.swupdater";
 const LSMethod LS2Handler::ROOT_METHODS[] = {
     { "connect", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
