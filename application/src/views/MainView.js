@@ -15,68 +15,45 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import React from 'react';
-import {Layout, Cell} from '@enact/ui/Layout';
+import Divider from '@enact/moonstone/Divider/Divider';
 import {Panels, Panel, Header} from '@enact/moonstone/Panels';
-
-import {createToast, registerServerStatus, call, subscribe} from '../components/LunaAPI';
-import ControlView from './ControlView';
-import DetailView from './DetailView';
+import {Layout, Cell, Row, Column} from '@enact/ui/Layout';
+import Nav from '../components/Nav';
+import {registerServerStatus} from '../components/LunaAPI';
+import HawkBitTab from './HawkBitTab';
+import UpdateTab from './UpdateTab';
 
 const SERVICE_SWUPDATER = 'com.webos.service.swupdater';
 const URI_SERVICE_SWUPDATER = 'luna://' + SERVICE_SWUPDATER;
-const ID_NONE = "";
-const STATUS_NONE = "none";
-const STATUS_COMPLETED = "completed";
+const TABS = ['update', 'hawkbit'];
 
 class MainView extends React.Component {
-    constructor() {
-        super();
+    constructor (props) {
+        super(props);
         this.state = {
-            id: ID_NONE,
-            status: STATUS_NONE,
-            softwareModules: [],
+            tab: TABS[0],
+            serverStatus : {},
         };
 
-        this.onGetStatus = this.onGetStatus.bind(this);
         this.onRegisterServerStatus = this.onRegisterServerStatus.bind(this);
         this.onApplicationClose = this.onApplicationClose.bind(this);
-    }
-
-    onGetStatus(res) {
-        const id = res.id || ID_NONE;
-        const status = res.status || STATUS_NONE;
-        const softwareModules = res.softwareModules || [];
-
-        if (id !== ID_NONE && this.state.id === ID_NONE) {
-            createToast(`Update available<br> ${softwareModules[0].name} (v${softwareModules[0].version})`);
-        }
-        if (status === STATUS_COMPLETED && this.state.status !== STATUS_COMPLETED) {
-            createToast(`Update completed<br> ${softwareModules[0].name} (v${softwareModules[0].version})`);
-        }
-
-        this.setState({
-            id: id,
-            status: status,
-            softwareModules: softwareModules,
-        });
+        this.onTabChange = this.onTabChange.bind(this);
     }
 
     onRegisterServerStatus(res) {
         console.log('onRegisterServerStatus', res);
-        if (res.connected) {
-            this.getStatus = subscribe(URI_SERVICE_SWUPDATER, 'getStatus', {}, this.onGetStatus);
-        } else {
-            if (this.getStatus) {
-                this.getStatus.cancel();
-                this.getStatus = null;
-            }
-        }
+        this.setState({serverStatus: res});
     }
 
     onApplicationClose() {
         if (typeof window === 'object') {
             window.close();
         }
+    }
+
+    onTabChange(e) {
+        const tab = e.target.textContent.toLowerCase();
+        this.setState({tab: tab});
     }
 
     componentDidMount() {
@@ -90,27 +67,31 @@ class MainView extends React.Component {
             this.registerServerStatus.cancel();
             this.registerServerStatus = null;
         }
-        if (this.getStatus) {
-            this.getStatus.cancel();
-            this.getStatus = null;
-        }
     }
 
     render() {
-        const {status, softwareModules} = this.state;
+        const onTabChange = this.onTabChange;
+        const selectedTab = this.state.tab;
+        const serverStatus = this.state.serverStatus;
 
         return (
             <Panels onApplicationClose={this.onApplicationClose}>
                 <Panel>
-                    <Header title="S/W update demo" />
-                    <Layout style={{height: '100%'}}>
-                        <Cell size="25%">
-                            <ControlView actionId={this.state.id} status={status}/>
+                    <Header title="S/W update demo" type="compact"/>
+                    <Column>
+                        <Cell shrink>
+                            <Nav
+                                tabs={TABS}
+                                onTabChange={onTabChange}
+                                selectedTab={selectedTab}
+                            />
+                            <Divider/>
                         </Cell>
                         <Cell>
-                            <DetailView softwareModules={softwareModules}/>
+                            {selectedTab === 'update' && <UpdateTab serverStatus={serverStatus}/>}
+                            {selectedTab === 'hawkbit' && <HawkBitTab serverStatus={serverStatus}/>}
                         </Cell>
-                    </Layout>
+                    </Column>
                 </Panel>
             </Panels>
         );

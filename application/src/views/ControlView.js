@@ -20,7 +20,6 @@ import Button from '@enact/moonstone/Button';
 import Divider from '@enact/moonstone/Divider';
 import {Layout, Cell} from '@enact/ui/Layout';
 import Panel from '@enact/moonstone/Panels';
-
 import {call} from '../components/LunaAPI';
 
 const SERVICE_SWUPDATER = 'com.webos.service.swupdater';
@@ -59,18 +58,17 @@ class ControlView extends React.Component {
 
     render() {
         const {status} = this.props;
+        const styleButton = {margin: '0.5rem'};
         return (
             <Panel noCloseButton>
-                <Layout>
+                <Layout orientation="vertical">
                     <Cell>
                         <Divider>Update</Divider>
                         <BodyText>Status : {status}</BodyText>
-                        <Button small onClick={this.onStart}>Start</Button>
-                        <Button small disabled onClick={this.onCancel}>Cancel</Button>
-                        <p />
-                        <Button small disabled onClick={this.onPause}>Pause</Button>
-                        <Button small disabled onClick={this.onResume}>Resume</Button>
-                        <p />
+                        <Button style={styleButton} onClick={this.onStart}>Start</Button>
+                        <Button style={styleButton} disabled onClick={this.onCancel}>Cancel</Button>
+                        <Button style={styleButton} disabled onClick={this.onPause}>Pause</Button>
+                        <Button style={styleButton} disabled onClick={this.onResume}>Resume</Button>
                     </Cell>
                 </Layout>
             </Panel>

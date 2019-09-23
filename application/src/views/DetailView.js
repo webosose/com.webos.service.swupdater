@@ -18,6 +18,7 @@ import React from 'react';
 import Divider from '@enact/moonstone/Divider';
 import Scroller from '@enact/moonstone/Scroller';
 import Panel from '@enact/moonstone/Panels';
+import {Layout, Cell, Row, Column} from '@enact/ui/Layout';
 import SoftwareModule from '../components/SoftwareModule';
 
 class DetailView extends React.Component {
@@ -43,12 +44,20 @@ class DetailView extends React.Component {
         return (
             <Panel noCloseButton>
                 <Scroller>
-                    <div>
-                        <Divider>OS</Divider>
-                        {osModules}
-                        <Divider>App</Divider>
-                        {appModules}
-                    </div>
+                    <Layout orientation="vertical">
+                        <Cell shrink>
+                            <Divider>OS</Divider>
+                        </Cell>
+                        <Cell shrink>
+                            {osModules}
+                        </Cell>
+                        <Cell shrink>
+                            <Divider>App</Divider>
+                        </Cell>
+                        <Cell shrink>
+                            {appModules}
+                        </Cell>
+                    </Layout>
                 </Scroller>
             </Panel>
         );

@@ -10,7 +10,8 @@
 	"largeIcon": "icon-large.png",
 	"trustLevel": "trusted",
 	"requiredPermissions": [
-		"private", "public", "swupdate"
+		"notifications",
+		"swupdate"
 	],
 	"uiRevision": 2
 }
