@@ -22,6 +22,7 @@
 #include "ls2/AppInstaller.h"
 #include "ls2/ConnectionManager.h"
 #include "ls2/NotificationManager.h"
+#include "ls2/SettingsService.h"
 #include "ls2/SystemService.h"
 #include "util/Logger.h"
 
@@ -103,12 +104,14 @@ bool LS2Handler::onInitialization()
     AppInstaller::getInstance().initialize(m_mainloop);
     ConnectionManager::getInstance().initialize(m_mainloop);
     NotificationManager::getInstance().initialize(m_mainloop);
+    SettingsService::getInstance().initialize(m_mainloop);
 
     return true;
 }
 
 bool LS2Handler::onFinalization()
 {
+    SettingsService::getInstance().finalize();
     NotificationManager::getInstance().finalize();
     ConnectionManager::getInstance().finalize();
     AppInstaller::getInstance().finalize();

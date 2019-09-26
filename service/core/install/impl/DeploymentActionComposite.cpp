@@ -58,34 +58,10 @@ void DeploymentActionComposite::onStatusChanged(enum StatusType prev, enum Statu
 
         if (value == "opkg") {
             // TODO need to find better solution
-            isRebootRequired = true;
+            createRebootAlert(SoftwareModuleType_Application);
             break;
         }
     }
-
-    if (!isRebootRequired) {
-        return;
-    }
-
-    string title = "System has been updated. Reboot required!";
-    string message;
-    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
-        std::shared_ptr<SoftwareModuleComposite> module = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it);
-        message += " - " + module->getName() + " (" + module->getVersion() + ")<br>";
-    }
-
-    JValue buttons = pbnjson::Array();
-    JValue button = pbnjson::Object();
-    button.put("label", "Reboot");
-    button.put("onclick", "luna://com.webos.service.power/shutdown/machineReboot");
-
-    JValue params = pbnjson::Object();
-    params.put("reason", "ota");
-    button.put("params", params);
-
-    buttons.append(button);
-
-    NotificationManager::getInstance().createAlert(title, message, buttons);
 }
 
 bool DeploymentActionComposite::fromJson(const JValue& json)
@@ -194,4 +170,28 @@ bool DeploymentActionComposite::restoreActionHistory(const JValue& json, bool is
         pause();
 
     return true;
+}
+
+bool DeploymentActionComposite::createRebootAlert(SoftwareModuleType type)
+{
+    string title = "System has been updated. Reboot required!";
+    string message;
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        std::shared_ptr<SoftwareModuleComposite> module = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it);
+        if (type == module->getType())
+            message += " - " + module->getName() + " (" + module->getVersion() + ")<br>";
+    }
+
+    JValue buttons = pbnjson::Array();
+    JValue button = pbnjson::Object();
+    button.put("label", "Reboot");
+    button.put("onclick", "luna://com.webos.service.power/shutdown/machineReboot");
+
+    JValue params = pbnjson::Object();
+    params.put("reason", "ota");
+    button.put("params", params);
+
+    buttons.append(button);
+
+    return NotificationManager::getInstance().createAlert(title, message, buttons);
 }

@@ -11,6 +11,7 @@
 	"trustLevel": "trusted",
 	"requiredPermissions": [
 		"notifications",
+		"settings",
 		"swupdate"
 	],
 	"uiRevision": 2

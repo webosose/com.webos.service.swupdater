@@ -52,6 +52,7 @@ public:
     bool isOnlyOSModuleCompleted();
     bool toProceedingJson(JValue& json);
     bool restoreActionHistory(const JValue& json, bool isRebootDetected);
+    bool createRebootAlert(SoftwareModuleType type);
 
 private:
     bool m_isForceDownload;

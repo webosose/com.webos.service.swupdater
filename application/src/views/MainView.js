@@ -25,7 +25,7 @@ import UpdateTab from './UpdateTab';
 
 const SERVICE_SWUPDATER = 'com.webos.service.swupdater';
 const URI_SERVICE_SWUPDATER = 'luna://' + SERVICE_SWUPDATER;
-const TABS = ['update', 'hawkbit'];
+const TABS = ['settings', 'update'];
 
 class MainView extends React.Component {
     constructor (props) {
@@ -88,8 +88,8 @@ class MainView extends React.Component {
                             <Divider/>
                         </Cell>
                         <Cell>
+                            {selectedTab === 'settings' && <HawkBitTab serverStatus={serverStatus}/>}
                             {selectedTab === 'update' && <UpdateTab serverStatus={serverStatus}/>}
-                            {selectedTab === 'hawkbit' && <HawkBitTab serverStatus={serverStatus}/>}
                         </Cell>
                     </Column>
                 </Panel>

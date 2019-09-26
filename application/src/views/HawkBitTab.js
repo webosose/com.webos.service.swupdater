@@ -18,12 +18,19 @@ import React from 'react';
 import BodyText from '@enact/ui/BodyText/BodyText';
 import Button from '@enact/moonstone/Button';
 import CheckBoxItem from '@enact/moonstone/CheckboxItem';
+import Divider from '@enact/moonstone/Divider';
 import Input from '@enact/moonstone/Input';
+import Scroller from '@enact/moonstone/Scroller';
+import SwitchItem from '@enact/moonstone/SwitchItem';
 import {Layout, Cell, Row, Column} from '@enact/ui/Layout';
-import {call} from '../components/LunaAPI';
+import {call, subscribe} from '../components/LunaAPI';
 
 const SERVICE_SWUPDATER = 'com.webos.service.swupdater';
 const URI_SERVICE_SWUPDATER = 'luna://' + SERVICE_SWUPDATER;
+const SERVICE_SETTINGS = 'com.webos.service.settings';
+const URI_SERVICE_SETTINGS = 'luna://' + SERVICE_SETTINGS;
+const CATEGORY_SWUPDATE = "swupdate";
+const KEY_AUTO_UPDATE = "autoUpdate";
 
 const PLACEHOLDER_DEVICEID = 'webOS_test';
 const PLACEHOLDER_ADDRESS = 'http://10.178.84.116:8080';
@@ -35,6 +42,7 @@ class HawkBitTab extends React.Component {
     constructor (props) {
         super(props);
         this.state = {
+            autoUpdateToggle: false,
             deviceId: PLACEHOLDER_DEVICEID,
             deviceIdToggle: true,
             address: PLACEHOLDER_ADDRESS,
@@ -44,6 +52,7 @@ class HawkBitTab extends React.Component {
             password: PLACEHOLDER_PASSWORD,
         };
 
+        this.onAutoUpdateToggle = this.onAutoUpdateToggle.bind(this);
         this.onDeviceIdChange = this.onDeviceIdChange.bind(this);
         this.onDeviceIdToggle = this.onDeviceIdToggle.bind(this);
         this.onAddressChange = this.onAddressChange.bind(this);
@@ -53,6 +62,16 @@ class HawkBitTab extends React.Component {
         this.onPasswordChange = this.onPasswordChange.bind(this);
         this.onConnectClick = this.onConnectClick.bind(this);
         this.onConnect = this.onConnect.bind(this);
+        this.onGetSystemSettings = this.onGetSystemSettings.bind(this);
+    }
+
+    onAutoUpdateToggle(e) {
+        call(URI_SERVICE_SETTINGS, 'setSystemSettings', {
+            category: CATEGORY_SWUPDATE,
+            settings: {
+                autoUpdate: e.selected
+            }
+        });
     }
 
     onDeviceIdChange(e) {
@@ -118,17 +137,67 @@ class HawkBitTab extends React.Component {
         console.log("onConnect", res);
     }
 
+    onGetSystemSettings(res) {
+        console.log("onGetSystemSettings", res);
+        const {autoUpdateToggle} = this.state;
+        let hasAutoUpdate = res.hasOwnProperty("settings") && res.settings.hasOwnProperty(KEY_AUTO_UPDATE);
+        // first return & the requesting key/value does not exist.
+        // To successfully subscribe from SettingsService, all the requesting key/values should exist.
+        // So, if there is a key that has no value assigned, fill in the default value.
+        if (res.hasOwnProperty("subscribed") && !hasAutoUpdate) {
+            call(URI_SERVICE_SETTINGS, 'setSystemSettings', {
+                category: CATEGORY_SWUPDATE,
+                settings: {
+                    autoUpdate: autoUpdateToggle
+                }
+            });
+            this.getSystemSettingsCall.cancel();
+            this.getSystemSettingsCall = subscribe(URI_SERVICE_SETTINGS, 'getSystemSettings', {
+                category: CATEGORY_SWUPDATE,
+                keys: [KEY_AUTO_UPDATE]
+            }, this.onGetSystemSettings);
+            return;
+        }
+
+        if (hasAutoUpdate) {
+            this.setState({
+                autoUpdateToggle: res.settings[KEY_AUTO_UPDATE]
+            });
+        }
+    }
+
+    componentDidMount() {
+        this.getSystemSettingsCall = subscribe(URI_SERVICE_SETTINGS, 'getSystemSettings', {
+            category: CATEGORY_SWUPDATE,
+            keys: [KEY_AUTO_UPDATE]
+        }, this.onGetSystemSettings);
+    }
+
+    componentWillUnmount() {
+        if (this.getSystemSettingsCall) {
+            this.getSystemSettingsCall.cancel();
+            this.getSystemSettingsCall = null;
+        }
+    }
+
     render() {
-        const {deviceIdToggle, tokenToggle} = this.state;
+        const {autoUpdateToggle, deviceIdToggle, tokenToggle} = this.state;
+        console.log("render", autoUpdateToggle, deviceIdToggle, tokenToggle)
         const {serverStatus} = this.props;
-        const styleRow = {margin: '0.5rem'};
-        const styleKey = {marginLeft: '0.5rem', width: '12%'};
+        const styleSwitch = {width: '50%'};
+        const styleRow = {margin: '0.5em'};
+        const styleKey = {width: '12%'};
         const styleInput = {marginRight: '2%', width: '60%'};
 
         return (
+            <Scroller>
             <div>
+                <Divider>Update options</Divider>
+                <SwitchItem style={styleSwitch} onToggle={this.onAutoUpdateToggle} selected={autoUpdateToggle}>Update automatically</SwitchItem>
+                <p />
+                <Divider>hawkBit info</Divider>
                 <Row style={styleRow}>
-                    <BodyText style={{marginLeft: '0.5rem'}}>registerServerStatus : {JSON.stringify(serverStatus, null, " ")}</BodyText>
+                    <BodyText>registerServerStatus : {JSON.stringify(serverStatus, null, " ")}</BodyText>
                 </Row>
                 <Row style={styleRow}>
                     <BodyText style={styleKey}>Device ID : </BodyText>
@@ -154,6 +223,7 @@ class HawkBitTab extends React.Component {
                     <Button onClick={this.onConnectClick}>Connect</Button>
                 </Row>
             </div>
+            </Scroller>
         );
     }
 }
