@@ -16,7 +16,10 @@
 
 #include "PolicyManager.h"
 #include "core/AbsAction.h"
+#include "hawkbit/HawkBitInfo.h"
 #include "ls2/AppInstaller.h"
+#include "ls2/NotificationManager.h"
+#include "ls2/SettingsService.h"
 #include "ls2/SystemService.h"
 #include "updater/AbsUpdater.h"
 #include "util/JValueUtil.h"
@@ -44,6 +47,7 @@ PolicyManager::PolicyManager()
     , m_tickInterval(0)
     , m_tickSrc(0)
     , m_pendingClearRequest(false)
+    , m_isAutoUpdateOn(false)
 {
     setClassName("PolicyManager");
 }
@@ -61,6 +65,7 @@ bool PolicyManager::onInitialization()
     LS2Handler::getInstance().setListener(this);
     AbsUpdaterFactory::getInstance().initialize(NULL);
     ConnectionManager::getInstance().getStatus(this);
+    SettingsService::getInstance().getSystemSettings(this);
 
     m_statusPoint = new LS::SubscriptionPoint();
     m_statusPoint->setServiceHandle(&LS2Handler::getInstance());
@@ -103,12 +108,12 @@ void PolicyManager::onRequestStatusChange()
                 HawkBitClient::getInstance().proceeding(m_currentAction->getId(), proceedingJson.stringify());
                 m_proceedingJson = proceedingJson.duplicate();
             }
-            AbsBootloader::getBootloader().setEnv("action_id", m_currentAction->getId());
             AbsBootloader::getBootloader().notifyUpdate();
             Logger::info(getClassName(), "Update installed, but reboot required.");
             Util::touchFile(FILE_NON_VOLITILE_REBOOTCHECK);
             Util::touchFile(FILE_VOLITILE_REBOOTCHECK);
-            Util::reboot();
+            // Util::reboot();
+            m_currentAction->createRebootAlert(SoftwareModuleType_OS);
         }
         return;
     }
@@ -155,6 +160,62 @@ void PolicyManager::onGetStatusSubscription(pbnjson::JValue subscriptionPayload)
         Logger::info(getClassName(), "WiFi ON");
     } else {
         Logger::info(getClassName(), "WiFi OFF");
+    }
+}
+
+void PolicyManager::onGetSystemSettingsSubscription(pbnjson::JValue subscriptionPayload)
+{
+    bool hasAutoUpdate = JValueUtil::hasKey(subscriptionPayload, "settings", "autoUpdate");
+    // first return & the requesting key/value does not exist
+    // To successfully subscribe from SettingsService, all the requesting key/values should exist.
+    // So, if there is a key that has no value assigned, fill in the default value.
+    if (subscriptionPayload.hasKey("subscribed") && !hasAutoUpdate) {
+        JValue settingsObject = Object();
+        settingsObject.put("autoUpdate", m_isAutoUpdateOn);
+        if (SettingsService::getInstance().setSystemSettings(settingsObject)) {
+            SettingsService::getInstance().getSystemSettings(this);
+        } else {
+            Logger::error(getClassName(), "Fail to subscribe SettingsService");
+        }
+        return;
+    }
+
+    if (hasAutoUpdate)
+        m_isAutoUpdateOn = subscriptionPayload["settings"]["autoUpdate"].asBool();
+    Logger::info(getClassName(), subscriptionPayload["settings"].stringify());
+    if (m_isAutoUpdateOn && m_currentAction && m_currentAction->getStatus().getStatus() == StatusType_READY) {
+        m_currentAction->start();
+    }
+}
+
+void PolicyManager::onConnect(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+{
+    string tmp;
+    if (!JValueUtil::getValue(requestPayload, "deviceId", tmp) || tmp.empty()) {
+        JValue getInfoPayload = Object();
+        if (!ConnectionManager::getInstance().getinfo(getInfoPayload)) {
+            responsePayload.put("errorText", "Fail to get MAC address");
+            return;
+        }
+        if (JValueUtil::getValue(getInfoPayload, "wiredInfo", "macAddress", tmp) && !tmp.empty()) {
+            requestPayload.put("deviceId", "webOS_" + tmp);
+        } else if (JValueUtil::getValue(getInfoPayload, "wifiInfo", "macAddress", tmp) && !tmp.empty()) {
+            requestPayload.put("deviceId", "webOS_" + tmp);
+        } else {
+            responsePayload.put("errorText", "Fail to find wired/wireless MAC address");
+            return;
+        }
+    }
+    if (!JValueUtil::getValue(requestPayload, "address", tmp) || tmp.empty()) {
+        responsePayload.put("errorText", "'address' does not exist");
+        return;
+    }
+    if (!JValueUtil::getValue(requestPayload, "token", tmp) || tmp.empty()) {
+        responsePayload.put("errorText", "'token' does not exist");
+        return;
+    }
+    if (!HawkBitInfo::getInstance().setJson(requestPayload)) {
+        responsePayload.put("errorText", "Fail to write payload");
     }
 }
 
@@ -280,7 +341,6 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
             !Util::isFileExist(FILE_VOLITILE_REBOOTCHECK)) {
             Logger::info(getClassName(), "Reboot detected!");
             m_currentAction->restoreActionHistory(message, true);
-            AbsBootloader::getBootloader().setEnv("action_id", "");
             AbsBootloader::getBootloader().setRebootOK();
             Util::removeFile(FILE_NON_VOLITILE_REBOOTCHECK);
         } else{
@@ -294,7 +354,7 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
         Logger::info(getClassName(), "Failed to prepare update");
         return;
     }
-    if (m_currentAction->isForceDownload()) {
+    if (m_currentAction->isForceDownload() || m_isAutoUpdateOn) {
         m_currentAction->start();
     }
 }

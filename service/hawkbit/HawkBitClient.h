@@ -69,12 +69,6 @@ private:
     bool getBase(JValue& responsePayload, const string& url);
     void getStatus(JValue& json, const string& execution, const string& finished, string detail = "");
 
-    static const string HAWKBIT_TENANT;
-    static const string HAWKBIT_URL;
-    static const string HAWKBIT_ID;
-
-    string m_hawkBitUrl;
-
 };
 
 #endif /* HAWKBIT_HAWKBITCLIENT_H_ */

@@ -15,11 +15,13 @@
 #include <glib.h>
 #include <pbnjson.hpp>
 
-#include "hawkbit/HawkBitClient.h"
-#include "ls2/LS2Handler.h"
 #include "PolicyManager.h"
 #include "Setting.h"
+#include "hawkbit/HawkBitClient.h"
+#include "hawkbit/HawkBitInfo.h"
+#include "ls2/LS2Handler.h"
 #include "updater/FOSSInstaller.h"
+#include "util/Logger.h"
 
 using namespace std;
 using namespace pbnjson;
@@ -29,6 +31,17 @@ static GMainLoop *s_mainloop;
 void exitDaemon(int signo)
 {
     g_main_loop_quit(s_mainloop);
+}
+
+gboolean checkHawkBitInfoSet(gpointer data)
+{
+    Logger::info("Main", __FUNCTION__);
+    if (!HawkBitInfo::getInstance().isHawkBitInfoSet()) {
+        Logger::warning("Main", __FUNCTION__, "HawkBitInfo is NOT set. So terminating.");
+        g_main_loop_quit(s_mainloop);
+    }
+
+    return G_SOURCE_REMOVE;
 }
 
 int main(int argc, char* argv[])
@@ -46,9 +59,11 @@ int main(int argc, char* argv[])
     Setting::getInstance().initialize(s_mainloop);
     LS2Handler::getInstance().initialize(s_mainloop);
     // FOSSInstaller::getInstance().initialize(s_mainloop);
+    HawkBitInfo::getInstance().initialize(s_mainloop);
     HawkBitClient::getInstance().initialize(s_mainloop);
     PolicyManager::getInstance().initialize(s_mainloop);
 
+    g_timeout_add_seconds(10, checkHawkBitInfoSet, NULL);
     Logger::verbose("Main", "Start g_mainloop");
     g_main_loop_run(s_mainloop);
     Logger::verbose("Main", "Stop g_mainloop");
@@ -56,6 +71,7 @@ int main(int argc, char* argv[])
     // xxx: DON'T change finalize order.
     PolicyManager::getInstance().finalize();
     HawkBitClient::getInstance().finalize();
+    HawkBitInfo::getInstance().finalize();
     // FOSSInstaller::getInstance().finalize();
     LS2Handler::getInstance().finalize();
     Setting::getInstance().finalize();

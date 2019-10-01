@@ -40,7 +40,6 @@ private:
     SystemService();
 
     static const string SERVICE_NAME;
-    static const unsigned long LSCALL_TIMEOUT;
 
 };
 

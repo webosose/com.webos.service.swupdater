@@ -47,6 +47,7 @@ public:
 
     static bool _getStatus(LSHandle* sh, LSMessage* reply, void* ctx);
     bool getStatus(ConnectionManagerListener* listener);
+    bool getinfo(JValue& responsePayload);
 
 private:
     ConnectionManager();

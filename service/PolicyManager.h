@@ -25,12 +25,14 @@
 #include "interface/ISingleton.h"
 #include "ls2/ConnectionManager.h"
 #include "ls2/LS2Handler.h"
+#include "ls2/SettingsService.h"
 
 class PolicyManager : public ISingleton<PolicyManager>,
                       public IInitializable,
                       public ConnectionManagerListener,
                       public LS2HandlerListener,
-                      public HawkBitClientListener {
+                      public HawkBitClientListener,
+                      public SettingsServiceListener {
 friend ISingleton<PolicyManager>;
 public:
     static gboolean _tick(gpointer user_data);
@@ -48,7 +50,11 @@ public:
     // ConnectionManagerListener
     virtual void onGetStatusSubscription(pbnjson::JValue subscriptionPayload) override;
 
+    // SettingsServiceListener
+    virtual void onGetSystemSettingsSubscription(pbnjson::JValue subscriptionPayload) override;
+
     // LS2HandlerListener
+    virtual void onConnect(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onSetConfig(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onStart(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
@@ -81,6 +87,7 @@ private:
     // TODO this is a temp solution. it should be changed *queue* before polling
     bool m_pendingClearRequest;
 
+    bool m_isAutoUpdateOn;
 };
 
 #endif /* POLICYMANAGER_H_ */

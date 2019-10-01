@@ -20,7 +20,6 @@
 #include "util/Logger.h"
 
 const string SystemService::SERVICE_NAME = "com.webos.service.systemservice";
-const unsigned long SystemService::LSCALL_TIMEOUT = 5000;
 
 SystemService::SystemService()
 {
@@ -48,7 +47,7 @@ bool SystemService::queryOSInfo(JValue& responsePayload)
             requestPayload.stringify().c_str()
         );
         LS2Handler::writeBLog("Call", "/osInfo/query", requestPayload);
-        LS::Message reply = call.get(LSCALL_TIMEOUT);
+        LS::Message reply = call.get(LS2Handler::LSCALL_TIMEOUT);
         if (!reply) {
             Logger::error(getClassName(), "Timeout OS info query");
             return false;
@@ -81,7 +80,7 @@ bool SystemService::queryDeviceInfo(JValue& responsePayload)
             requestPayload.stringify().c_str()
         );
         LS2Handler::writeBLog("Call", "/deviceInfo/query", requestPayload);
-        LS::Message reply = call.get(LSCALL_TIMEOUT);
+        LS::Message reply = call.get(LS2Handler::LSCALL_TIMEOUT);
         if (!reply) {
             Logger::error(getClassName(), "Timeout device info query");
             return false;

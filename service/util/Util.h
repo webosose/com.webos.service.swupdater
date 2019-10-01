@@ -29,6 +29,8 @@ public:
     static bool isFileExist(const string& filename);
     static bool touchFile(const string& filename);
     static bool removeFile(const string& filename);
+    static bool writeFile(const string& filename, const string& contents);
+    static bool makeDir(const string& dir);
     static bool reboot();
 };
 

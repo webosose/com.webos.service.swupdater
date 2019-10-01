@@ -22,18 +22,21 @@
 #include "ls2/AppInstaller.h"
 #include "ls2/ConnectionManager.h"
 #include "ls2/NotificationManager.h"
+#include "ls2/SettingsService.h"
 #include "ls2/SystemService.h"
 #include "util/Logger.h"
 
+const unsigned long LS2Handler::LSCALL_TIMEOUT = 5000;
 const string LS2Handler::NAME = "com.webos.service.swupdater";
 const LSMethod LS2Handler::ROOT_METHODS[] = {
-    { "getStatus", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "setConfig", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "start", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "pause", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "resume", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-    { "cancel", LS2Handler::onRequest , LUNA_METHOD_FLAGS_NONE },
-        { 0, 0 , LUNA_METHOD_FLAGS_NONE }
+    { "connect", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "getStatus", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "setConfig", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "start", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "pause", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "resume", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "cancel", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { 0, 0, LUNA_METHOD_FLAGS_NONE }
 };
 
 bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
@@ -61,6 +64,8 @@ bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
 
         if (LS2Handler::getInstance().m_listener == nullptr) {
             responsePayload.put("errorText", "API handler is null");
+        } else if (kind == "/connect") {
+            PolicyManager::getInstance().onConnect(request, requestPayload, responsePayload);
         } else if (kind == "/getStatus") {
             PolicyManager::getInstance().onGetStatus(request, requestPayload, responsePayload);
         } else if (kind == "/setConfig") {
@@ -99,12 +104,14 @@ bool LS2Handler::onInitialization()
     AppInstaller::getInstance().initialize(m_mainloop);
     ConnectionManager::getInstance().initialize(m_mainloop);
     NotificationManager::getInstance().initialize(m_mainloop);
+    SettingsService::getInstance().initialize(m_mainloop);
 
     return true;
 }
 
 bool LS2Handler::onFinalization()
 {
+    SettingsService::getInstance().finalize();
     NotificationManager::getInstance().finalize();
     ConnectionManager::getInstance().finalize();
     AppInstaller::getInstance().finalize();

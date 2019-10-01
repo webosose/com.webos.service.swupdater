@@ -1,4 +1,4 @@
 [D-BUS Service]
 Name=com.webos.service.swupdater
 Exec=@WEBOS_INSTALL_SBINDIR@/swupdater
-Type=static
+Type=dynamic

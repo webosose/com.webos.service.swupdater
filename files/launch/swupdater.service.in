@@ -16,13 +16,13 @@
 
 [Unit]
 Description=webos - "%n"
+ConditionPathExists=@WEBOS_INSTALL_PREFERENCESDIR@/com.webos.service.swupdater/hawkBitInfo.json
 Requires=ls-hubd.service wpa-supplicant.service
 After=ls-hubd.service wpa-supplicant.service
 
 [Service]
-Type=simple
+Type=oneshot
 OOMScoreAdjust=-1000
 EnvironmentFile=-/var/systemd/system/env/swupdater.env
-ExecStartPre=/bin/sleep 5
-ExecStart=@WEBOS_INSTALL_SBINDIR@/swupdater
-Restart=on-failure
+ExecStart=/usr/bin/luna-send -n 1 -f luna://com.webos.service.swupdater/com/palm/luna/private/ping '{}'
+RemainAfterExit=yes
