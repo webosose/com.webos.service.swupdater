@@ -330,10 +330,14 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
     m_currentAction->fromJson(responsePayload);
 
     // process actionHistory
+    string messageStr;
+    JValue message;
     if (JValueUtil::hasKey(responsePayload, "actionHistory", "messages") &&
         responsePayload["actionHistory"]["messages"].isArray() &&
-        responsePayload["actionHistory"]["messages"].arraySize() > 0) {
-        JValue message = JDomParser::fromString(responsePayload["actionHistory"]["messages"][0].asString());
+        responsePayload["actionHistory"]["messages"].arraySize() > 0 &&
+        responsePayload["actionHistory"]["messages"][0].asString(messageStr) == CONV_OK &&
+        messageStr.find("Auto assignment by target filter") == string::npos && // set by hawkBit
+        !(message = JDomParser::fromString(messageStr)).isNull()) {
         Logger::info(getClassName(), "ActionHistory", message.stringify());
         // restore previous proceeding message
         m_proceedingJson = message.duplicate();
