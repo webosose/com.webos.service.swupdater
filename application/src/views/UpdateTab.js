@@ -45,10 +45,10 @@ class UpdateTab extends React.Component {
         const softwareModules = res.softwareModules || [];
 
         if (id !== ID_NONE && this.state.id === ID_NONE) {
-            createToast(`Update available<br> ${softwareModules[0].name} (v${softwareModules[0].version})`);
+            // createToast(`Update available<br> ${softwareModules[0].name} (${softwareModules[0].version})`);
         }
         if (status === STATUS_COMPLETED && this.state.status !== STATUS_COMPLETED) {
-            createToast(`Update completed<br> ${softwareModules[0].name} (v${softwareModules[0].version})`);
+            // createToast(`Update completed<br> ${softwareModules[0].name} (${softwareModules[0].version})`);
         }
 
         this.setState({
@@ -56,6 +56,13 @@ class UpdateTab extends React.Component {
             status: status,
             softwareModules: softwareModules,
         });
+    }
+
+    componentDidMount() {
+        const {serverStatus} = this.props;
+        if (serverStatus && serverStatus.connected) {
+            this.getStatus = subscribe(URI_SERVICE_SWUPDATER, 'getStatus', {}, this.onGetStatus);
+        }
     }
 
     componentWillUnmount() {

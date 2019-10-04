@@ -103,7 +103,8 @@ class HawkBitTab extends React.Component {
     }
 
     onConnectClick() {
-        const {deviceId, deviceIdToggle, address, token, tokenToggle, username, password} = this.state;
+        const {deviceIdToggle, address, token, tokenToggle, username, password} = this.state;
+        const deviceId = deviceIdToggle ? '' : this.state.deviceId;
 
         if (tokenToggle) {
             var xmlHttp = new window.XMLHttpRequest();
@@ -113,7 +114,7 @@ class HawkBitTab extends React.Component {
                     let response = JSON.parse(xmlHttp.responseText);
                     let token = response["authentication.gatewaytoken.key"].value;
                     call(URI_SERVICE_SWUPDATER, "connect", {
-                        deviceId: deviceIdToggle ? '' : deviceId,
+                        deviceId: deviceId,
                         address: address,
                         token: token,
                     }, this.onConnect);

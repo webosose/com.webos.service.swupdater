@@ -62,7 +62,9 @@ bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
         before(request, requestPayload, responsePayload);
         string kind = request.getKind();
 
-        if (LS2Handler::getInstance().m_listener == nullptr) {
+        if (requestPayload.isNull()) {
+            responsePayload.put("errorText", "Json parsing error");
+        } else if (LS2Handler::getInstance().m_listener == nullptr) {
             responsePayload.put("errorText", "API handler is null");
         } else if (kind == "/connect") {
             PolicyManager::getInstance().onConnect(request, requestPayload, responsePayload);
