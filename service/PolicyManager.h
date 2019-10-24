@@ -32,7 +32,8 @@ class PolicyManager : public ISingleton<PolicyManager>,
                       public ConnectionManagerListener,
                       public LS2HandlerListener,
                       public HawkBitClientListener,
-                      public SettingsServiceListener {
+                      public SettingsServiceListener,
+                      public DeploymentActionCompositeListener {
 friend ISingleton<PolicyManager>;
 public:
     static gboolean _tick(gpointer user_data);
@@ -57,16 +58,23 @@ public:
     virtual void onConnect(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onSetConfig(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onStart(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onPause(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onResume(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onCancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onStartDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
 
     // HawkBitClientListener
     virtual void onCancellationAction(JValue& responsePayload) override;
     virtual void onInstallationAction(JValue& responsePayload) override;
     virtual void onPollingSleepAction(int seconds) override;
     virtual void onSettingConfigData() override;
+
+    // DeploymentActionCompositeListener
+    virtual void onChangedStatus(DeploymentActionComposite* deploymentAction) override;
+    virtual void onCompletedDownload(DeploymentActionComposite* deploymentAction) override;
+    virtual void onCompletedInstall(DeploymentActionComposite* deploymentAction) override;
+    virtual void onFailedDownload(DeploymentActionComposite* deploymentAction) override;
+    virtual void onFailedInstall(DeploymentActionComposite* deploymentAction) override;
 
 private:
     PolicyManager();

@@ -82,6 +82,7 @@ bool SoftwareModuleComposite::fromJson(const JValue& json)
     if (json.hasKey("artifacts") && json["artifacts"].isArray()) {
         for (JValue artifact : json["artifacts"].items()) {
             shared_ptr<ArtifactLeaf> ptr = make_shared<ArtifactLeaf>();
+            ptr->setListener(this);
             ptr->fromJson(artifact);
             if (m_metadata.isValid())
                 ptr->setMetadata(m_metadata);
@@ -110,6 +111,82 @@ bool SoftwareModuleComposite::toJson(JValue& json)
         artifacts.append(artifact);
     }
     json.put("artifacts", artifacts);
+    return true;
+}
+
+void SoftwareModuleComposite::onChangedStatus(ArtifactLeaf* artifact)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    if (m_listener)
+        m_listener->onChangedStatus(this);
+}
+
+void SoftwareModuleComposite::onCompletedDownload(ArtifactLeaf* artifact)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__, to_string(m_current));
+
+    m_current++;
+    if (m_current < m_children.size()) {
+        if (!m_children[m_current]->startDownload()) {
+            onFailedDownload((ArtifactLeaf*)m_children[m_current].get());
+        }
+        return;
+    }
+
+    if (m_listener)
+        m_listener->onCompletedDownload(this);
+}
+
+void SoftwareModuleComposite::onCompletedInstall(ArtifactLeaf* artifact)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+}
+
+void SoftwareModuleComposite::onFailedDownload(ArtifactLeaf* artifact)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    if (m_listener)
+        m_listener->onFailedDownload(this);
+}
+
+void SoftwareModuleComposite::onFailedInstall(ArtifactLeaf* artifact)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+}
+
+bool SoftwareModuleComposite::startDownload()
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    m_current = 0;
+    return m_children[m_current]->startDownload();
+}
+
+bool SoftwareModuleComposite::pauseDownload()
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    return m_children[m_current]->pauseDownload();
+}
+
+bool SoftwareModuleComposite::resumeDownload()
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    return m_children[m_current]->resumeDownload();
+}
+
+bool SoftwareModuleComposite::cancelDownload()
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    m_current = -1;
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        (void) (*it)->cancelDownload();
+    }
+
     return true;
 }
 

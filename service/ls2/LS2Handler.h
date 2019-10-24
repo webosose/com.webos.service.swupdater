@@ -39,10 +39,10 @@ public:
     virtual void onConnect(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
     virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
     virtual void onSetConfig(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
-    virtual void onStart(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
-    virtual void onPause(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
-    virtual void onResume(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
-    virtual void onCancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onStartDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
 
 };
 

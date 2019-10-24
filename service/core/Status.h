@@ -30,6 +30,15 @@ enum StatusType {
     StatusType_CANCELED,
     StatusType_COMPLETED,
     StatusType_FAILED,
+    // TODO rename
+    ST_NONE,
+    ST_IDLE,
+    ST_DOWNLOAD,
+    ST_PAUSED,
+    ST_DOWNLOAD_DONE,
+    ST_INSTALL,
+    ST_INSTALL_DONE,
+    ST_FAILED,
 };
 
 enum TransitionType {
@@ -65,6 +74,31 @@ public:
             return "completed";
 
         case StatusType_FAILED:
+            return "failed";
+
+        // TODO rename
+        case ST_NONE:
+            return "none";
+
+        case ST_IDLE:
+            return "idle";
+
+        case ST_DOWNLOAD:
+            return "download";
+
+        case ST_PAUSED:
+            return "paused";
+
+        case ST_DOWNLOAD_DONE:
+            return "download-done";
+
+        case ST_INSTALL:
+            return "install";
+
+        case ST_INSTALL_DONE:
+            return "install-done";
+
+        case ST_FAILED:
             return "failed";
         }
         return "unknown";
@@ -227,6 +261,11 @@ public:
             return fail();
         }
         return false;
+    }
+
+    void setStatus(enum StatusType status)
+    {
+        m_status = status;
     }
 
     enum StatusType getStatus()

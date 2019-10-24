@@ -38,11 +38,16 @@ public:
     virtual bool cancel() override;
     virtual bool setWaitingReboot() override;
 
+    virtual bool startDownload() {}
+    virtual bool pauseDownload() {}
+    virtual bool resumeDownload() {}
+    virtual bool cancelDownload() {}
+
 protected:
     void enableCallback();
     void disbleCallback();
 
-    deque<shared_ptr<Component>> m_children;
+    deque<shared_ptr<Composite>> m_children;
 
     unsigned int m_current;
 

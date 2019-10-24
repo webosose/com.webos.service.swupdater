@@ -25,6 +25,8 @@
 #include "core/install/impl/ArtifactLeaf.h"
 #include "core/Status.h"
 #include "interface/IClassName.h"
+#include "interface/IListener.h"
+#include "interface/ISerializable.h"
 
 using namespace std;
 using namespace pbnjson;
@@ -36,8 +38,24 @@ enum SoftwareModuleType {
     SoftwareModuleType_Mixed
 };
 
+class SoftwareModuleComposite;
+
+class SoftwareModuleCompositeListener {
+public:
+    SoftwareModuleCompositeListener() {}
+    virtual ~SoftwareModuleCompositeListener() {}
+
+    virtual void onChangedStatus(SoftwareModuleComposite* softwareModule) = 0;
+    virtual void onCompletedDownload(SoftwareModuleComposite* softwareModule) = 0;
+    virtual void onCompletedInstall(SoftwareModuleComposite* softwareModule) = 0;
+    virtual void onFailedDownload(SoftwareModuleComposite* softwareModule) = 0;
+    virtual void onFailedInstall(SoftwareModuleComposite* softwareModule) = 0;
+};
+
 class SoftwareModuleComposite : public IClassName,
-                                public Composite {
+                                public Composite,
+                                public ArtifactLeafListener,
+                                public IListener<SoftwareModuleCompositeListener> {
 public:
     static string toString(enum SoftwareModuleType& type);
     static SoftwareModuleType toEnum(const string& type);
@@ -48,6 +66,19 @@ public:
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
     virtual bool toJson(JValue& json) override;
+
+    // ArtifactLeafListener
+    virtual void onChangedStatus(ArtifactLeaf* artifact) override;
+    virtual void onCompletedDownload(ArtifactLeaf* artifact) override;
+    virtual void onCompletedInstall(ArtifactLeaf* artifact) override;
+    virtual void onFailedDownload(ArtifactLeaf* artifact) override;
+    virtual void onFailedInstall(ArtifactLeaf* artifact) override;
+
+    // LS2 methods : Composite
+    virtual bool startDownload() override;
+    virtual bool pauseDownload() override;
+    virtual bool resumeDownload() override;
+    virtual bool cancelDownload() override;
 
     const enum SoftwareModuleType getType()
     {

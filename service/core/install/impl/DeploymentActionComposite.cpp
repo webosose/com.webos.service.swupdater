@@ -26,6 +26,7 @@ DeploymentActionComposite::DeploymentActionComposite()
     : AbsAction()
     , m_isForceDownload(false)
     , m_isForceUpdate(false)
+    , m_status("XXX_name")
 {
     setClassName("DeploymentActionComposite");
     m_status.setName("DeploymentActionComposite");
@@ -81,6 +82,7 @@ bool DeploymentActionComposite::fromJson(const JValue& json)
 
     for (JValue chunk : json["deployment"]["chunks"].items()) {
         shared_ptr<SoftwareModuleComposite> module = make_shared<SoftwareModuleComposite>();
+        module->setListener(this);
         module->fromJson(chunk);
         if (module->getType() == SoftwareModuleType_OS) // process OS type first
             m_children.push_front(module);
@@ -88,12 +90,15 @@ bool DeploymentActionComposite::fromJson(const JValue& json)
             m_children.push_back(module);
     }
     enableCallback();
+
+    setStatus(ST_IDLE);
     return true;
 }
 
 bool DeploymentActionComposite::toJson(JValue& json)
 {
     Component::toJson(json);
+    json.put("status", m_status.getStatusStr());
 
     json.put("id", m_id);
 
@@ -104,6 +109,127 @@ bool DeploymentActionComposite::toJson(JValue& json)
         softwareModules.append(softwareModule);
     }
     json.put("softwareModules", softwareModules);
+    return true;
+}
+
+void DeploymentActionComposite::onChangedStatus(SoftwareModuleComposite* softwareModule)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    if (m_listener)
+        m_listener->onChangedStatus(this);
+}
+
+void DeploymentActionComposite::onCompletedDownload(SoftwareModuleComposite* softwareModule)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__, to_string(m_current));
+
+    m_current++;
+    if (m_current < m_children.size()) {
+        if (!m_children[m_current]->startDownload()) {
+            onFailedDownload((SoftwareModuleComposite*)m_children[m_current].get());
+        }
+        return;
+    }
+
+    setStatus(ST_DOWNLOAD_DONE);
+
+    if (m_listener)
+        m_listener->onCompletedDownload(this);
+}
+
+void DeploymentActionComposite::onCompletedInstall(SoftwareModuleComposite* softwareModule)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+}
+
+void DeploymentActionComposite::onFailedDownload(SoftwareModuleComposite* softwareModule)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    setStatus(ST_FAILED);
+
+    if (m_listener)
+        m_listener->onFailedDownload(this);
+}
+
+void DeploymentActionComposite::onFailedInstall(SoftwareModuleComposite* softwareModule)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+}
+
+bool DeploymentActionComposite::startDownload()
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    if (m_status.getStatus() == ST_DOWNLOAD)
+        return true;
+    if (m_status.getStatus() != ST_IDLE &&
+        m_status.getStatus() != ST_PAUSED &&
+        m_status.getStatus() != ST_DOWNLOAD_DONE)
+        return false;
+
+    m_current = 0;
+    if (!m_children[m_current]->startDownload())
+        return false;
+
+    setStatus(ST_DOWNLOAD);
+    return true;
+}
+
+bool DeploymentActionComposite::pauseDownload()
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    if (m_status.getStatus() == ST_PAUSED)
+        return true;
+    if (m_status.getStatus() != ST_DOWNLOAD)
+        return false;
+    if (m_current < 0 || m_current >= m_children.size())
+        return false;
+
+    if (!m_children[m_current]->pauseDownload())
+        return false;
+
+    setStatus(ST_PAUSED);
+    return true;
+}
+
+bool DeploymentActionComposite::resumeDownload()
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    if (m_status.getStatus() == ST_DOWNLOAD)
+        return true;
+    if (m_status.getStatus() != ST_PAUSED)
+        return false;
+    if (m_current < 0 || m_current >= m_children.size())
+        return false;
+
+    if (!m_children[m_current]->resumeDownload())
+        return false;
+
+    setStatus(ST_DOWNLOAD);
+    return true;
+}
+
+bool DeploymentActionComposite::cancelDownload()
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    if (m_status.getStatus() == ST_IDLE)
+        return true;
+    if (m_status.getStatus() != ST_DOWNLOAD &&
+        m_status.getStatus() != ST_PAUSED &&
+        m_status.getStatus() != ST_DOWNLOAD_DONE)
+        return false;
+
+    m_current = -1;
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        (void) (*it)->cancelDownload();
+    }
+
+    setStatus(ST_IDLE);
     return true;
 }
 
@@ -194,4 +320,14 @@ bool DeploymentActionComposite::createRebootAlert(SoftwareModuleType type)
     buttons.append(button);
 
     return NotificationManager::getInstance().createAlert(title, message, buttons);
+}
+
+bool DeploymentActionComposite::setStatus(enum StatusType status)
+{
+    m_status.setStatus(status);
+
+    if (m_listener)
+        m_listener->onChangedStatus(this);
+
+    return true;
 }

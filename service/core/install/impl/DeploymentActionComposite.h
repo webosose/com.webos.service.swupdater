@@ -24,11 +24,30 @@
 #include "core/AbsAction.h"
 #include "core/install/design/Composite.h"
 #include "core/install/impl/SoftwareModuleComposite.h"
+#include "interface/IClassName.h"
+#include "interface/IListener.h"
+#include "interface/ISerializable.h"
 
 using namespace std;
 
+class DeploymentActionComposite;
+
+class DeploymentActionCompositeListener {
+public:
+    DeploymentActionCompositeListener() {}
+    virtual ~DeploymentActionCompositeListener() {}
+
+    virtual void onChangedStatus(DeploymentActionComposite* deploymentAction) = 0;
+    virtual void onCompletedDownload(DeploymentActionComposite* deploymentAction) = 0;
+    virtual void onCompletedInstall(DeploymentActionComposite* deploymentAction) = 0;
+    virtual void onFailedDownload(DeploymentActionComposite* deploymentAction) = 0;
+    virtual void onFailedInstall(DeploymentActionComposite* deploymentAction) = 0;
+};
+
 class DeploymentActionComposite : public AbsAction,
-                                  public Composite {
+                                  public Composite,
+                                  public SoftwareModuleCompositeListener,
+                                  public IListener<DeploymentActionCompositeListener> {
 public:
     DeploymentActionComposite();
     virtual ~DeploymentActionComposite();
@@ -38,6 +57,19 @@ public:
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
     virtual bool toJson(JValue& json) override;
+
+    // SoftwareModuleCompositeListener
+    virtual void onChangedStatus(SoftwareModuleComposite* softwareModule) override;
+    virtual void onCompletedDownload(SoftwareModuleComposite* softwareModule) override;
+    virtual void onCompletedInstall(SoftwareModuleComposite* softwareModule) override;
+    virtual void onFailedDownload(SoftwareModuleComposite* softwareModule) override;
+    virtual void onFailedInstall(SoftwareModuleComposite* softwareModule) override;
+
+    // LS2 methods : Composite
+    virtual bool startDownload() override;
+    virtual bool pauseDownload() override;
+    virtual bool resumeDownload() override;
+    virtual bool cancelDownload() override;
 
     const bool isForceDownload()
     {
@@ -55,8 +87,12 @@ public:
     bool createRebootAlert(SoftwareModuleType type);
 
 private:
+    bool setStatus(enum StatusType status);
+
     bool m_isForceDownload;
     bool m_isForceUpdate;
+
+    Status m_status;
 
 };
 

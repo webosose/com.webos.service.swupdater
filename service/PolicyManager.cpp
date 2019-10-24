@@ -242,46 +242,50 @@ void PolicyManager::onSetConfig(LS::Message& request, JValue& requestPayload, JV
     HawkBitClient::getInstance().putConfigData(data);
 }
 
-void PolicyManager::onStart(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+void PolicyManager::onStartDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
         responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->start()) {
+    if (!m_currentAction->startDownload()) {
+        responsePayload.put("errorText", "Cannot start download");
         return;
     }
 }
 
-void PolicyManager::onPause(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+void PolicyManager::onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
         responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->pause()) {
+    if (!m_currentAction->pauseDownload()) {
+        responsePayload.put("errorText", "Cannot pause download");
         return;
     }
 }
 
-void PolicyManager::onResume(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+void PolicyManager::onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
         responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->resume()) {
+    if (!m_currentAction->resumeDownload()) {
+        responsePayload.put("errorText", "Cannot resume download");
         return;
     }
 }
 
-void PolicyManager::onCancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+void PolicyManager::onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (!m_currentAction) {
         responsePayload.put("errorText", "No active deployment action");
         return;
     }
-    if (!m_currentAction->cancel()) {
+    if (!m_currentAction->cancelDownload()) {
+        responsePayload.put("errorText", "Cannot cancel download");
         return;
     }
 }
@@ -327,7 +331,13 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
         return;
     }
     m_currentAction = make_shared<DeploymentActionComposite>();
+    m_currentAction->setListener(this);
     m_currentAction->fromJson(responsePayload);
+
+    // XXX: Temporarily added for {start,pause,resume,cancel} Download implementation
+    if (m_currentAction->isForceDownload())
+        m_currentAction->startDownload();
+    return;
 
     // process actionHistory
     string messageStr;
@@ -401,6 +411,45 @@ void PolicyManager::onSettingConfigData()
     configData.put("webos_build_id", osInfo["webos_build_id"]);
     configData.put("webos_build_datetime", osInfo["webos_build_datetime"]);
     HawkBitClient::getInstance().putConfigData(configData);
+}
+
+void PolicyManager::onChangedStatus(DeploymentActionComposite* deploymentAction)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    postStatus();
+}
+
+void PolicyManager::onCompletedDownload(DeploymentActionComposite* deploymentAction)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+}
+
+void PolicyManager::onCompletedInstall(DeploymentActionComposite* deploymentAction)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    m_pendingClearRequest = true;
+    HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), true);
+    Logger::info(getClassName(), "Install completed.");
+}
+
+void PolicyManager::onFailedDownload(DeploymentActionComposite* deploymentAction)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    m_pendingClearRequest = true;
+    HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), false);
+    Logger::info(getClassName(), "Download failed.");
+}
+
+void PolicyManager::onFailedInstall(DeploymentActionComposite* deploymentAction)
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    m_pendingClearRequest = true;
+    HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), false);
+    Logger::info(getClassName(), "Install failed.");
 }
 
 void PolicyManager::postStatus()

@@ -32,10 +32,10 @@ const LSMethod LS2Handler::ROOT_METHODS[] = {
     { "connect", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
     { "getStatus", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
     { "setConfig", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
-    { "start", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
-    { "pause", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
-    { "resume", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
-    { "cancel", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "startDownload", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "pauseDownload", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "resumeDownload", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "cancelDownload", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
     { 0, 0, LUNA_METHOD_FLAGS_NONE }
 };
 
@@ -72,14 +72,14 @@ bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
             PolicyManager::getInstance().onGetStatus(request, requestPayload, responsePayload);
         } else if (kind == "/setConfig") {
             PolicyManager::getInstance().onSetConfig(request, requestPayload, responsePayload);
-        } else if (kind == "/start") {
-            PolicyManager::getInstance().onStart(request, requestPayload, responsePayload);
-        } else if (kind == "/pause") {
-            PolicyManager::getInstance().onPause(request, requestPayload, responsePayload);
-        } else if (kind == "/resume") {
-            PolicyManager::getInstance().onResume(request, requestPayload, responsePayload);
-        } else if (kind == "/cancel") {
-            PolicyManager::getInstance().onCancel(request, requestPayload, responsePayload);
+        } else if (kind == "/startDownload") {
+            PolicyManager::getInstance().onStartDownload(request, requestPayload, responsePayload);
+        } else if (kind == "/pauseDownload") {
+            PolicyManager::getInstance().onPauseDownload(request, requestPayload, responsePayload);
+        } else if (kind == "/resumeDownload") {
+            PolicyManager::getInstance().onResumeDownload(request, requestPayload, responsePayload);
+        } else if (kind == "/cancelDownload") {
+            PolicyManager::getInstance().onCancelDownload(request, requestPayload, responsePayload);
         } else {
             responsePayload.put("errorText", "Please extend API handlers");
         }

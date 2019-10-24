@@ -19,6 +19,7 @@
 #include "PolicyManager.h"
 #include "updater/AbsUpdater.h"
 #include "util/JValueUtil.h"
+#include "util/Util.h"
 
 // TODO change to /media/internal/downloads and delete downloaded files.
 const string ArtifactLeaf::DIRNAME = "/home/root/";
@@ -51,7 +52,9 @@ void ArtifactLeaf::onProgressDownload(HttpFile* call)
     if ((m_curSize - m_prevSize) > (1024 * 512)) {
         Logger::debug(getClassName(), m_fileName, std::string(__FUNCTION__) + " (" + to_string(m_curSize) + "/" + to_string(m_total) + ")");
         // TODO Need to change progress handler
-        PolicyManager::getInstance().onRequestProgressUpdate();
+        // PolicyManager::getInstance().onRequestProgressUpdate();
+        if (m_listener)
+            m_listener->onChangedStatus(this);
         m_prevSize = m_curSize;
     }
 }
@@ -61,45 +64,16 @@ void ArtifactLeaf::onCompletedDownload(HttpFile* call)
     Logger::info(getClassName(), m_fileName, __FUNCTION__);
     m_curSize = call->getFilesize();
 
-    if (m_status.getStatus() != StatusType_RUNNING) {
-        return;
-    }
-
-    if (getFileExtension() == "ipk") {
-        string installer = JValueUtil::getMeta(m_metadata, "installer");
-        if (installer.empty() || installer == "appInstallService") {
-            // TODO: Following is temp code for demo. we need to find better way
-            string command = "opkg remove " + getIpkName();
-            system(command.c_str());
-            AppInstaller::getInstance().install(getIpkName(), getDownloadName(), this);
-            return;
-        } else if (installer == "opkg") {
-            AbsUpdaterFactory::getInstance().setReadWriteMode();
-            string command = "opkg install --force-reinstall --force-downgrade " + getDownloadName();
-            if (system(command.c_str()) == 0)
-                completeStatus(true);
-            else
-                completeStatus(false);
-            return;
-        }
-    } else if (getFileExtension() == "delta") {
-        if (AbsUpdaterFactory::getInstance().deploy(getDownloadName())) {
-            AbsUpdaterFactory::getInstance().printDebug();
-            completeStatus(true);
-        } else {
-            completeStatus(false);
-        }
-        return;
-    }
-
-    Logger::warning(getClassName(), m_fileName, "Not supported file extension");
-    completeStatus(true);
+    if (m_listener)
+        m_listener->onCompletedDownload(this);
 }
 
 void ArtifactLeaf::onFailedDownload(HttpFile* call)
 {
     Logger::error(getClassName(), m_fileName, __FUNCTION__);
-    m_status.fail();
+
+    if (m_listener)
+        m_listener->onFailedDownload(this);
 }
 
 void ArtifactLeaf::onInstallSubscription(pbnjson::JValue subscriptionPayload)
@@ -122,8 +96,8 @@ void ArtifactLeaf::onInstallSubscription(pbnjson::JValue subscriptionPayload)
 
 bool ArtifactLeaf::prepare()
 {
-    if (!Leaf::prepare())
-        return false;
+//    if (!Leaf::prepare())
+//        return false;
     m_httpFile = make_shared<HttpFile>();
     m_httpFile->open(MethodType_GET, m_url);
     m_httpFile->setFilename(getDownloadName());
@@ -131,45 +105,47 @@ bool ArtifactLeaf::prepare()
     return true;
 }
 
-bool ArtifactLeaf::start()
+bool ArtifactLeaf::startDownload()
 {
-    if (!Leaf::start())
-        return false;
-    if (!m_httpFile->send()) {
-        m_status.fail();
-        return false;
-    }
-    return true;
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    m_httpFile = make_shared<HttpFile>();
+    m_httpFile->open(MethodType_GET, m_url);
+    m_httpFile->setFilename(getDownloadName());
+    m_httpFile->setListener(this);
+    // TODO return errorCode
+    return m_httpFile->send();
 }
 
-bool ArtifactLeaf::pause()
+bool ArtifactLeaf::pauseDownload()
 {
-    if (!Leaf::pause())
-        return false;
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
     m_httpFile = nullptr;
     return true;
 }
 
-bool ArtifactLeaf::resume()
+bool ArtifactLeaf::resumeDownload()
 {
-    if (!Leaf::resume())
-        return false;
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
     m_httpFile = make_shared<HttpFile>();
     m_httpFile->open(MethodType_GET, m_url);
     m_httpFile->setFilename(getDownloadName());
     m_httpFile->setListener(this);
-    if (!m_httpFile->send()) {
-        m_status.fail();
-        return false;
-    }
-    return true;
+    // TODO return errorCode
+    return m_httpFile->send();
 }
 
-bool ArtifactLeaf::cancel()
+bool ArtifactLeaf::cancelDownload()
 {
-    if (!Leaf::cancel())
-        return false;
-    // TODO download should be canceled
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    m_httpFile = nullptr;
+    if (Util::removeFile(getDownloadName())) {
+        m_curSize = 0;
+        m_prevSize = 0;
+    }
     return true;
 }
 
