@@ -70,6 +70,8 @@ public:
     virtual bool pauseDownload() override;
     virtual bool resumeDownload() override;
     virtual bool cancelDownload() override;
+    virtual bool startInstall() override;
+    virtual bool cancelInstall() override;
 
     const bool isForceDownload()
     {
@@ -83,11 +85,19 @@ public:
 
     bool isOnlyOSModuleCompleted();
     bool toProceedingJson(JValue& json);
-    bool restoreActionHistory(const JValue& json, bool isRebootDetected);
+    bool restoreActionHistory(const JValue& json);
     bool createRebootAlert(SoftwareModuleType type);
 
+    Status& getStatus()
+    {
+        return m_status;
+    }
+
 private:
-    bool setStatus(enum StatusType status);
+    bool setStatus(enum StatusType status, bool doFeedback = true);
+
+    static const string FILE_NON_VOLITILE_REBOOTCHECK;
+    static const string FILE_VOLITILE_REBOOTCHECK;
 
     bool m_isForceDownload;
     bool m_isForceUpdate;

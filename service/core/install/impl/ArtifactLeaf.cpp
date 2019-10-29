@@ -86,11 +86,13 @@ void ArtifactLeaf::onInstallSubscription(pbnjson::JValue subscriptionPayload)
 
     if (state == "installed") {
         getCall().cancel();
-        completeStatus(true);
+        if (m_listener)
+            m_listener->onCompletedInstall(this);
     } else if (state == "install failed") {
         Logger::error(getClassName(), m_fileName, "Failed to install artifact");
         getCall().cancel();
-        completeStatus(false);
+        if (m_listener)
+            m_listener->onFailedInstall(this);
     }
 }
 
@@ -146,6 +148,68 @@ bool ArtifactLeaf::cancelDownload()
         m_curSize = 0;
         m_prevSize = 0;
     }
+    return true;
+}
+
+bool ArtifactLeaf::startInstall()
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    // Wait for this deployment action's status to be "install" and posting "getStatus".
+    // Otherwise, "install" status comes after "onCompletedInstall" or "onFailedInstall".
+    return Util::async([=] {
+        if (Util::sha1(getDownloadName()) != m_sha1) {
+            Logger::warning(getClassName(), m_fileName, "Sha1 verification failed");
+            if (m_listener)
+                m_listener->onFailedInstall(this);
+            return true;
+        }
+
+        if (getFileExtension() == "ipk") {
+            string installer = JValueUtil::getMeta(m_metadata, "installer");
+            if (installer.empty() || installer == "appInstallService") {
+                // TODO: Following is temp code for demo. we need to find better way
+                string command = "opkg remove " + getIpkName();
+                system(command.c_str());
+                AppInstaller::getInstance().install(getIpkName(), getDownloadName(), this);
+                return true;
+            } else if (installer == "opkg") {
+                AbsUpdaterFactory::getInstance().setReadWriteMode();
+                string command = "opkg install --force-reinstall --force-downgrade " + getDownloadName();
+                if (system(command.c_str()) == 0) {
+                    if (m_listener)
+                        m_listener->onCompletedInstall(this);
+                } else {
+                    if (m_listener)
+                        m_listener->onFailedInstall(this);
+                }
+                return true;
+            }
+        } else if (getFileExtension() == "delta") {
+            if (AbsUpdaterFactory::getInstance().deploy(getDownloadName())) {
+                AbsUpdaterFactory::getInstance().printDebug();
+                if (m_listener)
+                    m_listener->onCompletedInstall(this);
+            } else {
+                if (m_listener)
+                    m_listener->onFailedInstall(this);
+            }
+            return true;
+        }
+
+        Logger::warning(getClassName(), m_fileName, "Not supported file extension");
+        if (m_listener)
+            m_listener->onCompletedInstall(this);
+        return true;
+    }, 50);
+}
+
+bool ArtifactLeaf::cancelInstall()
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    // TODO OSTree::undeploy
+
     return true;
 }
 

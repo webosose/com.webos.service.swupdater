@@ -268,6 +268,26 @@ public:
         m_status = status;
     }
 
+    void setStatus(const string& statusStr)
+    {
+        if (statusStr == toString(ST_IDLE))
+            m_status = ST_IDLE;
+        else if (statusStr == toString(ST_DOWNLOAD))
+            m_status = ST_DOWNLOAD;
+        else if (statusStr == toString(ST_PAUSED))
+            m_status = ST_PAUSED;
+        else if (statusStr == toString(ST_DOWNLOAD_DONE))
+            m_status = ST_DOWNLOAD;
+        else if (statusStr == toString(ST_INSTALL))
+            m_status = ST_INSTALL;
+        else if (statusStr == toString(ST_INSTALL_DONE))
+            m_status = ST_INSTALL_DONE;
+        else if (statusStr == toString(ST_FAILED))
+            m_status = ST_FAILED;
+        else
+            m_status = ST_NONE;
+    }
+
     enum StatusType getStatus()
     {
         return m_status;

@@ -43,7 +43,8 @@ public:
     virtual void onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
     virtual void onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
     virtual void onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
-
+    virtual void onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
+    virtual void onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) = 0;
 };
 
 class LS2Handler : public Handle,

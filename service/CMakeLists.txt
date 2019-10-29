@@ -56,6 +56,10 @@ pkg_check_modules(PMLOG PmLogLib)
 include_directories(${PMLOG_INCLUDE_DIRS})
 webos_add_compiler_flags(ALL ${PMLOG_CFLAGS_OTHER})
 
+pkg_check_modules(BOOST Boost)
+include_directories(${Boost_INCLUDE_DIRS})
+webos_add_compiler_flags(ALL ${Boost_CFLAGS_OTHER})
+
 if (LIBOSTREE)
     pkg_check_modules(OSTREE REQUIRED ostree-1)
     include_directories(${OSTREE_INCLUDE_DIRS})
@@ -86,6 +90,7 @@ set(LIBS
     ${PMLOG_LDFLAGS}
     ${PBNJSON_C_LDFLAGS}
     ${PBNJSON_CPP_LDFLAGS}
+    ${Boost_LDFLAGS}
 )
 if (LIBOSTREE)
     set (LIBS ${LIBS} ${OSTREE_LDFLAGS})

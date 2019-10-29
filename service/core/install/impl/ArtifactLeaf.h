@@ -69,6 +69,8 @@ public:
     virtual bool pauseDownload() override;
     virtual bool resumeDownload() override;
     virtual bool cancelDownload() override;
+    virtual bool startInstall() override;
+    virtual bool cancelInstall() override;
     virtual bool setWaitingReboot() override;
 
     // ISerializable

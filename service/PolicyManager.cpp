@@ -183,8 +183,11 @@ void PolicyManager::onGetSystemSettingsSubscription(pbnjson::JValue subscription
     if (hasAutoUpdate)
         m_isAutoUpdateOn = subscriptionPayload["settings"]["autoUpdate"].asBool();
     Logger::info(getClassName(), subscriptionPayload["settings"].stringify());
-    if (m_isAutoUpdateOn && m_currentAction && m_currentAction->getStatus().getStatus() == StatusType_READY) {
-        m_currentAction->start();
+    if (m_isAutoUpdateOn && m_currentAction) {
+        if (m_currentAction->getStatus().getStatus() == ST_IDLE)
+            m_currentAction->startDownload();
+        else if (m_currentAction->getStatus().getStatus() == ST_DOWNLOAD_DONE)
+            m_currentAction->startInstall();
     }
 }
 
@@ -290,6 +293,30 @@ void PolicyManager::onCancelDownload(LS::Message& request, JValue& requestPayloa
     }
 }
 
+void PolicyManager::onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+{
+    if (!m_currentAction) {
+        responsePayload.put("errorText", "No active deployment action");
+        return;
+    }
+    if (!m_currentAction->startInstall()) {
+        responsePayload.put("errorText", "Cannot start install");
+        return;
+    }
+}
+
+void PolicyManager::onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
+{
+    if (!m_currentAction) {
+        responsePayload.put("errorText", "No active deployment action");
+        return;
+    }
+    if (!m_currentAction->cancelInstall()) {
+        responsePayload.put("errorText", "Cannot cancel install");
+        return;
+    }
+}
+
 void PolicyManager::onCancellationAction(JValue& responsePayload)
 {
     string id;
@@ -304,14 +331,25 @@ void PolicyManager::onCancellationAction(JValue& responsePayload)
             return;
         }
 
-        if (m_currentAction->cancel()) {
+        bool isCanceled = true;
+        if (m_currentAction->getStatus().getStatus() == ST_INSTALL_DONE ||
+            (m_currentAction->getStatus().getStatus() == ST_INSTALL && !m_currentAction->cancelInstall())) {
+            isCanceled = false;
+        }
+        m_currentAction->cancelDownload();
+
+        if (isCanceled) {
             Logger::info(getClassName(), "Update is canceled");
+            HawkBitClient::getInstance().postCancellationAction(id, true);
         } else {
             Logger::info(getClassName(), "Failed to cancel update");
+            HawkBitClient::getInstance().postCancellationAction(id, false);
         }
         m_currentAction = nullptr;
         return;
     }
+
+    Logger::warning(getClassName(), __FUNCTION__, "Not implemented yet");
 }
 
 void PolicyManager::onInstallationAction(JValue& responsePayload)
@@ -334,11 +372,6 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
     m_currentAction->setListener(this);
     m_currentAction->fromJson(responsePayload);
 
-    // XXX: Temporarily added for {start,pause,resume,cancel} Download implementation
-    if (m_currentAction->isForceDownload())
-        m_currentAction->startDownload();
-    return;
-
     // process actionHistory
     string messageStr;
     JValue message;
@@ -348,29 +381,14 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
         responsePayload["actionHistory"]["messages"][0].asString(messageStr) == CONV_OK &&
         messageStr.find("Auto assignment by target filter") == string::npos && // set by hawkBit
         !(message = JDomParser::fromString(messageStr)).isNull()) {
-        Logger::info(getClassName(), "ActionHistory", message.stringify());
-        // restore previous proceeding message
-        m_proceedingJson = message.duplicate();
-        if (Util::isFileExist(FILE_NON_VOLITILE_REBOOTCHECK) &&
-            !Util::isFileExist(FILE_VOLITILE_REBOOTCHECK)) {
-            Logger::info(getClassName(), "Reboot detected!");
-            m_currentAction->restoreActionHistory(message, true);
-            AbsBootloader::getBootloader().setRebootOK();
-            Util::removeFile(FILE_NON_VOLITILE_REBOOTCHECK);
-        } else{
-            Logger::info(getClassName(), "Waiting reboot..");
-            m_currentAction->restoreActionHistory(message, false);
-        }
-        return;
+        Logger::info(getClassName(), "actionHistory", message.stringify());
+        if (m_currentAction->restoreActionHistory(message))
+            return;
+        Logger::warning(getClassName(), "Fail to restore actionHistory");
     }
 
-    if (!m_currentAction->prepare()) {
-        Logger::info(getClassName(), "Failed to prepare update");
-        return;
-    }
-    if (m_currentAction->isForceDownload() || m_isAutoUpdateOn) {
-        m_currentAction->start();
-    }
+    if (m_currentAction->isForceDownload() || m_isAutoUpdateOn)
+        m_currentAction->startDownload();
 }
 
 void PolicyManager::onPollingSleepAction(int seconds)
@@ -423,6 +441,11 @@ void PolicyManager::onChangedStatus(DeploymentActionComposite* deploymentAction)
 void PolicyManager::onCompletedDownload(DeploymentActionComposite* deploymentAction)
 {
     Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    Logger::info(getClassName(), "Download completed.");
+
+     if (m_currentAction->isForceUpdate() || m_isAutoUpdateOn)
+         m_currentAction->startInstall();
 }
 
 void PolicyManager::onCompletedInstall(DeploymentActionComposite* deploymentAction)

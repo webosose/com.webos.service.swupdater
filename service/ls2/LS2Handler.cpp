@@ -36,6 +36,8 @@ const LSMethod LS2Handler::ROOT_METHODS[] = {
     { "pauseDownload", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
     { "resumeDownload", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
     { "cancelDownload", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "startInstall", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
+    { "cancelInstall", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
     { 0, 0, LUNA_METHOD_FLAGS_NONE }
 };
 
@@ -80,6 +82,10 @@ bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
             PolicyManager::getInstance().onResumeDownload(request, requestPayload, responsePayload);
         } else if (kind == "/cancelDownload") {
             PolicyManager::getInstance().onCancelDownload(request, requestPayload, responsePayload);
+        } else if (kind == "/startInstall") {
+            PolicyManager::getInstance().onStartInstall(request, requestPayload, responsePayload);
+        } else if (kind == "/cancelInstall") {
+            PolicyManager::getInstance().onCancelInstall(request, requestPayload, responsePayload);
         } else {
             responsePayload.put("errorText", "Please extend API handlers");
         }

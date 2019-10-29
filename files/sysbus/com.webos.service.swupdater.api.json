@@ -6,6 +6,8 @@
         "com.webos.service.swupdater/startDownload",
         "com.webos.service.swupdater/pauseDownload",
         "com.webos.service.swupdater/resumeDownload",
-        "com.webos.service.swupdater/cancelDownload"
+        "com.webos.service.swupdater/cancelDownload",
+        "com.webos.service.swupdater/startInstall",
+        "com.webos.service.swupdater/cancelInstall"
     ]
 }

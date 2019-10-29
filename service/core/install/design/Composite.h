@@ -42,6 +42,8 @@ public:
     virtual bool pauseDownload() {}
     virtual bool resumeDownload() {}
     virtual bool cancelDownload() {}
+    virtual bool startInstall() {}
+    virtual bool cancelInstall() {}
 
 protected:
     void enableCallback();

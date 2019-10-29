@@ -59,7 +59,7 @@ public:
     bool resumed(const string& id);
 
     // HackBit communication APIs
-    bool postCancellationAction(JValue& requestPayload, JValue& responsePayload, string& id);
+    bool postCancellationAction(const string& id, bool success);
     bool postDeploymentAction(const string& id, bool success);
     bool putConfigData(JValue& data);
 

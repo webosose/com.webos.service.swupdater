@@ -16,10 +16,18 @@
 
 #include "util/Util.h"
 
+#include <boost/version.hpp>
+#if (BOOST_VERSION >= 106800)
+#include <boost/uuid/detail/sha1.hpp>
+#else
+#include <boost/uuid/sha1.hpp>
+#endif
 #include <fcntl.h>
 #include <fstream>
-#include <unistd.h>
+#include <iomanip>
+#include <sstream>
 #include <stdlib.h>
+#include <unistd.h>
 
 bool Util::isFileExist(const string& filename)
 {
@@ -66,4 +74,39 @@ bool Util::reboot()
 {
     int rc = ::system("reboot");
     return WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
+}
+
+string Util::sha1(const string& filename)
+{
+    ifstream file(filename);
+    if (!file.good()) {
+        return "";
+    }
+
+    stringstream ss;
+    boost::uuids::detail::sha1 sha1;
+    unsigned int digest[5];
+    char buf[4096];
+    while (file.good()) {
+        file.read(buf, sizeof(buf));
+        sha1.process_bytes(buf, file.gcount());
+    }
+    sha1.get_digest(digest);
+    for (int i = 0; i < 5; i++) {
+        cout << std::hex;
+        ss << std::hex << std::setfill('0') << std::setw(8) << digest[i];
+    }
+    return ss.str();
+}
+
+gboolean Util::cbAsync(gpointer data)
+{
+    IAsyncCall *p = reinterpret_cast<IAsyncCall*>(data);
+    if (!p) return false;
+
+    p->Call();
+
+    delete p;
+
+    return false;
 }

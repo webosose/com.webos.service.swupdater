@@ -62,6 +62,8 @@ public:
     virtual void onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
 
     // HawkBitClientListener
     virtual void onCancellationAction(JValue& responsePayload) override;

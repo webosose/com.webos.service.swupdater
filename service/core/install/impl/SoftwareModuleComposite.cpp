@@ -19,6 +19,7 @@
 #include "ls2/AppInstaller.h"
 #include "util/JValueUtil.h"
 #include "util/Logger.h"
+#include "util/Util.h"
 
 string SoftwareModuleComposite::toString(enum SoftwareModuleType& type)
 {
@@ -140,7 +141,20 @@ void SoftwareModuleComposite::onCompletedDownload(ArtifactLeaf* artifact)
 
 void SoftwareModuleComposite::onCompletedInstall(ArtifactLeaf* artifact)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::getInstance().debug(getClassName(), __FUNCTION__, to_string(m_current));
+
+    m_current++;
+    if (m_current < m_children.size()) {
+        if (!m_children[m_current]->startInstall()) {
+            onFailedInstall((ArtifactLeaf*)m_children[m_current].get());
+        }
+        return;
+    }
+
+    if (m_listener)
+        m_listener->onCompletedInstall(this);
+
+    // TODO remove downloaded files
 }
 
 void SoftwareModuleComposite::onFailedDownload(ArtifactLeaf* artifact)
@@ -154,6 +168,11 @@ void SoftwareModuleComposite::onFailedDownload(ArtifactLeaf* artifact)
 void SoftwareModuleComposite::onFailedInstall(ArtifactLeaf* artifact)
 {
     Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    if (m_listener)
+        m_listener->onFailedInstall(this);
+
+    // TODO remove downloaded files
 }
 
 bool SoftwareModuleComposite::startDownload()
@@ -185,6 +204,26 @@ bool SoftwareModuleComposite::cancelDownload()
     m_current = -1;
     for (auto it = m_children.begin(); it != m_children.end(); ++it) {
         (void) (*it)->cancelDownload();
+    }
+
+    return true;
+}
+
+bool SoftwareModuleComposite::startInstall()
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    m_current = 0;
+    return m_children[m_current]->startInstall();
+}
+
+bool SoftwareModuleComposite::cancelInstall()
+{
+    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+
+    m_current = -1;
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        (void) (*it)->cancelInstall();
     }
 
     return true;
