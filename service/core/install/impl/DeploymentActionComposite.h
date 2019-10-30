@@ -65,7 +65,7 @@ public:
     virtual void onFailedDownload(SoftwareModuleComposite* softwareModule) override;
     virtual void onFailedInstall(SoftwareModuleComposite* softwareModule) override;
 
-    // LS2 methods : Composite
+    // Composite
     virtual bool startDownload() override;
     virtual bool pauseDownload() override;
     virtual bool resumeDownload() override;
@@ -83,7 +83,6 @@ public:
         return m_isForceUpdate;
     }
 
-    bool isOnlyOSModuleCompleted();
     bool toProceedingJson(JValue& json);
     bool restoreActionHistory(const JValue& json);
     bool createRebootAlert(SoftwareModuleType type);
@@ -93,11 +92,11 @@ public:
         return m_status;
     }
 
-private:
-    bool setStatus(enum StatusType status, bool doFeedback = true);
-
     static const string FILE_NON_VOLITILE_REBOOTCHECK;
     static const string FILE_VOLITILE_REBOOTCHECK;
+
+private:
+    bool setStatus(enum StatusType status, bool doFeedback = true);
 
     bool m_isForceDownload;
     bool m_isForceUpdate;

@@ -26,9 +26,6 @@
 #include "util/Logger.h"
 #include "util/Util.h"
 
-const string PolicyManager::FILE_NON_VOLITILE_REBOOTCHECK = "/var/luna/preferences/swupdater_reboot_required";
-const string PolicyManager::FILE_VOLITILE_REBOOTCHECK = "/tmp/swupdater_reboot_required";
-
 gboolean PolicyManager::_tick(gpointer user_data)
 {
     if (getInstance().m_pendingClearRequest) {
@@ -42,7 +39,6 @@ gboolean PolicyManager::_tick(gpointer user_data)
 
 PolicyManager::PolicyManager()
     : m_currentAction(nullptr)
-    , m_proceedingJson(pbnjson::Object())
     , m_statusPoint(nullptr)
     , m_tickInterval(0)
     , m_tickSrc(0)
@@ -72,8 +68,8 @@ bool PolicyManager::onInitialization()
 
     onPollingSleepAction(DEFAULT_TICK_INTERVAL);
 
-    if (Util::isFileExist(FILE_NON_VOLITILE_REBOOTCHECK) &&
-        !Util::isFileExist(FILE_VOLITILE_REBOOTCHECK)) {
+    if (Util::isFileExist(DeploymentActionComposite::FILE_NON_VOLITILE_REBOOTCHECK) &&
+        !Util::isFileExist(DeploymentActionComposite::FILE_VOLITILE_REBOOTCHECK)) {
         // poll now, os update is in progress.
         HawkBitClient::getInstance().poll();
     }
@@ -90,62 +86,6 @@ bool PolicyManager::onFinalization()
     HawkBitClient::getInstance().setListener(nullptr);
 
     return true;
-}
-
-void PolicyManager::onRequestStatusChange()
-{
-    postStatus();
-
-    if (!m_currentAction)
-        return;
-
-    if (m_currentAction->getStatus().isWaitingReboot()) {
-        // feedback proceeding message only when running status
-        if (m_currentAction->getStatus().getStatus() == StatusType_RUNNING) {
-            JValue proceedingJson = pbnjson::Object();
-            m_currentAction->toProceedingJson(proceedingJson);
-            if (proceedingJson != m_proceedingJson) {
-                HawkBitClient::getInstance().proceeding(m_currentAction->getId(), proceedingJson.stringify());
-                m_proceedingJson = proceedingJson.duplicate();
-            }
-            AbsBootloader::getBootloader().notifyUpdate();
-            Logger::info(getClassName(), "Update installed, but reboot required.");
-            Util::touchFile(FILE_NON_VOLITILE_REBOOTCHECK);
-            Util::touchFile(FILE_VOLITILE_REBOOTCHECK);
-            // Util::reboot();
-            m_currentAction->createRebootAlert(SoftwareModuleType_OS);
-        }
-        return;
-    }
-
-    if (m_currentAction->getStatus().getStatus() == StatusType_RUNNING ||
-        m_currentAction->getStatus().getStatus() == StatusType_PAUSED) {
-        JValue proceedingJson = pbnjson::Object();
-        m_currentAction->toProceedingJson(proceedingJson);
-        if (proceedingJson != m_proceedingJson) { // softwaremodule status changed.
-            if (m_currentAction->isOnlyOSModuleCompleted()) {
-                m_currentAction->setWaitingReboot();
-                return;
-            }
-            HawkBitClient::getInstance().proceeding(m_currentAction->getId(), proceedingJson.stringify());
-            m_proceedingJson = proceedingJson.duplicate();
-        }
-    }
-
-    if (m_currentAction->getStatus().getStatus() == StatusType_COMPLETED) {
-        HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), true);
-        m_pendingClearRequest = true;
-        Logger::info(getClassName(), "Update completed.");
-    } else if (m_currentAction->getStatus().getStatus() == StatusType_FAILED) {
-        HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), false);
-        m_pendingClearRequest = true;
-        Logger::info(getClassName(), "Update failed.");
-    }
-}
-
-void PolicyManager::onRequestProgressUpdate()
-{
-    postStatus();
 }
 
 void PolicyManager::onGetStatusSubscription(pbnjson::JValue subscriptionPayload)
@@ -184,9 +124,9 @@ void PolicyManager::onGetSystemSettingsSubscription(pbnjson::JValue subscription
         m_isAutoUpdateOn = subscriptionPayload["settings"]["autoUpdate"].asBool();
     Logger::info(getClassName(), subscriptionPayload["settings"].stringify());
     if (m_isAutoUpdateOn && m_currentAction) {
-        if (m_currentAction->getStatus().getStatus() == ST_IDLE)
+        if (m_currentAction->getStatus().getStatus() == StatusType_IDLE)
             m_currentAction->startDownload();
-        else if (m_currentAction->getStatus().getStatus() == ST_DOWNLOAD_DONE)
+        else if (m_currentAction->getStatus().getStatus() == StatusType_DOWNLOAD_DONE)
             m_currentAction->startInstall();
     }
 }
@@ -332,8 +272,8 @@ void PolicyManager::onCancellationAction(JValue& responsePayload)
         }
 
         bool isCanceled = true;
-        if (m_currentAction->getStatus().getStatus() == ST_INSTALL_DONE ||
-            (m_currentAction->getStatus().getStatus() == ST_INSTALL && !m_currentAction->cancelInstall())) {
+        if (m_currentAction->getStatus().getStatus() == StatusType_INSTALL_DONE ||
+            (m_currentAction->getStatus().getStatus() == StatusType_INSTALL && !m_currentAction->cancelInstall())) {
             isCanceled = false;
         }
         m_currentAction->cancelDownload();
@@ -433,14 +373,14 @@ void PolicyManager::onSettingConfigData()
 
 void PolicyManager::onChangedStatus(DeploymentActionComposite* deploymentAction)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     postStatus();
 }
 
 void PolicyManager::onCompletedDownload(DeploymentActionComposite* deploymentAction)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     Logger::info(getClassName(), "Download completed.");
 
@@ -450,7 +390,7 @@ void PolicyManager::onCompletedDownload(DeploymentActionComposite* deploymentAct
 
 void PolicyManager::onCompletedInstall(DeploymentActionComposite* deploymentAction)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     m_pendingClearRequest = true;
     HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), true);
@@ -459,7 +399,7 @@ void PolicyManager::onCompletedInstall(DeploymentActionComposite* deploymentActi
 
 void PolicyManager::onFailedDownload(DeploymentActionComposite* deploymentAction)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     m_pendingClearRequest = true;
     HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), false);
@@ -468,7 +408,7 @@ void PolicyManager::onFailedDownload(DeploymentActionComposite* deploymentAction
 
 void PolicyManager::onFailedInstall(DeploymentActionComposite* deploymentAction)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     m_pendingClearRequest = true;
     HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), false);

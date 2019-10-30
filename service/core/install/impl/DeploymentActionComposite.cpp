@@ -33,43 +33,14 @@ DeploymentActionComposite::DeploymentActionComposite()
     : AbsAction()
     , m_isForceDownload(false)
     , m_isForceUpdate(false)
-    , m_status("XXX_name")
+    , m_status()
 {
     setClassName("DeploymentActionComposite");
-    m_status.setName("DeploymentActionComposite");
     setType(ActionType_INSTALL);
-
-    m_status.addCallback( // @suppress("Invalid arguments")
-        std::bind(&DeploymentActionComposite::onStatusChanged,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2
-        )
-    );
 }
 
 DeploymentActionComposite::~DeploymentActionComposite()
 {
-    disbleCallback();
-    m_status.clearCallback();
-}
-
-void DeploymentActionComposite::onStatusChanged(enum StatusType prev, enum StatusType cur)
-{
-    if (cur != StatusType_COMPLETED)
-        return;
-
-    bool isRebootRequired = false;
-    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
-        JValue metadata = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it)->getMetadata();
-        string value = JValueUtil::getMeta(metadata, "installer");
-
-        if (value == "opkg") {
-            // TODO need to find better solution
-            createRebootAlert(SoftwareModuleType_Application);
-            break;
-        }
-    }
 }
 
 bool DeploymentActionComposite::fromJson(const JValue& json)
@@ -96,17 +67,16 @@ bool DeploymentActionComposite::fromJson(const JValue& json)
         else
             m_children.push_back(module);
     }
-    enableCallback();
 
-    setStatus(ST_IDLE, false);
+    setStatus(StatusType_IDLE, false);
     return true;
 }
 
 bool DeploymentActionComposite::toJson(JValue& json)
 {
-    Component::toJson(json);
-    json.put("status", m_status.getStatusStr());
+    Composite::toJson(json);
 
+    json.put("status", m_status.getStatusStr());
     json.put("id", m_id);
 
     JValue softwareModules = pbnjson::Array();
@@ -121,7 +91,7 @@ bool DeploymentActionComposite::toJson(JValue& json)
 
 void DeploymentActionComposite::onChangedStatus(SoftwareModuleComposite* softwareModule)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     if (m_listener)
         m_listener->onChangedStatus(this);
@@ -129,7 +99,7 @@ void DeploymentActionComposite::onChangedStatus(SoftwareModuleComposite* softwar
 
 void DeploymentActionComposite::onCompletedDownload(SoftwareModuleComposite* softwareModule)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__, to_string(m_current));
+    Logger::debug(getClassName(), __FUNCTION__, to_string(m_current));
 
     m_current++;
     if (m_current < m_children.size()) {
@@ -139,7 +109,7 @@ void DeploymentActionComposite::onCompletedDownload(SoftwareModuleComposite* sof
         return;
     }
 
-    setStatus(ST_DOWNLOAD_DONE);
+    setStatus(StatusType_DOWNLOAD_DONE);
 
     if (m_listener)
         m_listener->onCompletedDownload(this);
@@ -147,7 +117,7 @@ void DeploymentActionComposite::onCompletedDownload(SoftwareModuleComposite* sof
 
 void DeploymentActionComposite::onCompletedInstall(SoftwareModuleComposite* softwareModule)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     JValue proceedingJson = pbnjson::Object();
     toProceedingJson(proceedingJson);
@@ -186,7 +156,7 @@ void DeploymentActionComposite::onCompletedInstall(SoftwareModuleComposite* soft
         }
     }
 
-    setStatus(ST_INSTALL_DONE);
+    setStatus(StatusType_INSTALL_DONE);
 
     if (m_listener)
         m_listener->onCompletedInstall(this);
@@ -194,9 +164,9 @@ void DeploymentActionComposite::onCompletedInstall(SoftwareModuleComposite* soft
 
 void DeploymentActionComposite::onFailedDownload(SoftwareModuleComposite* softwareModule)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
-    setStatus(ST_FAILED);
+    setStatus(StatusType_FAILED);
 
     if (m_listener)
         m_listener->onFailedDownload(this);
@@ -204,9 +174,9 @@ void DeploymentActionComposite::onFailedDownload(SoftwareModuleComposite* softwa
 
 void DeploymentActionComposite::onFailedInstall(SoftwareModuleComposite* softwareModule)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
-    setStatus(ST_FAILED);
+    setStatus(StatusType_FAILED);
 
     if (m_listener)
         m_listener->onFailedInstall(this);
@@ -214,30 +184,30 @@ void DeploymentActionComposite::onFailedInstall(SoftwareModuleComposite* softwar
 
 bool DeploymentActionComposite::startDownload()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
-    if (m_status.getStatus() == ST_DOWNLOAD)
+    if (m_status.getStatus() == StatusType_DOWNLOAD)
         return true;
-    if (m_status.getStatus() != ST_IDLE &&
-        m_status.getStatus() != ST_PAUSED &&
-        m_status.getStatus() != ST_DOWNLOAD_DONE)
+    if (m_status.getStatus() != StatusType_IDLE &&
+        m_status.getStatus() != StatusType_PAUSED &&
+        m_status.getStatus() != StatusType_DOWNLOAD_DONE)
         return false;
 
     m_current = 0;
     if (!m_children[m_current]->startDownload())
         return false;
 
-    setStatus(ST_DOWNLOAD);
+    setStatus(StatusType_DOWNLOAD);
     return true;
 }
 
 bool DeploymentActionComposite::pauseDownload()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
-    if (m_status.getStatus() == ST_PAUSED)
+    if (m_status.getStatus() == StatusType_PAUSED)
         return true;
-    if (m_status.getStatus() != ST_DOWNLOAD)
+    if (m_status.getStatus() != StatusType_DOWNLOAD)
         return false;
     if (m_current < 0 || m_current >= m_children.size())
         return false;
@@ -245,17 +215,17 @@ bool DeploymentActionComposite::pauseDownload()
     if (!m_children[m_current]->pauseDownload())
         return false;
 
-    setStatus(ST_PAUSED);
+    setStatus(StatusType_PAUSED);
     return true;
 }
 
 bool DeploymentActionComposite::resumeDownload()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
-    if (m_status.getStatus() == ST_DOWNLOAD)
+    if (m_status.getStatus() == StatusType_DOWNLOAD)
         return true;
-    if (m_status.getStatus() != ST_PAUSED)
+    if (m_status.getStatus() != StatusType_PAUSED)
         return false;
     if (m_current < 0 || m_current >= m_children.size())
         return false;
@@ -263,19 +233,19 @@ bool DeploymentActionComposite::resumeDownload()
     if (!m_children[m_current]->resumeDownload())
         return false;
 
-    setStatus(ST_DOWNLOAD);
+    setStatus(StatusType_DOWNLOAD);
     return true;
 }
 
 bool DeploymentActionComposite::cancelDownload()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
-    if (m_status.getStatus() == ST_IDLE)
+    if (m_status.getStatus() == StatusType_IDLE)
         return true;
-    if (m_status.getStatus() != ST_DOWNLOAD &&
-        m_status.getStatus() != ST_PAUSED &&
-        m_status.getStatus() != ST_DOWNLOAD_DONE)
+    if (m_status.getStatus() != StatusType_DOWNLOAD &&
+        m_status.getStatus() != StatusType_PAUSED &&
+        m_status.getStatus() != StatusType_DOWNLOAD_DONE)
         return false;
 
     m_current = -1;
@@ -283,34 +253,34 @@ bool DeploymentActionComposite::cancelDownload()
         (void) (*it)->cancelDownload();
     }
 
-    setStatus(ST_IDLE);
+    setStatus(StatusType_IDLE);
     return true;
 }
 
 bool DeploymentActionComposite::startInstall()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
-    if (m_status.getStatus() == ST_INSTALL)
+    if (m_status.getStatus() == StatusType_INSTALL)
         return true;
-    if (m_status.getStatus() != ST_DOWNLOAD_DONE)
+    if (m_status.getStatus() != StatusType_DOWNLOAD_DONE)
         return false;
 
     m_current = 0;
     if (!m_children[m_current]->startInstall())
         return false;
 
-    setStatus(ST_INSTALL);
+    setStatus(StatusType_INSTALL);
     return true;
 }
 
 bool DeploymentActionComposite::cancelInstall()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
-    if (m_status.getStatus() == ST_DOWNLOAD_DONE)
+    if (m_status.getStatus() == StatusType_DOWNLOAD_DONE)
         return true;
-    if (m_status.getStatus() != ST_INSTALL)
+    if (m_status.getStatus() != StatusType_INSTALL)
         return false;
 
     for (unsigned int i = 0; i < m_children.size(); i++) {
@@ -326,30 +296,7 @@ bool DeploymentActionComposite::cancelInstall()
         (void) (*it)->cancelInstall();
     }
 
-    setStatus(ST_DOWNLOAD_DONE);
-    return true;
-}
-
-bool DeploymentActionComposite::isOnlyOSModuleCompleted()
-{
-    bool hasOSModule = false;
-    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
-        SoftwareModuleType type = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it)->getType();
-        if (type == SoftwareModuleType_OS) {
-            hasOSModule = true;
-            break;
-        }
-    }
-    if (!hasOSModule)
-        return false;
-    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
-        shared_ptr<SoftwareModuleComposite> module = std::dynamic_pointer_cast<SoftwareModuleComposite>(*it);
-        if (module->getType() == SoftwareModuleType_OS && module->getStatus().getStatus() == StatusType_COMPLETED)
-            continue;
-        if (module->getType() == SoftwareModuleType_Application && module->getStatus().getStatus() == StatusType_READY)
-            continue;
-        return false;
-    }
+    setStatus(StatusType_DOWNLOAD_DONE);
     return true;
 }
 
@@ -369,7 +316,7 @@ bool DeploymentActionComposite::restoreActionHistory(const JValue& json) {
     if (isRebootRequired) {
         if (!isRebootDetected) {
             Logger::info(getClassName(), "Waiting reboot..");
-            setStatus(ST_INSTALL, false);
+            setStatus(StatusType_INSTALL, false);
             return true;
         }
         if (!AbsUpdaterFactory::getInstance().isUpdated()) {
@@ -382,21 +329,21 @@ bool DeploymentActionComposite::restoreActionHistory(const JValue& json) {
         Util::removeFile(FILE_NON_VOLITILE_REBOOTCHECK);
     }
 
-    if (status == Status::toString(ST_IDLE)) {
-        setStatus(ST_IDLE, false);
+    if (status == Status::toString(StatusType_IDLE)) {
+        setStatus(StatusType_IDLE, false);
         return true;
-    } else if (status == Status::toString(ST_DOWNLOAD)) {
+    } else if (status == Status::toString(StatusType_DOWNLOAD)) {
         if (!m_children[m_current]->startDownload())
             return false;
-        setStatus(ST_DOWNLOAD, false);
+        setStatus(StatusType_DOWNLOAD, false);
         return true;
-    } else if (status == Status::toString(ST_PAUSED)) {
-        setStatus(ST_PAUSED, false);
+    } else if (status == Status::toString(StatusType_PAUSED)) {
+        setStatus(StatusType_PAUSED, false);
         return true;
-    } else if (status == Status::toString(ST_DOWNLOAD_DONE)) {
-        setStatus(ST_DOWNLOAD_DONE, false);
+    } else if (status == Status::toString(StatusType_DOWNLOAD_DONE)) {
+        setStatus(StatusType_DOWNLOAD_DONE, false);
         return true;
-    } else if (status == Status::toString(ST_INSTALL)) {
+    } else if (status == Status::toString(StatusType_INSTALL)) {
         if (isRebootRequired) {
             // m_current has been installed already.
             m_current++;
@@ -404,16 +351,16 @@ bool DeploymentActionComposite::restoreActionHistory(const JValue& json) {
         if (m_current < m_children.size()) {
             if (!m_children[m_current]->startInstall())
                 return false;
-            setStatus(ST_INSTALL, false);
+            setStatus(StatusType_INSTALL, false);
             return true;
         }
-        setStatus(ST_INSTALL_DONE, false);
+        setStatus(StatusType_INSTALL_DONE, false);
         if (m_listener)
             m_listener->onCompletedInstall(this);
         return true;
     }
 
-    Logger::getInstance().warning(getClassName(), "ActionHistory", "Unknown status: " + status);
+    Logger::warning(getClassName(), "actionHistory", "Unknown status: " + status);
     return false;
 }
 

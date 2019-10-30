@@ -21,34 +21,28 @@
 #include <iostream>
 #include <deque>
 
-#include "core/install/design/Component.h"
+#include "interface/ISerializable.h"
 
 using namespace std;
 
-class Composite : public Component {
+class Composite : public ISerializable {
 public:
     Composite();
     virtual ~Composite();
 
-    virtual void onChildStatusChanged(enum StatusType prev, enum StatusType cur);
-    virtual bool prepare() override;
-    virtual bool start() override;
-    virtual bool pause() override;
-    virtual bool resume() override;
-    virtual bool cancel() override;
-    virtual bool setWaitingReboot() override;
+    virtual bool startDownload() = 0;
+    virtual bool pauseDownload() = 0;
+    virtual bool resumeDownload() = 0;
+    virtual bool cancelDownload() = 0;
+    virtual bool startInstall() = 0;
+    virtual bool cancelInstall() = 0;
 
-    virtual bool startDownload() {}
-    virtual bool pauseDownload() {}
-    virtual bool resumeDownload() {}
-    virtual bool cancelDownload() {}
-    virtual bool startInstall() {}
-    virtual bool cancelInstall() {}
+    virtual bool toJson(JValue& json) override
+    {
+        return true;
+    }
 
 protected:
-    void enableCallback();
-    void disbleCallback();
-
     deque<shared_ptr<Composite>> m_children;
 
     unsigned int m_current;

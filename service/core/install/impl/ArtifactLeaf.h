@@ -63,15 +63,13 @@ public:
     // AppInstallerListener
     virtual void onInstallSubscription(pbnjson::JValue subscriptionPayload) override;
 
-    // Component
-    virtual bool prepare() override;
+    // Composite
     virtual bool startDownload() override;
     virtual bool pauseDownload() override;
     virtual bool resumeDownload() override;
     virtual bool cancelDownload() override;
     virtual bool startInstall() override;
     virtual bool cancelInstall() override;
-    virtual bool setWaitingReboot() override;
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
@@ -103,8 +101,6 @@ public:
     {
         return DIRNAME + m_fileName.substr(0, m_fileName.find_last_of(".")) + "." + m_sha1 + "." + getFileExtension();
     }
-
-    void completeStatus(bool success = true);
 
 private:
     const static string DIRNAME;

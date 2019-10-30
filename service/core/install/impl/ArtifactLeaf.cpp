@@ -30,7 +30,6 @@ ArtifactLeaf::ArtifactLeaf()
     , m_prevSize(0)
 {
     setClassName("ArtifactLeaf");
-    m_status.setName("ArtifactLeaf");
 }
 
 ArtifactLeaf::~ArtifactLeaf()
@@ -51,8 +50,6 @@ void ArtifactLeaf::onProgressDownload(HttpFile* call)
     // To avoid many subscription issues.
     if ((m_curSize - m_prevSize) > (1024 * 512)) {
         Logger::debug(getClassName(), m_fileName, std::string(__FUNCTION__) + " (" + to_string(m_curSize) + "/" + to_string(m_total) + ")");
-        // TODO Need to change progress handler
-        // PolicyManager::getInstance().onRequestProgressUpdate();
         if (m_listener)
             m_listener->onChangedStatus(this);
         m_prevSize = m_curSize;
@@ -96,20 +93,9 @@ void ArtifactLeaf::onInstallSubscription(pbnjson::JValue subscriptionPayload)
     }
 }
 
-bool ArtifactLeaf::prepare()
-{
-//    if (!Leaf::prepare())
-//        return false;
-    m_httpFile = make_shared<HttpFile>();
-    m_httpFile->open(MethodType_GET, m_url);
-    m_httpFile->setFilename(getDownloadName());
-    m_httpFile->setListener(this);
-    return true;
-}
-
 bool ArtifactLeaf::startDownload()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     m_httpFile = make_shared<HttpFile>();
     m_httpFile->open(MethodType_GET, m_url);
@@ -121,7 +107,7 @@ bool ArtifactLeaf::startDownload()
 
 bool ArtifactLeaf::pauseDownload()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     m_httpFile = nullptr;
     return true;
@@ -129,7 +115,7 @@ bool ArtifactLeaf::pauseDownload()
 
 bool ArtifactLeaf::resumeDownload()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     m_httpFile = make_shared<HttpFile>();
     m_httpFile->open(MethodType_GET, m_url);
@@ -141,7 +127,7 @@ bool ArtifactLeaf::resumeDownload()
 
 bool ArtifactLeaf::cancelDownload()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     m_httpFile = nullptr;
     if (Util::removeFile(getDownloadName())) {
@@ -153,7 +139,7 @@ bool ArtifactLeaf::cancelDownload()
 
 bool ArtifactLeaf::startInstall()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     // Wait for this deployment action's status to be "install" and posting "getStatus".
     // Otherwise, "install" status comes after "onCompletedInstall" or "onFailedInstall".
@@ -206,14 +192,9 @@ bool ArtifactLeaf::startInstall()
 
 bool ArtifactLeaf::cancelInstall()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     return AbsUpdaterFactory::getInstance().undeploy();
-}
-
-bool ArtifactLeaf::setWaitingReboot()
-{
-    return true;
 }
 
 bool ArtifactLeaf::fromJson(const JValue& json)
@@ -237,23 +218,10 @@ bool ArtifactLeaf::fromJson(const JValue& json)
 
 bool ArtifactLeaf::toJson(JValue& json)
 {
-    Component::toJson(json);
+    Composite::toJson(json);
 
     json.put("filename", m_fileName);
     json.put("total", m_total);
     json.put("size", m_curSize);
     return true;
-}
-
-void ArtifactLeaf::completeStatus(bool success)
-{
-    // If installation has already started, it will not pause.
-    // So, this prevents the status to be changed, even if the installation is completed in the background.
-    if (m_status.getStatus() == StatusType_PAUSED)
-        return;
-
-    if (success)
-        m_status.complete();
-    else
-        m_status.fail();
 }

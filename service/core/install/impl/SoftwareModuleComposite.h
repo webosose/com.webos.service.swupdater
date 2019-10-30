@@ -23,7 +23,6 @@
 
 #include "core/install/design/Composite.h"
 #include "core/install/impl/ArtifactLeaf.h"
-#include "core/Status.h"
 #include "interface/IClassName.h"
 #include "interface/IListener.h"
 #include "interface/ISerializable.h"
@@ -74,7 +73,7 @@ public:
     virtual void onFailedDownload(ArtifactLeaf* artifact) override;
     virtual void onFailedInstall(ArtifactLeaf* artifact) override;
 
-    // LS2 methods : Composite
+    // Composite
     virtual bool startDownload() override;
     virtual bool pauseDownload() override;
     virtual bool resumeDownload() override;
@@ -101,8 +100,6 @@ public:
     {
         return m_metadata;
     }
-
-    bool restore(StatusType lastStatus);
 
 protected:
     enum SoftwareModuleType m_type;

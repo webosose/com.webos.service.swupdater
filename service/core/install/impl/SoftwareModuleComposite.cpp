@@ -58,12 +58,10 @@ SoftwareModuleComposite::SoftwareModuleComposite()
     , m_version("")
 {
     setClassName("SoftwareModuleComposite");
-    m_status.setName("SoftwareModuleComposite");
 }
 
 SoftwareModuleComposite::~SoftwareModuleComposite()
 {
-    disbleCallback();
 }
 
 bool SoftwareModuleComposite::fromJson(const JValue& json)
@@ -89,14 +87,13 @@ bool SoftwareModuleComposite::fromJson(const JValue& json)
                 ptr->setMetadata(m_metadata);
             m_children.push_back(ptr);
         }
-        enableCallback();
     }
     return true;
 }
 
 bool SoftwareModuleComposite::toJson(JValue& json)
 {
-    Component::toJson(json);
+    Composite::toJson(json);
 
     json.put("type", toString(m_type));
     json.put("name", m_name);
@@ -117,7 +114,7 @@ bool SoftwareModuleComposite::toJson(JValue& json)
 
 void SoftwareModuleComposite::onChangedStatus(ArtifactLeaf* artifact)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     if (m_listener)
         m_listener->onChangedStatus(this);
@@ -125,7 +122,7 @@ void SoftwareModuleComposite::onChangedStatus(ArtifactLeaf* artifact)
 
 void SoftwareModuleComposite::onCompletedDownload(ArtifactLeaf* artifact)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__, to_string(m_current));
+    Logger::debug(getClassName(), __FUNCTION__, to_string(m_current));
 
     m_current++;
     if (m_current < m_children.size()) {
@@ -141,7 +138,7 @@ void SoftwareModuleComposite::onCompletedDownload(ArtifactLeaf* artifact)
 
 void SoftwareModuleComposite::onCompletedInstall(ArtifactLeaf* artifact)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__, to_string(m_current));
+    Logger::debug(getClassName(), __FUNCTION__, to_string(m_current));
 
     m_current++;
     if (m_current < m_children.size()) {
@@ -159,7 +156,7 @@ void SoftwareModuleComposite::onCompletedInstall(ArtifactLeaf* artifact)
 
 void SoftwareModuleComposite::onFailedDownload(ArtifactLeaf* artifact)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     if (m_listener)
         m_listener->onFailedDownload(this);
@@ -167,7 +164,7 @@ void SoftwareModuleComposite::onFailedDownload(ArtifactLeaf* artifact)
 
 void SoftwareModuleComposite::onFailedInstall(ArtifactLeaf* artifact)
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     if (m_listener)
         m_listener->onFailedInstall(this);
@@ -177,7 +174,7 @@ void SoftwareModuleComposite::onFailedInstall(ArtifactLeaf* artifact)
 
 bool SoftwareModuleComposite::startDownload()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     m_current = 0;
     return m_children[m_current]->startDownload();
@@ -185,21 +182,21 @@ bool SoftwareModuleComposite::startDownload()
 
 bool SoftwareModuleComposite::pauseDownload()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     return m_children[m_current]->pauseDownload();
 }
 
 bool SoftwareModuleComposite::resumeDownload()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     return m_children[m_current]->resumeDownload();
 }
 
 bool SoftwareModuleComposite::cancelDownload()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     m_current = -1;
     for (auto it = m_children.begin(); it != m_children.end(); ++it) {
@@ -211,7 +208,7 @@ bool SoftwareModuleComposite::cancelDownload()
 
 bool SoftwareModuleComposite::startInstall()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     m_current = 0;
     return m_children[m_current]->startInstall();
@@ -219,27 +216,12 @@ bool SoftwareModuleComposite::startInstall()
 
 bool SoftwareModuleComposite::cancelInstall()
 {
-    Logger::getInstance().debug(getClassName(), __FUNCTION__);
+    Logger::debug(getClassName(), __FUNCTION__);
 
     m_current = -1;
     for (auto it = m_children.begin(); it != m_children.end(); ++it) {
         (void) (*it)->cancelInstall();
     }
 
-    return true;
-}
-
-bool SoftwareModuleComposite::restore(StatusType lastStatus)
-{
-    m_current = 0;
-    if (lastStatus == StatusType_READY) {
-        return prepare();
-    } else if (lastStatus == StatusType_COMPLETED) {
-        for (auto it = m_children.begin(); it != m_children.end(); ++it) {
-            shared_ptr<ArtifactLeaf> artifact = std::dynamic_pointer_cast<ArtifactLeaf>(*it);
-            artifact->getStatus().complete(false);
-        }
-        getStatus().complete(false);
-    }
     return true;
 }
