@@ -157,6 +157,56 @@ Error:
     return false;
 }
 
+bool OSTree::undeploy()
+{
+    Logger::verbose(getClassName(), __FUNCTION__);
+
+    gboolean changed;
+    g_autoptr(GError) gerror = NULL;
+    g_autoptr(GPtrArray) deployments = NULL;
+    g_autoptr(OstreeDeployment) pendingDeployment = NULL;
+    guint index = 0;
+
+    if (!lock()) {
+        goto Error;
+    }
+    if (!ostree_sysroot_load_if_changed(m_sysroot, &changed, NULL, &gerror)) {
+        Logger::error(getClassName(), __FUNCTION__, "Failed to load sysroot: " + string(gerror->message));
+        goto Error;
+    }
+    deployments = ostree_sysroot_get_deployments(m_sysroot);
+    ostree_sysroot_query_deployments_for(m_sysroot, NULL, &pendingDeployment, NULL);
+
+    for (; index < deployments->len; index++) {
+        OstreeDeployment* deployment = (OstreeDeployment*)deployments->pdata[index];
+        if (deployment == pendingDeployment)
+            break;
+    }
+
+    if (!pendingDeployment || index >= deployments->len) {
+        Logger::info(getClassName(), __FUNCTION__, "No pending deployment to undeploy");
+        unlock();
+        return true;
+    }
+
+    g_ptr_array_remove_index(deployments, index);
+    if (!ostree_sysroot_write_deployments(m_sysroot, deployments, NULL, &gerror)) {
+        Logger::error(getClassName(), __FUNCTION__, "Failed to undeploy: " + string(gerror->message));
+        goto Error;
+    }
+    if (!ostree_sysroot_cleanup(m_sysroot, NULL, &gerror)) {
+        Logger::error(getClassName(), __FUNCTION__, "Failed to cleanup: " + string(gerror->message));
+        goto Error;
+    }
+
+    unlock();
+    return true;
+
+Error:
+    unlock();
+    return false;
+}
+
 bool OSTree::setReadWriteMode()
 {
     Logger::verbose(getClassName(), __FUNCTION__);

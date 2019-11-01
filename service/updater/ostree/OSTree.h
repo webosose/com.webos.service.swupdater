@@ -33,6 +33,7 @@ public:
     virtual bool onFinalization() override;
 
     virtual bool deploy(const string& path) override;
+    virtual bool undeploy() override;
     virtual bool setReadWriteMode() override;
     virtual bool isUpdated() override;
     virtual void printDebug() override;

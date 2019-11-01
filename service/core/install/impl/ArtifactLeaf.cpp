@@ -208,9 +208,7 @@ bool ArtifactLeaf::cancelInstall()
 {
     Logger::getInstance().debug(getClassName(), __FUNCTION__);
 
-    // TODO OSTree::undeploy
-
-    return true;
+    return AbsUpdaterFactory::getInstance().undeploy();
 }
 
 bool ArtifactLeaf::setWaitingReboot()
