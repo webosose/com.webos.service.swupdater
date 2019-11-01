@@ -33,35 +33,3 @@ AbsBootloader::AbsBootloader()
 AbsBootloader::~AbsBootloader()
 {
 }
-
-string AbsBootloader::getHawkBitId()
-{
-    // TODO : distinguish devel or production (refer WEBOS_DISTRO_PRERELEASE)
-    bool isDevel = true;
-
-    if (isDevel) {
-        if (!Setting::getInstance().getId().empty()) {
-            return Setting::getInstance().getId();
-        } else {
-            return "webOS_undefined";
-        }
-    } else {
-        if (!Socket::getMacAddress("eth0").empty()) {
-            return Socket::getMacAddress("eth0");
-        } else if (!Socket::getMacAddress("wlan0").empty()) {
-            return Socket::getMacAddress("wlan0");
-        } else {
-            char buff[256];
-            stringstream ss;
-            FILE* file = popen("echo -n `nyx-cmd DeviceInfo query nduid 2>/dev/null`", "r");
-            if (!file) {
-                return "undefined";
-            }
-            while (fgets(buff, sizeof(buff), file)) {
-                ss << buff;
-            }
-            pclose(file);
-            return ss.str();
-        }
-    }
-}

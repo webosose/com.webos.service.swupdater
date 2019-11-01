@@ -18,6 +18,12 @@
 
 option(LIBOSTREE "Build with libostree" ON)
 
+# Uncomment to override the following variables defined in .bb file.
+# set(HAWKBIT_ADDRESS http://10.178.84.116:8080)
+# set(HAWKBIT_TOKEN 377b83e10b9f894883e98351875151cb)
+webos_add_compiler_flags(ALL -DINCLUDE_WEBOS -DHAWKBIT_ADDRESS=${HAWKBIT_ADDRESS} -DHAWKBIT_TOKEN=${HAWKBIT_TOKEN})
+webos_configure_header_files(${CMAKE_CURRENT_SOURCE_DIR})
+
 include(FindPkgConfig)
 
 pkg_check_modules(CURL REQUIRED libcurl)

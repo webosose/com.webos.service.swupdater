@@ -22,6 +22,11 @@
 #else
 #include <boost/uuid/sha1.hpp>
 #endif
+#include <boost/lexical_cast.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+
 #include <fcntl.h>
 #include <fstream>
 #include <iomanip>
@@ -74,6 +79,12 @@ bool Util::reboot()
 {
     int rc = ::system("reboot");
     return WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
+}
+
+string Util::generateUuid()
+{
+    boost::uuids::uuid uid = boost::uuids::random_generator()();
+    return std::string(boost::lexical_cast<std::string>(uid));
 }
 
 string Util::sha1(const string& filename)

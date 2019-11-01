@@ -20,7 +20,6 @@
 #include "util/Logger.h"
 
 Setting::Setting()
-    : m_id("")
 {
     setClassName("Setting");
 }
@@ -32,20 +31,14 @@ Setting::~Setting()
 void Setting::printHelp()
 {
     cout << "Usage) ENV_OPTIONS /usr/sbin/swupdater"<< endl;
-    cout << "Option) DEVICE_ID=webOS_XXXX"<< endl;
     cout << "Option) LOG_TYPE=[pmlog|console]"<< endl;
     cout << "Option) LOG_LEVEL=[verbose|debug|info|warning|error]"<< endl;
-    cout << "Example) DEVICE_ID=webOS_kkangeva LOG_TYPE=console LOG_LEVEL=verbose /usr/sbin/swupdater"<< endl;
+    cout << "Example) LOG_TYPE=console LOG_LEVEL=verbose /usr/sbin/swupdater"<< endl;
 }
 
 bool Setting::onInitialization()
 {
-    char* env = std::getenv("DEVICE_ID");
-    if (env) {
-        m_id = env;
-    }
-
-    env = std::getenv("LOG_TYPE");
+    char* env = std::getenv("LOG_TYPE");
     if (env && strcmp(env, "pmlog") == 0) {
         Logger::getInstance().setType(LogType_PMLOG);
     } else if (env && strcmp(env, "console") == 0) {

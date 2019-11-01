@@ -14,42 +14,16 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef SETTING_H_
-#define SETTING_H_
+#ifndef ENVIRONMENT_H_
+#define ENVIRONMENT_H_
 
-#include <iostream>
-#include <string>
-
-#include "interface/IInitializable.h"
-#include "interface/ISingleton.h"
-
-#ifdef INCLUDE_WEBOS
-#include "Environment.h"
-#else
 #define NAME_SWUPDATER                      "com.webos.service.swupdater"
 
-#define HAWKBIT_ADDRESS                     "http://10.178.84.116:8080"
-#define HAWKBIT_TOKEN                       "377b83e10b9f894883e98351875151cb"
+#define HAWKBIT_ADDRESS                     "@HAWKBIT_ADDRESS@"
+#define HAWKBIT_TOKEN                       "@HAWKBIT_TOKEN@"
 #define HAWKBIT_TENANT                      "DEFAULT"
 
-#define PATH_PREFERENCE                     "/var/preferences/" NAME_SWUPDATER
+#define PATH_PREFERENCE                     "@WEBOS_INSTALL_PREFERENCESDIR@/" NAME_SWUPDATER
 #define FILE_HAWKBIT_INFO                   "hawkBitInfo.json"
-#endif
 
-using namespace std;
-
-class Setting : public IInitializable, public ISingleton<Setting> {
-friend class ISingleton<Setting>;
-public:
-    virtual ~Setting();
-
-    void printHelp();
-
-    virtual bool onInitialization() override;
-    virtual bool onFinalization() override;
-
-private:
-    Setting();
-};
-
-#endif /* SETTING_H_ */
+#endif /* ENVIRONMENT_H_ */

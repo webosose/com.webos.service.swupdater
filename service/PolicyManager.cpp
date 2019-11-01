@@ -131,37 +131,6 @@ void PolicyManager::onGetSystemSettingsSubscription(pbnjson::JValue subscription
     }
 }
 
-void PolicyManager::onConnect(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
-{
-    string tmp;
-    if (!JValueUtil::getValue(requestPayload, "deviceId", tmp) || tmp.empty()) {
-        JValue getInfoPayload = Object();
-        if (!ConnectionManager::getInstance().getinfo(getInfoPayload)) {
-            responsePayload.put("errorText", "Fail to get MAC address");
-            return;
-        }
-        if (JValueUtil::getValue(getInfoPayload, "wiredInfo", "macAddress", tmp) && !tmp.empty()) {
-            requestPayload.put("deviceId", "webOS_" + tmp);
-        } else if (JValueUtil::getValue(getInfoPayload, "wifiInfo", "macAddress", tmp) && !tmp.empty()) {
-            requestPayload.put("deviceId", "webOS_" + tmp);
-        } else {
-            responsePayload.put("errorText", "Fail to find wired/wireless MAC address");
-            return;
-        }
-    }
-    if (!JValueUtil::getValue(requestPayload, "address", tmp) || tmp.empty()) {
-        responsePayload.put("errorText", "'address' does not exist");
-        return;
-    }
-    if (!JValueUtil::getValue(requestPayload, "token", tmp) || tmp.empty()) {
-        responsePayload.put("errorText", "'token' does not exist");
-        return;
-    }
-    if (!HawkBitInfo::getInstance().setJson(requestPayload)) {
-        responsePayload.put("errorText", "Fail to write payload");
-    }
-}
-
 void PolicyManager::onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
 {
     if (m_currentAction) {

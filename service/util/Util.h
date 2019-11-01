@@ -34,6 +34,7 @@ public:
     static bool makeDir(const string& dir);
     static bool reboot();
 
+    static string generateUuid();
     static string sha1(const string& filename);
 
     // Call function asynchronously

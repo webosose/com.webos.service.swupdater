@@ -19,6 +19,8 @@
 #include <lunaservice.h>
 
 #include "PolicyManager.h"
+#include "Setting.h"
+#include "hawkbit/HawkBitInfo.h"
 #include "ls2/AppInstaller.h"
 #include "ls2/ConnectionManager.h"
 #include "ls2/NotificationManager.h"
@@ -27,9 +29,8 @@
 #include "util/Logger.h"
 
 const unsigned long LS2Handler::LSCALL_TIMEOUT = 5000;
-const string LS2Handler::NAME = "com.webos.service.swupdater";
+const string LS2Handler::NAME = NAME_SWUPDATER;
 const LSMethod LS2Handler::ROOT_METHODS[] = {
-    { "connect", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
     { "getStatus", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
     { "setConfig", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
     { "startDownload", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
@@ -68,8 +69,8 @@ bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
             responsePayload.put("errorText", "Json parsing error");
         } else if (LS2Handler::getInstance().m_listener == nullptr) {
             responsePayload.put("errorText", "API handler is null");
-        } else if (kind == "/connect") {
-            PolicyManager::getInstance().onConnect(request, requestPayload, responsePayload);
+        } else if (!HawkBitInfo::getInstance().isHawkBitInfoSet()) {
+            responsePayload.put("errorText", "HawkBitInfo is NOT set");
         } else if (kind == "/getStatus") {
             PolicyManager::getInstance().onGetStatus(request, requestPayload, responsePayload);
         } else if (kind == "/setConfig") {
