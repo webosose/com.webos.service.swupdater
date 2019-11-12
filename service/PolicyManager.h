@@ -33,7 +33,7 @@ class PolicyManager : public ISingleton<PolicyManager>,
                       public LS2HandlerListener,
                       public HawkBitClientListener,
                       public SettingsServiceListener,
-                      public DeploymentActionCompositeListener {
+                      public CompositeListener {
 friend ISingleton<PolicyManager>;
 public:
     static gboolean _tick(gpointer user_data);
@@ -67,11 +67,11 @@ public:
     virtual void onSettingConfigData() override;
 
     // DeploymentActionCompositeListener
-    virtual void onChangedStatus(DeploymentActionComposite* deploymentAction) override;
-    virtual void onCompletedDownload(DeploymentActionComposite* deploymentAction) override;
-    virtual void onCompletedInstall(DeploymentActionComposite* deploymentAction) override;
-    virtual void onFailedDownload(DeploymentActionComposite* deploymentAction) override;
-    virtual void onFailedInstall(DeploymentActionComposite* deploymentAction) override;
+    virtual void onChangedStatus(Composite* deploymentAction) override;
+    virtual void onCompletedDownload(Composite* deploymentAction) override;
+    virtual void onCompletedInstall(Composite* deploymentAction) override;
+    virtual void onFailedDownload(Composite* deploymentAction) override;
+    virtual void onFailedInstall(Composite* deploymentAction) override;
 
 private:
     PolicyManager();

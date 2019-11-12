@@ -112,7 +112,7 @@ bool SoftwareModuleComposite::toJson(JValue& json)
     return true;
 }
 
-void SoftwareModuleComposite::onChangedStatus(ArtifactLeaf* artifact)
+void SoftwareModuleComposite::onChangedStatus(Composite* artifact)
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
@@ -120,7 +120,7 @@ void SoftwareModuleComposite::onChangedStatus(ArtifactLeaf* artifact)
         m_listener->onChangedStatus(this);
 }
 
-void SoftwareModuleComposite::onCompletedDownload(ArtifactLeaf* artifact)
+void SoftwareModuleComposite::onCompletedDownload(Composite* artifact)
 {
     Logger::debug(getClassName(), __FUNCTION__, to_string(m_current));
 
@@ -136,7 +136,7 @@ void SoftwareModuleComposite::onCompletedDownload(ArtifactLeaf* artifact)
         m_listener->onCompletedDownload(this);
 }
 
-void SoftwareModuleComposite::onCompletedInstall(ArtifactLeaf* artifact)
+void SoftwareModuleComposite::onCompletedInstall(Composite* artifact)
 {
     Logger::debug(getClassName(), __FUNCTION__, to_string(m_current));
 
@@ -150,11 +150,9 @@ void SoftwareModuleComposite::onCompletedInstall(ArtifactLeaf* artifact)
 
     if (m_listener)
         m_listener->onCompletedInstall(this);
-
-    // TODO remove downloaded files
 }
 
-void SoftwareModuleComposite::onFailedDownload(ArtifactLeaf* artifact)
+void SoftwareModuleComposite::onFailedDownload(Composite* artifact)
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
@@ -162,14 +160,12 @@ void SoftwareModuleComposite::onFailedDownload(ArtifactLeaf* artifact)
         m_listener->onFailedDownload(this);
 }
 
-void SoftwareModuleComposite::onFailedInstall(ArtifactLeaf* artifact)
+void SoftwareModuleComposite::onFailedInstall(Composite* artifact)
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
     if (m_listener)
         m_listener->onFailedInstall(this);
-
-    // TODO remove downloaded files
 }
 
 bool SoftwareModuleComposite::startDownload()
@@ -191,6 +187,9 @@ bool SoftwareModuleComposite::resumeDownload()
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
+    // m_current is -1, if swupdater is respawned (or rebooted) while downloadPaused
+    if (m_current == -1)
+        m_current = 0;
     return m_children[m_current]->resumeDownload();
 }
 

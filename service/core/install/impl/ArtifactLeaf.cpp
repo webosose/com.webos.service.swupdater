@@ -141,11 +141,11 @@ bool ArtifactLeaf::startInstall()
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
-    // Wait for this deployment action's status to be "install" and posting "getStatus".
-    // Otherwise, "install" status comes after "onCompletedInstall" or "onFailedInstall".
+    // Wait for this deployment action's status to be "installStarted" and posting "getStatus".
+    // Otherwise, "installStarted" status can come after "installCompleted" or "failed".
     return Util::async([=] {
         if (Util::sha1(getDownloadName()) != m_sha1) {
-            Logger::warning(getClassName(), m_fileName, "Sha1 verification failed");
+            Logger::error(getClassName(), m_fileName, "SHA1 verification failed");
             if (m_listener)
                 m_listener->onFailedInstall(this);
             return true;
@@ -185,7 +185,7 @@ bool ArtifactLeaf::startInstall()
 
         Logger::warning(getClassName(), m_fileName, "Not supported file extension");
         if (m_listener)
-            m_listener->onCompletedInstall(this);
+            m_listener->onFailedInstall(this);
         return true;
     }, 50);
 }

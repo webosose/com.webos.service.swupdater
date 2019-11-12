@@ -34,7 +34,6 @@ public:
 
     virtual void notifyUpdate() override;
     virtual void setRebootOK() override;
-    virtual bool isRebootAfterUpdate() override;
 };
 
 #endif /* HARDWARE_ICAS_H_ */

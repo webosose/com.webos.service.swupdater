@@ -68,7 +68,7 @@ bool DeploymentActionComposite::fromJson(const JValue& json)
             m_children.push_back(module);
     }
 
-    setStatus(StatusType_IDLE, false);
+    setStatus(StatusType_DOWNLOAD_READY, false);
     return true;
 }
 
@@ -89,7 +89,7 @@ bool DeploymentActionComposite::toJson(JValue& json)
     return true;
 }
 
-void DeploymentActionComposite::onChangedStatus(SoftwareModuleComposite* softwareModule)
+void DeploymentActionComposite::onChangedStatus(Composite* softwareModule)
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
@@ -97,7 +97,7 @@ void DeploymentActionComposite::onChangedStatus(SoftwareModuleComposite* softwar
         m_listener->onChangedStatus(this);
 }
 
-void DeploymentActionComposite::onCompletedDownload(SoftwareModuleComposite* softwareModule)
+void DeploymentActionComposite::onCompletedDownload(Composite* softwareModule)
 {
     Logger::debug(getClassName(), __FUNCTION__, to_string(m_current));
 
@@ -109,24 +109,25 @@ void DeploymentActionComposite::onCompletedDownload(SoftwareModuleComposite* sof
         return;
     }
 
-    setStatus(StatusType_DOWNLOAD_DONE);
+    setStatus(StatusType_INSTALL_READY);
 
     if (m_listener)
         m_listener->onCompletedDownload(this);
 }
 
-void DeploymentActionComposite::onCompletedInstall(SoftwareModuleComposite* softwareModule)
+void DeploymentActionComposite::onCompletedInstall(Composite* softwareModule)
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
-    JValue proceedingJson = pbnjson::Object();
-    toProceedingJson(proceedingJson);
+    JValue actionHistoryJson = pbnjson::Object();
+    toActionHistory(actionHistoryJson);
 
-    if (softwareModule->getType() == SoftwareModuleType::SoftwareModuleType_OS) {
+    SoftwareModuleType type = ((SoftwareModuleComposite*)softwareModule)->getType();
+    if (type == SoftwareModuleType::SoftwareModuleType_OS) {
         // feedback to hawkBit (reboot required)
-        proceedingJson.put("isRebootRequired", true);
-        HawkBitClient::getInstance().proceeding(m_id, proceedingJson.stringify());
-        // reboot toast
+        actionHistoryJson.put("isRebootRequired", true);
+        HawkBitClient::getInstance().proceeding(m_id, actionHistoryJson.stringify());
+        // show toast (reboot required)
         AbsBootloader::getBootloader().notifyUpdate();
         Logger::info(getClassName(), "OS installed, and reboot required.");
         Util::touchFile(FILE_NON_VOLITILE_REBOOTCHECK);
@@ -136,7 +137,7 @@ void DeploymentActionComposite::onCompletedInstall(SoftwareModuleComposite* soft
     }
 
     // feedback to hawkBit (softwaremodule completed)
-    HawkBitClient::getInstance().proceeding(m_id, proceedingJson.stringify());
+    HawkBitClient::getInstance().proceeding(m_id, actionHistoryJson.stringify());
 
     m_current++;
     if (m_current < m_children.size()) {
@@ -156,13 +157,13 @@ void DeploymentActionComposite::onCompletedInstall(SoftwareModuleComposite* soft
         }
     }
 
-    setStatus(StatusType_INSTALL_DONE);
+    setStatus(StatusType_INSTALL_COMPLETED);
 
     if (m_listener)
         m_listener->onCompletedInstall(this);
 }
 
-void DeploymentActionComposite::onFailedDownload(SoftwareModuleComposite* softwareModule)
+void DeploymentActionComposite::onFailedDownload(Composite* softwareModule)
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
@@ -172,7 +173,7 @@ void DeploymentActionComposite::onFailedDownload(SoftwareModuleComposite* softwa
         m_listener->onFailedDownload(this);
 }
 
-void DeploymentActionComposite::onFailedInstall(SoftwareModuleComposite* softwareModule)
+void DeploymentActionComposite::onFailedInstall(Composite* softwareModule)
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
@@ -186,18 +187,15 @@ bool DeploymentActionComposite::startDownload()
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
-    if (m_status.getStatus() == StatusType_DOWNLOAD)
+    if (m_status.getStatus() == StatusType_DOWNLOAD_STARTED)
         return true;
-    if (m_status.getStatus() != StatusType_IDLE &&
-        m_status.getStatus() != StatusType_PAUSED &&
-        m_status.getStatus() != StatusType_DOWNLOAD_DONE)
+    if (m_status.getStatus() != StatusType_DOWNLOAD_READY)
         return false;
 
     m_current = 0;
     if (!m_children[m_current]->startDownload())
         return false;
-
-    setStatus(StatusType_DOWNLOAD);
+    setStatus(StatusType_DOWNLOAD_STARTED);
     return true;
 }
 
@@ -205,17 +203,15 @@ bool DeploymentActionComposite::pauseDownload()
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
-    if (m_status.getStatus() == StatusType_PAUSED)
+    if (m_status.getStatus() == StatusType_DOWNLOAD_PAUSED)
         return true;
-    if (m_status.getStatus() != StatusType_DOWNLOAD)
-        return false;
-    if (m_current < 0 || m_current >= m_children.size())
+    if (m_status.getStatus() != StatusType_DOWNLOAD_STARTED)
         return false;
 
     if (!m_children[m_current]->pauseDownload())
         return false;
 
-    setStatus(StatusType_PAUSED);
+    setStatus(StatusType_DOWNLOAD_PAUSED);
     return true;
 }
 
@@ -223,17 +219,15 @@ bool DeploymentActionComposite::resumeDownload()
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
-    if (m_status.getStatus() == StatusType_DOWNLOAD)
+    if (m_status.getStatus() == StatusType_DOWNLOAD_STARTED)
         return true;
-    if (m_status.getStatus() != StatusType_PAUSED)
-        return false;
-    if (m_current < 0 || m_current >= m_children.size())
+    if (m_status.getStatus() != StatusType_DOWNLOAD_PAUSED)
         return false;
 
     if (!m_children[m_current]->resumeDownload())
         return false;
 
-    setStatus(StatusType_DOWNLOAD);
+    setStatus(StatusType_DOWNLOAD_STARTED);
     return true;
 }
 
@@ -241,11 +235,11 @@ bool DeploymentActionComposite::cancelDownload()
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
-    if (m_status.getStatus() == StatusType_IDLE)
+    if (m_status.getStatus() == StatusType_DOWNLOAD_READY)
         return true;
-    if (m_status.getStatus() != StatusType_DOWNLOAD &&
-        m_status.getStatus() != StatusType_PAUSED &&
-        m_status.getStatus() != StatusType_DOWNLOAD_DONE)
+    if (m_status.getStatus() != StatusType_DOWNLOAD_STARTED &&
+        m_status.getStatus() != StatusType_DOWNLOAD_PAUSED &&
+        m_status.getStatus() != StatusType_INSTALL_READY)
         return false;
 
     m_current = -1;
@@ -253,7 +247,7 @@ bool DeploymentActionComposite::cancelDownload()
         (void) (*it)->cancelDownload();
     }
 
-    setStatus(StatusType_IDLE);
+    setStatus(StatusType_DOWNLOAD_READY);
     return true;
 }
 
@@ -261,16 +255,16 @@ bool DeploymentActionComposite::startInstall()
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
-    if (m_status.getStatus() == StatusType_INSTALL)
+    if (m_status.getStatus() == StatusType_INSTALL_STARTED)
         return true;
-    if (m_status.getStatus() != StatusType_DOWNLOAD_DONE)
+    if (m_status.getStatus() != StatusType_INSTALL_READY)
         return false;
 
     m_current = 0;
     if (!m_children[m_current]->startInstall())
         return false;
 
-    setStatus(StatusType_INSTALL);
+    setStatus(StatusType_INSTALL_STARTED);
     return true;
 }
 
@@ -278,9 +272,9 @@ bool DeploymentActionComposite::cancelInstall()
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
-    if (m_status.getStatus() == StatusType_DOWNLOAD_DONE)
+    if (m_status.getStatus() == StatusType_INSTALL_READY)
         return true;
-    if (m_status.getStatus() != StatusType_INSTALL)
+    if (m_status.getStatus() != StatusType_INSTALL_STARTED)
         return false;
 
     for (unsigned int i = 0; i < m_children.size(); i++) {
@@ -296,18 +290,11 @@ bool DeploymentActionComposite::cancelInstall()
         (void) (*it)->cancelInstall();
     }
 
-    setStatus(StatusType_DOWNLOAD_DONE);
+    setStatus(StatusType_INSTALL_READY);
     return true;
 }
 
-bool DeploymentActionComposite::toProceedingJson(JValue& json)
-{
-    json.put("status", m_status.getStatusStr());
-    json.put("currentSoftwareModule", (int)m_current);
-    return true;
-}
-
-bool DeploymentActionComposite::restoreActionHistory(const JValue& json) {
+bool DeploymentActionComposite::fromActionHistory(const JValue& json) {
     bool isRebootDetected = Util::isFileExist(FILE_NON_VOLITILE_REBOOTCHECK) && !Util::isFileExist(FILE_VOLITILE_REBOOTCHECK);
     bool isRebootRequired = json["isRebootRequired"].asBool();
     string status = json["status"].asString();
@@ -316,34 +303,35 @@ bool DeploymentActionComposite::restoreActionHistory(const JValue& json) {
     if (isRebootRequired) {
         if (!isRebootDetected) {
             Logger::info(getClassName(), "Waiting reboot..");
-            setStatus(StatusType_INSTALL, false);
+            setStatus(StatusType_INSTALL_STARTED, false);
             return true;
         }
         if (!AbsUpdaterFactory::getInstance().isUpdated()) {
-            Logger::error(getClassName(), "Fail to apply OS update");
+            Logger::error(getClassName(), "Reboot detected, but failed to apply updated OS");
             onFailedInstall((SoftwareModuleComposite*)m_children[m_current].get());
             return true;
         }
-        Logger::info(getClassName(), "Reboot detected!");
+        Logger::info(getClassName(), "Reboot detected, and updated OS applied.");
         AbsBootloader::getBootloader().setRebootOK();
         Util::removeFile(FILE_NON_VOLITILE_REBOOTCHECK);
     }
 
-    if (status == Status::toString(StatusType_IDLE)) {
-        setStatus(StatusType_IDLE, false);
+    enum StatusType statusType = Status::toStatusType(status);
+    if (statusType == StatusType_DOWNLOAD_READY) {
+        setStatus(StatusType_DOWNLOAD_READY, false);
         return true;
-    } else if (status == Status::toString(StatusType_DOWNLOAD)) {
+    } else if (statusType == StatusType_DOWNLOAD_STARTED) {
         if (!m_children[m_current]->startDownload())
             return false;
-        setStatus(StatusType_DOWNLOAD, false);
+        setStatus(StatusType_DOWNLOAD_STARTED, false);
         return true;
-    } else if (status == Status::toString(StatusType_PAUSED)) {
-        setStatus(StatusType_PAUSED, false);
+    } else if (statusType == StatusType_DOWNLOAD_PAUSED) {
+        setStatus(StatusType_DOWNLOAD_PAUSED, false);
         return true;
-    } else if (status == Status::toString(StatusType_DOWNLOAD_DONE)) {
-        setStatus(StatusType_DOWNLOAD_DONE, false);
+    } else if (statusType == StatusType_INSTALL_READY) {
+        setStatus(StatusType_INSTALL_READY, false);
         return true;
-    } else if (status == Status::toString(StatusType_INSTALL)) {
+    } else if (statusType == StatusType_INSTALL_STARTED) {
         if (isRebootRequired) {
             // m_current has been installed already.
             m_current++;
@@ -351,17 +339,24 @@ bool DeploymentActionComposite::restoreActionHistory(const JValue& json) {
         if (m_current < m_children.size()) {
             if (!m_children[m_current]->startInstall())
                 return false;
-            setStatus(StatusType_INSTALL, false);
+            setStatus(StatusType_INSTALL_STARTED, false);
             return true;
         }
-        setStatus(StatusType_INSTALL_DONE, false);
+        setStatus(StatusType_INSTALL_COMPLETED, false);
         if (m_listener)
             m_listener->onCompletedInstall(this);
         return true;
     }
 
-    Logger::warning(getClassName(), "actionHistory", "Unknown status: " + status);
+    Logger::warning(getClassName(), "actionHistory", "Unexpected status: " + status);
     return false;
+}
+
+bool DeploymentActionComposite::toActionHistory(JValue& json)
+{
+    json.put("status", m_status.getStatusStr());
+    json.put("currentSoftwareModule", (int)m_current);
+    return true;
 }
 
 bool DeploymentActionComposite::createRebootAlert(SoftwareModuleType type)
@@ -388,14 +383,23 @@ bool DeploymentActionComposite::createRebootAlert(SoftwareModuleType type)
     return NotificationManager::getInstance().createAlert(title, message, buttons);
 }
 
+void DeploymentActionComposite::removeDownloadedFiles()
+{
+    Logger::debug(getClassName(), __FUNCTION__);
+
+    for (auto it = m_children.begin(); it != m_children.end(); ++it) {
+        (*it)->cancelDownload();
+    }
+}
+
 bool DeploymentActionComposite::setStatus(enum StatusType status, bool doFeedback)
 {
     m_status.setStatus(status);
 
     if (doFeedback) {
-        JValue proceedingJson = pbnjson::Object();
-        toProceedingJson(proceedingJson);
-        HawkBitClient::getInstance().proceeding(m_id, proceedingJson.stringify());
+        JValue actionHistoryJson = pbnjson::Object();
+        toActionHistory(actionHistoryJson);
+        HawkBitClient::getInstance().proceeding(m_id, actionHistoryJson.stringify());
     }
 
     if (m_listener)

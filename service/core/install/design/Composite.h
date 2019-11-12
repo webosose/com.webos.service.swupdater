@@ -25,6 +25,20 @@
 
 using namespace std;
 
+class Composite;
+
+class CompositeListener {
+public:
+    CompositeListener() {}
+    virtual ~CompositeListener() {}
+
+    virtual void onChangedStatus(Composite* composite) = 0;
+    virtual void onCompletedDownload(Composite* composite) = 0;
+    virtual void onCompletedInstall(Composite* composite) = 0;
+    virtual void onFailedDownload(Composite* composite) = 0;
+    virtual void onFailedInstall(Composite* composite) = 0;
+};
+
 class Composite : public ISerializable {
 public:
     Composite();

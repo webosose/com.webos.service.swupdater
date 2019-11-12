@@ -75,8 +75,3 @@ void UBoot::setRebootOK()
     // 'rollback = 1' means, update is failed and booted into alternative deployment.
     // so next boot up, boot directly into alternative deployment.
 }
-
-bool UBoot::isRebootAfterUpdate()
-{
-    return getEnv("bootcount") != "0";
-}

@@ -33,7 +33,6 @@ public:
 
     virtual void notifyUpdate() = 0;
     virtual void setRebootOK() = 0;
-    virtual bool isRebootAfterUpdate() = 0;
 
 };
 

@@ -37,24 +37,10 @@ enum SoftwareModuleType {
     SoftwareModuleType_Mixed
 };
 
-class SoftwareModuleComposite;
-
-class SoftwareModuleCompositeListener {
-public:
-    SoftwareModuleCompositeListener() {}
-    virtual ~SoftwareModuleCompositeListener() {}
-
-    virtual void onChangedStatus(SoftwareModuleComposite* softwareModule) = 0;
-    virtual void onCompletedDownload(SoftwareModuleComposite* softwareModule) = 0;
-    virtual void onCompletedInstall(SoftwareModuleComposite* softwareModule) = 0;
-    virtual void onFailedDownload(SoftwareModuleComposite* softwareModule) = 0;
-    virtual void onFailedInstall(SoftwareModuleComposite* softwareModule) = 0;
-};
-
 class SoftwareModuleComposite : public IClassName,
                                 public Composite,
-                                public ArtifactLeafListener,
-                                public IListener<SoftwareModuleCompositeListener> {
+                                public CompositeListener,
+                                public IListener<CompositeListener> {
 public:
     static string toString(enum SoftwareModuleType& type);
     static SoftwareModuleType toEnum(const string& type);
@@ -66,12 +52,12 @@ public:
     virtual bool fromJson(const JValue& json) override;
     virtual bool toJson(JValue& json) override;
 
-    // ArtifactLeafListener
-    virtual void onChangedStatus(ArtifactLeaf* artifact) override;
-    virtual void onCompletedDownload(ArtifactLeaf* artifact) override;
-    virtual void onCompletedInstall(ArtifactLeaf* artifact) override;
-    virtual void onFailedDownload(ArtifactLeaf* artifact) override;
-    virtual void onFailedInstall(ArtifactLeaf* artifact) override;
+    // CompositeListener
+    virtual void onChangedStatus(Composite* artifact) override;
+    virtual void onCompletedDownload(Composite* artifact) override;
+    virtual void onCompletedInstall(Composite* artifact) override;
+    virtual void onFailedDownload(Composite* artifact) override;
+    virtual void onFailedInstall(Composite* artifact) override;
 
     // Composite
     virtual bool startDownload() override;

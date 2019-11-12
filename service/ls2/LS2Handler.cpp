@@ -32,7 +32,6 @@ const unsigned long LS2Handler::LSCALL_TIMEOUT = 5000;
 const string LS2Handler::NAME = NAME_SWUPDATER;
 const LSMethod LS2Handler::ROOT_METHODS[] = {
     { "getStatus", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
-    { "setConfig", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
     { "startDownload", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
     { "pauseDownload", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },
     { "resumeDownload", LS2Handler::onRequest, LUNA_METHOD_FLAGS_NONE },

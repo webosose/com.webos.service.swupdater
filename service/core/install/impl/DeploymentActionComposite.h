@@ -30,24 +30,10 @@
 
 using namespace std;
 
-class DeploymentActionComposite;
-
-class DeploymentActionCompositeListener {
-public:
-    DeploymentActionCompositeListener() {}
-    virtual ~DeploymentActionCompositeListener() {}
-
-    virtual void onChangedStatus(DeploymentActionComposite* deploymentAction) = 0;
-    virtual void onCompletedDownload(DeploymentActionComposite* deploymentAction) = 0;
-    virtual void onCompletedInstall(DeploymentActionComposite* deploymentAction) = 0;
-    virtual void onFailedDownload(DeploymentActionComposite* deploymentAction) = 0;
-    virtual void onFailedInstall(DeploymentActionComposite* deploymentAction) = 0;
-};
-
 class DeploymentActionComposite : public AbsAction,
                                   public Composite,
-                                  public SoftwareModuleCompositeListener,
-                                  public IListener<DeploymentActionCompositeListener> {
+                                  public CompositeListener,
+                                  public IListener<CompositeListener> {
 public:
     DeploymentActionComposite();
     virtual ~DeploymentActionComposite();
@@ -58,12 +44,12 @@ public:
     virtual bool fromJson(const JValue& json) override;
     virtual bool toJson(JValue& json) override;
 
-    // SoftwareModuleCompositeListener
-    virtual void onChangedStatus(SoftwareModuleComposite* softwareModule) override;
-    virtual void onCompletedDownload(SoftwareModuleComposite* softwareModule) override;
-    virtual void onCompletedInstall(SoftwareModuleComposite* softwareModule) override;
-    virtual void onFailedDownload(SoftwareModuleComposite* softwareModule) override;
-    virtual void onFailedInstall(SoftwareModuleComposite* softwareModule) override;
+    // CompositeListener
+    virtual void onChangedStatus(Composite* softwareModule) override;
+    virtual void onCompletedDownload(Composite* softwareModule) override;
+    virtual void onCompletedInstall(Composite* softwareModule) override;
+    virtual void onFailedDownload(Composite* softwareModule) override;
+    virtual void onFailedInstall(Composite* softwareModule) override;
 
     // Composite
     virtual bool startDownload() override;
@@ -83,9 +69,10 @@ public:
         return m_isForceUpdate;
     }
 
-    bool toProceedingJson(JValue& json);
-    bool restoreActionHistory(const JValue& json);
+    bool fromActionHistory(const JValue& json);
+    bool toActionHistory(JValue& json);
     bool createRebootAlert(SoftwareModuleType type);
+    void removeDownloadedFiles();
 
     Status& getStatus()
     {

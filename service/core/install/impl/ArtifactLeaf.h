@@ -31,25 +31,11 @@
 using namespace std;
 using namespace pbnjson;
 
-class ArtifactLeaf;
-
-class ArtifactLeafListener {
-public:
-    ArtifactLeafListener() {}
-    virtual ~ArtifactLeafListener() {}
-
-    virtual void onChangedStatus(ArtifactLeaf* artifact) = 0;
-    virtual void onCompletedDownload(ArtifactLeaf* artifact) = 0;
-    virtual void onCompletedInstall(ArtifactLeaf* artifact) = 0;
-    virtual void onFailedDownload(ArtifactLeaf* artifact) = 0;
-    virtual void onFailedInstall(ArtifactLeaf* artifact) = 0;
-};
-
 class ArtifactLeaf : public IClassName,
                      public HttpFileListener,
                      public AppInstallerListener,
                      public Composite,
-                     public IListener<ArtifactLeafListener> {
+                     public IListener<CompositeListener> {
 public:
     ArtifactLeaf();
     virtual ~ArtifactLeaf();

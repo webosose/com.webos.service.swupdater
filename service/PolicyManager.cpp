@@ -32,6 +32,7 @@ gboolean PolicyManager::_tick(gpointer user_data)
         Logger::info(getInstance().getClassName(), "Current Action is cleared");
         getInstance().m_currentAction = nullptr;
         getInstance().m_pendingClearRequest = false;
+        getInstance().postStatus();
     }
     HawkBitClient::getInstance().poll();
     return G_SOURCE_CONTINUE;
@@ -106,7 +107,7 @@ void PolicyManager::onGetStatusSubscription(pbnjson::JValue subscriptionPayload)
 void PolicyManager::onGetSystemSettingsSubscription(pbnjson::JValue subscriptionPayload)
 {
     bool hasAutoUpdate = JValueUtil::hasKey(subscriptionPayload, "settings", "autoUpdate");
-    // first return & the requesting key/value does not exist
+    // The case of the first return & the requesting key/value does not exist
     // To successfully subscribe from SettingsService, all the requesting key/values should exist.
     // So, if there is a key that has no value assigned, fill in the default value.
     if (subscriptionPayload.hasKey("subscribed") && !hasAutoUpdate) {
@@ -123,12 +124,14 @@ void PolicyManager::onGetSystemSettingsSubscription(pbnjson::JValue subscription
     if (hasAutoUpdate)
         m_isAutoUpdateOn = subscriptionPayload["settings"]["autoUpdate"].asBool();
     Logger::info(getClassName(), subscriptionPayload["settings"].stringify());
-    if (m_isAutoUpdateOn && m_currentAction) {
-        if (m_currentAction->getStatus().getStatus() == StatusType_IDLE)
-            m_currentAction->startDownload();
-        else if (m_currentAction->getStatus().getStatus() == StatusType_DOWNLOAD_DONE)
-            m_currentAction->startInstall();
-    }
+
+    // Comment out, because this is a policy.
+    // if (m_isAutoUpdateOn && m_currentAction) {
+    //     if (m_currentAction->getStatus().getStatus() == StatusType_DOWNLOAD_READY)
+    //         m_currentAction->startDownload();
+    //     else if (m_currentAction->getStatus().getStatus() == StatusType_INSTALL_READY)
+    //         m_currentAction->startInstall();
+    // }
 }
 
 void PolicyManager::onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload)
@@ -139,7 +142,7 @@ void PolicyManager::onGetStatus(LS::Message& request, JValue& requestPayload, JV
     } else {
         Logger::debug(getClassName(), "Current is null.");
         responsePayload.put("id", nullptr);
-        responsePayload.put("status", nullptr);
+        responsePayload.put("status", Status::toString(StatusType_IDLE));
     }
     if (m_statusPoint && request.isSubscription()) {
         Logger::debug(getClassName(), "Add subscription");
@@ -241,20 +244,20 @@ void PolicyManager::onCancellationAction(JValue& responsePayload)
         }
 
         bool isCanceled = true;
-        if (m_currentAction->getStatus().getStatus() == StatusType_INSTALL_DONE ||
-            (m_currentAction->getStatus().getStatus() == StatusType_INSTALL && !m_currentAction->cancelInstall())) {
+        if (m_currentAction->getStatus().getStatus() == StatusType_INSTALL_COMPLETED ||
+            (m_currentAction->getStatus().getStatus() == StatusType_INSTALL_STARTED && !m_currentAction->cancelInstall())) {
             isCanceled = false;
         }
-        m_currentAction->cancelDownload();
 
         if (isCanceled) {
             Logger::info(getClassName(), "Update is canceled");
             HawkBitClient::getInstance().postCancellationAction(id, true);
+            m_currentAction->removeDownloadedFiles();
+            m_currentAction = nullptr;
         } else {
             Logger::info(getClassName(), "Failed to cancel update");
             HawkBitClient::getInstance().postCancellationAction(id, false);
         }
-        m_currentAction = nullptr;
         return;
     }
 
@@ -291,13 +294,14 @@ void PolicyManager::onInstallationAction(JValue& responsePayload)
         messageStr.find("Auto assignment by target filter") == string::npos && // set by hawkBit
         !(message = JDomParser::fromString(messageStr)).isNull()) {
         Logger::info(getClassName(), "actionHistory", message.stringify());
-        if (m_currentAction->restoreActionHistory(message))
+        if (m_currentAction->fromActionHistory(message))
             return;
         Logger::warning(getClassName(), "Fail to restore actionHistory");
     }
 
-    if (m_currentAction->isForceDownload() || m_isAutoUpdateOn)
-        m_currentAction->startDownload();
+    // Comment out, because this is a policy.
+    // if (m_currentAction->isForceDownload() || m_isAutoUpdateOn)
+    //     m_currentAction->startDownload();
 }
 
 void PolicyManager::onPollingSleepAction(int seconds)
@@ -340,47 +344,51 @@ void PolicyManager::onSettingConfigData()
     HawkBitClient::getInstance().putConfigData(configData);
 }
 
-void PolicyManager::onChangedStatus(DeploymentActionComposite* deploymentAction)
+void PolicyManager::onChangedStatus(Composite* deploymentAction)
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
     postStatus();
 }
 
-void PolicyManager::onCompletedDownload(DeploymentActionComposite* deploymentAction)
+void PolicyManager::onCompletedDownload(Composite* deploymentAction)
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
     Logger::info(getClassName(), "Download completed.");
 
-     if (m_currentAction->isForceUpdate() || m_isAutoUpdateOn)
-         m_currentAction->startInstall();
+    // Comment out, because this is a policy.
+    // if (m_currentAction->isForceUpdate() || m_isAutoUpdateOn)
+    //     m_currentAction->startInstall();
 }
 
-void PolicyManager::onCompletedInstall(DeploymentActionComposite* deploymentAction)
+void PolicyManager::onCompletedInstall(Composite* deploymentAction)
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
     m_pendingClearRequest = true;
     HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), true);
+    m_currentAction->removeDownloadedFiles();
     Logger::info(getClassName(), "Install completed.");
 }
 
-void PolicyManager::onFailedDownload(DeploymentActionComposite* deploymentAction)
+void PolicyManager::onFailedDownload(Composite* deploymentAction)
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
     m_pendingClearRequest = true;
     HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), false);
+    m_currentAction->removeDownloadedFiles();
     Logger::info(getClassName(), "Download failed.");
 }
 
-void PolicyManager::onFailedInstall(DeploymentActionComposite* deploymentAction)
+void PolicyManager::onFailedInstall(Composite* deploymentAction)
 {
     Logger::debug(getClassName(), __FUNCTION__);
 
     m_pendingClearRequest = true;
     HawkBitClient::getInstance().postDeploymentAction(m_currentAction->getId(), false);
+    m_currentAction->removeDownloadedFiles();
     Logger::info(getClassName(), "Install failed.");
 }
 
@@ -395,7 +403,7 @@ void PolicyManager::postStatus()
 
     if (!m_currentAction) {
         cur.put("id", nullptr);
-        cur.put("status", nullptr);
+        cur.put("status", Status::toString(StatusType_IDLE));
     } else {
         m_currentAction->toJson(cur);
     }
