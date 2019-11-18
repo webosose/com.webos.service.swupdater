@@ -96,7 +96,7 @@ bool HttpRequest::send(JValue request)
 
 Done:
     if (rc != CURLE_OK) {
-        Logger::error(getClassName(), "Failed in curl_easy_setopt(WRITEFUNCTION", curl_easy_strerror(rc));
+        Logger::error(getClassName(), "Failed in curl_easy_setopt(WRITEFUNCTION)", curl_easy_strerror(rc));
         return false;
     }
     return true;

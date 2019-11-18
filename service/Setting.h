@@ -23,6 +23,19 @@
 #include "interface/IInitializable.h"
 #include "interface/ISingleton.h"
 
+#ifdef INCLUDE_WEBOS
+#include "Environment.h"
+#else
+#define NAME_SWUPDATER                      "com.webos.service.swupdater"
+
+#define HAWKBIT_ADDRESS                     "http://10.178.84.116:8080"
+#define HAWKBIT_TOKEN                       "377b83e10b9f894883e98351875151cb"
+#define HAWKBIT_TENANT                      "DEFAULT"
+
+#define PATH_PREFERENCE                     "/var/preferences/" NAME_SWUPDATER
+#define FILE_HAWKBIT_INFO                   "hawkBitInfo.json"
+#endif
+
 using namespace std;
 
 class Setting : public IInitializable, public ISingleton<Setting> {
@@ -35,15 +48,8 @@ public:
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    virtual string& getId()
-    {
-        return m_id;
-    }
-
 private:
     Setting();
-
-    string m_id;
 };
 
 #endif /* SETTING_H_ */

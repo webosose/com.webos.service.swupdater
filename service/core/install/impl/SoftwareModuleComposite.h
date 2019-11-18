@@ -23,8 +23,9 @@
 
 #include "core/install/design/Composite.h"
 #include "core/install/impl/ArtifactLeaf.h"
-#include "core/Status.h"
 #include "interface/IClassName.h"
+#include "interface/IListener.h"
+#include "interface/ISerializable.h"
 
 using namespace std;
 using namespace pbnjson;
@@ -37,7 +38,9 @@ enum SoftwareModuleType {
 };
 
 class SoftwareModuleComposite : public IClassName,
-                                public Composite {
+                                public Composite,
+                                public CompositeListener,
+                                public IListener<CompositeListener> {
 public:
     static string toString(enum SoftwareModuleType& type);
     static SoftwareModuleType toEnum(const string& type);
@@ -48,6 +51,21 @@ public:
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
     virtual bool toJson(JValue& json) override;
+
+    // CompositeListener
+    virtual void onChangedStatus(Composite* artifact) override;
+    virtual void onCompletedDownload(Composite* artifact) override;
+    virtual void onCompletedInstall(Composite* artifact) override;
+    virtual void onFailedDownload(Composite* artifact) override;
+    virtual void onFailedInstall(Composite* artifact) override;
+
+    // Composite
+    virtual bool startDownload() override;
+    virtual bool pauseDownload() override;
+    virtual bool resumeDownload() override;
+    virtual bool cancelDownload() override;
+    virtual bool startInstall() override;
+    virtual bool cancelInstall() override;
 
     const enum SoftwareModuleType getType()
     {
@@ -68,8 +86,6 @@ public:
     {
         return m_metadata;
     }
-
-    bool restore(StatusType lastStatus);
 
 protected:
     enum SoftwareModuleType m_type;

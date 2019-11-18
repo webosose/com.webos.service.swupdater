@@ -213,6 +213,27 @@ bool HawkBitClient::resumed(const string& id)
     return true;
 }
 
+bool HawkBitClient::postCancellationAction(const string& id, bool success)
+{
+    const string url = HawkBitInfo::getInstance().getBaseUrl() + "/cancelAction/" + id + "/feedback";
+    Logger::verbose(getClassName(), "RestAPI", "POST Deployment Action");
+
+    JValue requestPayload = pbnjson::Object();
+    requestPayload.put("id", id);
+    requestPayload.put("time", Time::getUtcTime());
+
+    if (success)
+        getStatus(requestPayload, "closed", "success");
+    else
+        getStatus(requestPayload, "closed", "failure");
+
+    HttpRequest httpCall;
+    if (!httpCall.open(MethodType_POST, url) || !httpCall.send(requestPayload)) {
+        Logger::error(getClassName(), "Failed to post feedback");
+        return false;
+    }
+    return true;
+}
 
 bool HawkBitClient::postDeploymentAction(const string& id, bool success)
 {

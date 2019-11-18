@@ -24,11 +24,16 @@
 #include "core/AbsAction.h"
 #include "core/install/design/Composite.h"
 #include "core/install/impl/SoftwareModuleComposite.h"
+#include "interface/IClassName.h"
+#include "interface/IListener.h"
+#include "interface/ISerializable.h"
 
 using namespace std;
 
 class DeploymentActionComposite : public AbsAction,
-                                  public Composite {
+                                  public Composite,
+                                  public CompositeListener,
+                                  public IListener<CompositeListener> {
 public:
     DeploymentActionComposite();
     virtual ~DeploymentActionComposite();
@@ -38,6 +43,21 @@ public:
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
     virtual bool toJson(JValue& json) override;
+
+    // CompositeListener
+    virtual void onChangedStatus(Composite* softwareModule) override;
+    virtual void onCompletedDownload(Composite* softwareModule) override;
+    virtual void onCompletedInstall(Composite* softwareModule) override;
+    virtual void onFailedDownload(Composite* softwareModule) override;
+    virtual void onFailedInstall(Composite* softwareModule) override;
+
+    // Composite
+    virtual bool startDownload() override;
+    virtual bool pauseDownload() override;
+    virtual bool resumeDownload() override;
+    virtual bool cancelDownload() override;
+    virtual bool startInstall() override;
+    virtual bool cancelInstall() override;
 
     const bool isForceDownload()
     {
@@ -49,14 +69,26 @@ public:
         return m_isForceUpdate;
     }
 
-    bool isOnlyOSModuleCompleted();
-    bool toProceedingJson(JValue& json);
-    bool restoreActionHistory(const JValue& json, bool isRebootDetected);
+    bool fromActionHistory(const JValue& json);
+    bool toActionHistory(JValue& json);
     bool createRebootAlert(SoftwareModuleType type);
+    void removeDownloadedFiles();
+
+    Status& getStatus()
+    {
+        return m_status;
+    }
+
+    static const string FILE_NON_VOLITILE_REBOOTCHECK;
+    static const string FILE_VOLITILE_REBOOTCHECK;
 
 private:
+    bool setStatus(enum StatusType status, bool doFeedback = true);
+
     bool m_isForceDownload;
     bool m_isForceUpdate;
+
+    Status m_status;
 
 };
 

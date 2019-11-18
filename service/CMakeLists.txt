@@ -18,6 +18,12 @@
 
 option(LIBOSTREE "Build with libostree" ON)
 
+# Uncomment to override the following variables defined in .bb file.
+# set(HAWKBIT_ADDRESS http://10.178.84.116:8080)
+# set(HAWKBIT_TOKEN 377b83e10b9f894883e98351875151cb)
+webos_add_compiler_flags(ALL -DINCLUDE_WEBOS -DHAWKBIT_ADDRESS=${HAWKBIT_ADDRESS} -DHAWKBIT_TOKEN=${HAWKBIT_TOKEN})
+webos_configure_header_files(${CMAKE_CURRENT_SOURCE_DIR})
+
 include(FindPkgConfig)
 
 pkg_check_modules(CURL REQUIRED libcurl)
@@ -56,6 +62,10 @@ pkg_check_modules(PMLOG PmLogLib)
 include_directories(${PMLOG_INCLUDE_DIRS})
 webos_add_compiler_flags(ALL ${PMLOG_CFLAGS_OTHER})
 
+pkg_check_modules(BOOST Boost)
+include_directories(${Boost_INCLUDE_DIRS})
+webos_add_compiler_flags(ALL ${Boost_CFLAGS_OTHER})
+
 if (LIBOSTREE)
     pkg_check_modules(OSTREE REQUIRED ostree-1)
     include_directories(${OSTREE_INCLUDE_DIRS})
@@ -86,6 +96,7 @@ set(LIBS
     ${PMLOG_LDFLAGS}
     ${PBNJSON_C_LDFLAGS}
     ${PBNJSON_CPP_LDFLAGS}
+    ${Boost_LDFLAGS}
 )
 if (LIBOSTREE)
     set (LIBS ${LIBS} ${OSTREE_LDFLAGS})

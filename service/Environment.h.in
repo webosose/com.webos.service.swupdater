@@ -14,23 +14,16 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#ifndef ENVIRONMENT_H_
+#define ENVIRONMENT_H_
 
-#ifndef CORE_INSTALL_DESIGN_LEAF_H_
-#define CORE_INSTALL_DESIGN_LEAF_H_
+#define NAME_SWUPDATER                      "com.webos.service.swupdater"
 
-#include "core/install/design/Component.h"
+#define HAWKBIT_ADDRESS                     "@HAWKBIT_ADDRESS@"
+#define HAWKBIT_TOKEN                       "@HAWKBIT_TOKEN@"
+#define HAWKBIT_TENANT                      "DEFAULT"
 
-class Leaf : public Component {
-public:
-    Leaf();
-    virtual ~Leaf();
+#define PATH_PREFERENCE                     "@WEBOS_INSTALL_PREFERENCESDIR@/" NAME_SWUPDATER
+#define FILE_HAWKBIT_INFO                   "hawkBitInfo.json"
 
-    virtual bool prepare() override;
-    virtual bool start() override;
-    virtual bool pause() override;
-    virtual bool resume() override;
-    virtual bool cancel()  override;
-
-};
-
-#endif /* CORE_INSTALL_DESIGN_LEAF_H_ */
+#endif /* ENVIRONMENT_H_ */

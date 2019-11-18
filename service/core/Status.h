@@ -1,15 +1,18 @@
-/* @@@LICENSE
- *
- * Copyright (c) 2019 LG Electronics, Inc.
- *
- * Confidential computer software. Valid license from LG required for
- * possession, use or copying. Consistent with FAR 12.211 and 12.212,
- * Commercial Computer Software, Computer Software Documentation, and
- * Technical Data for Commercial Items are licensed to the U.S. Government
- * under vendor's standard commercial license.
- *
- * LICENSE@@@
- */
+// Copyright (c) 2019 LG Electronics, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
 #ifndef CORE_STATUS_H_
 #define CORE_STATUS_H_
@@ -23,12 +26,14 @@
 using namespace std;
 
 enum StatusType {
-    StatusType_NONE,
-    StatusType_READY,
-    StatusType_RUNNING,
-    StatusType_PAUSED,
-    StatusType_CANCELED,
-    StatusType_COMPLETED,
+    StatusType_UNKNOWN,
+    StatusType_IDLE,
+    StatusType_DOWNLOAD_READY,
+    StatusType_DOWNLOAD_STARTED,
+    StatusType_DOWNLOAD_PAUSED,
+    StatusType_INSTALL_READY,
+    StatusType_INSTALL_STARTED,
+    StatusType_INSTALL_COMPLETED,
     StatusType_FAILED,
 };
 
@@ -39,35 +44,62 @@ enum TransitionType {
     TransitionType_Allowed = 1
 };
 
-typedef std::function<void(enum StatusType prev, enum StatusType cur)> Callback;
-
 class Status {
 public:
     static string toString(enum StatusType type)
     {
         switch (type) {
-        case StatusType_NONE:
-            return "none";
+        case StatusType_IDLE:
+            return "idle";
 
-        case StatusType_READY:
-            return "ready";
+        case StatusType_DOWNLOAD_READY:
+            return "downloadReady";
 
-        case StatusType_RUNNING:
-            return "running";
+        case StatusType_DOWNLOAD_STARTED:
+            return "downloadStarted";
 
-        case StatusType_PAUSED:
-            return "paused";
+        case StatusType_DOWNLOAD_PAUSED:
+            return "downloadPaused";
 
-        case StatusType_CANCELED:
-            return "canceled";
+        case StatusType_INSTALL_READY:
+            return "installReady";
 
-        case StatusType_COMPLETED:
-            return "completed";
+        case StatusType_INSTALL_STARTED:
+            return "installStarted";
+
+        case StatusType_INSTALL_COMPLETED:
+            return "installCompleted";
 
         case StatusType_FAILED:
             return "failed";
+
+        case StatusType_UNKNOWN:
+            return "unknown";
         }
         return "unknown";
+    }
+
+    static enum StatusType toStatusType(const string& statusStr)
+    {
+        if (statusStr == toString(StatusType_IDLE))
+            return StatusType_IDLE;
+        if (statusStr == toString(StatusType_DOWNLOAD_READY))
+            return StatusType_DOWNLOAD_READY;
+        if (statusStr == toString(StatusType_DOWNLOAD_STARTED))
+            return StatusType_DOWNLOAD_STARTED;
+        if (statusStr == toString(StatusType_DOWNLOAD_PAUSED))
+            return StatusType_DOWNLOAD_PAUSED;
+        if (statusStr == toString(StatusType_INSTALL_READY))
+            return StatusType_DOWNLOAD_STARTED;
+        if (statusStr == toString(StatusType_INSTALL_STARTED))
+            return StatusType_INSTALL_STARTED;
+        if (statusStr == toString(StatusType_INSTALL_COMPLETED))
+            return StatusType_INSTALL_COMPLETED;
+        if (statusStr == toString(StatusType_FAILED))
+            return StatusType_FAILED;
+        if (statusStr == toString(StatusType_IDLE))
+            return StatusType_IDLE;
+        return StatusType_UNKNOWN;
     }
 
     static bool writeCommonLog(Status& status, enum TransitionType type, const string& className, const string& transition)
@@ -82,151 +114,40 @@ public:
         return true;
     }
 
-    Status(const string& name)
-        : m_name(name)
-        , m_status(StatusType_NONE)
-        , m_waitingReboot(false)
+    Status()
+        : m_status(StatusType_IDLE)
     {
     }
 
     virtual ~Status()
     {
-        if (m_status == StatusType_PAUSED || m_status == StatusType_RUNNING) {
-            cancel();
-        }
-        m_callbacks.clear();
     }
 
-    enum TransitionType canPrepare()
+    void setStatus(enum StatusType status)
     {
-        return checkTransition(StatusType_READY);
+        m_status = status;
     }
 
-    bool prepare()
+    void setStatus(const string& statusStr)
     {
-        if (checkTransition(StatusType_READY) == TransitionType_NotAllowed)
-            return false;
-        changeStatus(StatusType_READY);
-        return true;
-    }
-
-    enum TransitionType canInstall()
-    {
-        return checkTransition(StatusType_RUNNING);
-    }
-
-    bool install()
-    {
-        if (canInstall() == TransitionType_NotAllowed)
-            return false;
-        changeStatus(StatusType_RUNNING);
-        return true;
-    }
-
-    enum TransitionType canPause()
-    {
-        return checkTransition(StatusType_PAUSED);
-    }
-
-    bool pause()
-    {
-        if (canPause() == TransitionType_NotAllowed)
-            return false;
-        changeStatus(StatusType_PAUSED);
-        return true;
-    }
-
-    enum TransitionType canResume()
-    {
-        return checkTransition(StatusType_RUNNING);
-    }
-
-    bool resume()
-    {
-        if (canResume() == TransitionType_NotAllowed)
-            return false;
-        changeStatus(StatusType_RUNNING);
-        return true;
-    }
-
-    enum TransitionType canCancel()
-    {
-        return checkTransition(StatusType_CANCELED);
-    }
-
-    bool cancel()
-    {
-        if (canCancel() == TransitionType_NotAllowed)
-            return false;
-        changeStatus(StatusType_CANCELED);
-        return true;
-    }
-
-    enum TransitionType canComplete()
-    {
-        return checkTransition(StatusType_COMPLETED);
-    }
-
-    bool complete(bool notify = true)
-    {
-        if (canComplete() == TransitionType_NotAllowed)
-            return false;
-        changeStatus(StatusType_COMPLETED);
-        return true;
-    }
-
-    enum TransitionType canFail()
-    {
-        return checkTransition(StatusType_FAILED);
-    }
-
-    bool fail()
-    {
-        if (canFail() == TransitionType_NotAllowed)
-            return false;
-        changeStatus(StatusType_FAILED);
-        return true;
-    }
-
-    enum TransitionType canWaitingReboot()
-    {
-        if (m_waitingReboot)
-            return TransitionType_Same;
-        return TransitionType_Allowed;
-    }
-
-    bool setWaitingReboot();
-
-    bool isWaitingReboot()
-    {
-        return m_waitingReboot;
-    }
-
-    bool transit(enum StatusType status)
-    {
-        switch (status) {
-        case StatusType_NONE:
-            return false;
-
-        case StatusType_READY:
-            return prepare();
-
-        case StatusType_RUNNING:
-            return install();
-
-        case StatusType_PAUSED:
-            return pause();
-
-        case StatusType_CANCELED:
-            return cancel();
-
-        case StatusType_COMPLETED:
-            return complete();
-
-        case StatusType_FAILED:
-            return fail();
-        }
-        return false;
+        if (statusStr == toString(StatusType_DOWNLOAD_READY))
+            m_status = StatusType_DOWNLOAD_READY;
+        else if (statusStr == toString(StatusType_DOWNLOAD_STARTED))
+            m_status = StatusType_DOWNLOAD_STARTED;
+        else if (statusStr == toString(StatusType_DOWNLOAD_PAUSED))
+            m_status = StatusType_DOWNLOAD_PAUSED;
+        else if (statusStr == toString(StatusType_INSTALL_READY))
+            m_status = StatusType_DOWNLOAD_STARTED;
+        else if (statusStr == toString(StatusType_INSTALL_STARTED))
+            m_status = StatusType_INSTALL_STARTED;
+        else if (statusStr == toString(StatusType_INSTALL_COMPLETED))
+            m_status = StatusType_INSTALL_COMPLETED;
+        else if (statusStr == toString(StatusType_FAILED))
+            m_status = StatusType_FAILED;
+        else if (statusStr == toString(StatusType_IDLE))
+            m_status = StatusType_IDLE;
+        else
+            m_status = StatusType_UNKNOWN;
     }
 
     enum StatusType getStatus()
@@ -239,35 +160,8 @@ public:
         return toString(m_status);
     }
 
-    void setName(const string& name)
-    {
-        m_name = name;
-    }
-
-    const string& getName()
-    {
-        return m_name;
-    }
-
-    void addCallback(Callback callback)
-    {
-        m_callbacks.push_back(std::move(callback));
-    }
-
-    void clearCallback()
-    {
-        m_callbacks.clear();
-    }
-
 private:
-    enum TransitionType checkTransition(enum StatusType status);
-    void changeStatus(enum StatusType nextStatus, bool notify = true);
-
-    string m_name;
     enum StatusType m_status;
-    bool m_waitingReboot;
-
-    deque<Callback> m_callbacks;
 };
 
 #endif /* CORE_STATUS_H_ */

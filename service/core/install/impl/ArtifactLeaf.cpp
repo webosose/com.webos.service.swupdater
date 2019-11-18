@@ -19,6 +19,7 @@
 #include "PolicyManager.h"
 #include "updater/AbsUpdater.h"
 #include "util/JValueUtil.h"
+#include "util/Util.h"
 
 // TODO change to /media/internal/downloads and delete downloaded files.
 const string ArtifactLeaf::DIRNAME = "/home/root/";
@@ -29,7 +30,6 @@ ArtifactLeaf::ArtifactLeaf()
     , m_prevSize(0)
 {
     setClassName("ArtifactLeaf");
-    m_status.setName("ArtifactLeaf");
 }
 
 ArtifactLeaf::~ArtifactLeaf()
@@ -50,8 +50,8 @@ void ArtifactLeaf::onProgressDownload(HttpFile* call)
     // To avoid many subscription issues.
     if ((m_curSize - m_prevSize) > (1024 * 512)) {
         Logger::debug(getClassName(), m_fileName, std::string(__FUNCTION__) + " (" + to_string(m_curSize) + "/" + to_string(m_total) + ")");
-        // TODO Need to change progress handler
-        PolicyManager::getInstance().onRequestProgressUpdate();
+        if (m_listener)
+            m_listener->onChangedStatus(this);
         m_prevSize = m_curSize;
     }
 }
@@ -61,45 +61,16 @@ void ArtifactLeaf::onCompletedDownload(HttpFile* call)
     Logger::info(getClassName(), m_fileName, __FUNCTION__);
     m_curSize = call->getFilesize();
 
-    if (m_status.getStatus() != StatusType_RUNNING) {
-        return;
-    }
-
-    if (getFileExtension() == "ipk") {
-        string installer = JValueUtil::getMeta(m_metadata, "installer");
-        if (installer.empty() || installer == "appInstallService") {
-            // TODO: Following is temp code for demo. we need to find better way
-            string command = "opkg remove " + getIpkName();
-            system(command.c_str());
-            AppInstaller::getInstance().install(getIpkName(), getDownloadName(), this);
-            return;
-        } else if (installer == "opkg") {
-            AbsUpdaterFactory::getInstance().setReadWriteMode();
-            string command = "opkg install --force-reinstall --force-downgrade " + getDownloadName();
-            if (system(command.c_str()) == 0)
-                completeStatus(true);
-            else
-                completeStatus(false);
-            return;
-        }
-    } else if (getFileExtension() == "delta") {
-        if (AbsUpdaterFactory::getInstance().deploy(getDownloadName())) {
-            AbsUpdaterFactory::getInstance().printDebug();
-            completeStatus(true);
-        } else {
-            completeStatus(false);
-        }
-        return;
-    }
-
-    Logger::warning(getClassName(), m_fileName, "Not supported file extension");
-    completeStatus(true);
+    if (m_listener)
+        m_listener->onCompletedDownload(this);
 }
 
 void ArtifactLeaf::onFailedDownload(HttpFile* call)
 {
     Logger::error(getClassName(), m_fileName, __FUNCTION__);
-    m_status.fail();
+
+    if (m_listener)
+        m_listener->onFailedDownload(this);
 }
 
 void ArtifactLeaf::onInstallSubscription(pbnjson::JValue subscriptionPayload)
@@ -112,70 +83,118 @@ void ArtifactLeaf::onInstallSubscription(pbnjson::JValue subscriptionPayload)
 
     if (state == "installed") {
         getCall().cancel();
-        completeStatus(true);
+        if (m_listener)
+            m_listener->onCompletedInstall(this);
     } else if (state == "install failed") {
         Logger::error(getClassName(), m_fileName, "Failed to install artifact");
         getCall().cancel();
-        completeStatus(false);
+        if (m_listener)
+            m_listener->onFailedInstall(this);
     }
 }
 
-bool ArtifactLeaf::prepare()
+bool ArtifactLeaf::startDownload()
 {
-    if (!Leaf::prepare())
-        return false;
+    Logger::debug(getClassName(), __FUNCTION__);
+
     m_httpFile = make_shared<HttpFile>();
     m_httpFile->open(MethodType_GET, m_url);
     m_httpFile->setFilename(getDownloadName());
     m_httpFile->setListener(this);
-    return true;
+    // TODO return errorCode
+    return m_httpFile->send();
 }
 
-bool ArtifactLeaf::start()
+bool ArtifactLeaf::pauseDownload()
 {
-    if (!Leaf::start())
-        return false;
-    if (!m_httpFile->send()) {
-        m_status.fail();
-        return false;
-    }
-    return true;
-}
+    Logger::debug(getClassName(), __FUNCTION__);
 
-bool ArtifactLeaf::pause()
-{
-    if (!Leaf::pause())
-        return false;
     m_httpFile = nullptr;
     return true;
 }
 
-bool ArtifactLeaf::resume()
+bool ArtifactLeaf::resumeDownload()
 {
-    if (!Leaf::resume())
-        return false;
+    Logger::debug(getClassName(), __FUNCTION__);
+
     m_httpFile = make_shared<HttpFile>();
     m_httpFile->open(MethodType_GET, m_url);
     m_httpFile->setFilename(getDownloadName());
     m_httpFile->setListener(this);
-    if (!m_httpFile->send()) {
-        m_status.fail();
-        return false;
+    // TODO return errorCode
+    return m_httpFile->send();
+}
+
+bool ArtifactLeaf::cancelDownload()
+{
+    Logger::debug(getClassName(), __FUNCTION__);
+
+    m_httpFile = nullptr;
+    if (Util::removeFile(getDownloadName())) {
+        m_curSize = 0;
+        m_prevSize = 0;
     }
     return true;
 }
 
-bool ArtifactLeaf::cancel()
+bool ArtifactLeaf::startInstall()
 {
-    if (!Leaf::cancel())
-        return false;
-    // TODO download should be canceled
-    return true;
+    Logger::debug(getClassName(), __FUNCTION__);
+
+    // Wait for this deployment action's status to be "installStarted" and posting "getStatus".
+    // Otherwise, "installStarted" status can come after "installCompleted" or "failed".
+    return Util::async([=] {
+        if (Util::sha1(getDownloadName()) != m_sha1) {
+            Logger::error(getClassName(), m_fileName, "SHA1 verification failed");
+            if (m_listener)
+                m_listener->onFailedInstall(this);
+            return true;
+        }
+
+        if (getFileExtension() == "ipk") {
+            string installer = JValueUtil::getMeta(m_metadata, "installer");
+            if (installer.empty() || installer == "appInstallService") {
+                // TODO: Following is temp code for demo. we need to find better way
+                string command = "opkg remove " + getIpkName();
+                system(command.c_str());
+                AppInstaller::getInstance().install(getIpkName(), getDownloadName(), this);
+                return true;
+            } else if (installer == "opkg") {
+                AbsUpdaterFactory::getInstance().setReadWriteMode();
+                string command = "opkg install --force-reinstall --force-downgrade " + getDownloadName();
+                if (system(command.c_str()) == 0) {
+                    if (m_listener)
+                        m_listener->onCompletedInstall(this);
+                } else {
+                    if (m_listener)
+                        m_listener->onFailedInstall(this);
+                }
+                return true;
+            }
+        } else if (getFileExtension() == "delta") {
+            if (AbsUpdaterFactory::getInstance().deploy(getDownloadName())) {
+                AbsUpdaterFactory::getInstance().printDebug();
+                if (m_listener)
+                    m_listener->onCompletedInstall(this);
+            } else {
+                if (m_listener)
+                    m_listener->onFailedInstall(this);
+            }
+            return true;
+        }
+
+        Logger::warning(getClassName(), m_fileName, "Not supported file extension");
+        if (m_listener)
+            m_listener->onFailedInstall(this);
+        return true;
+    }, 50);
 }
 
-bool ArtifactLeaf::setWaitingReboot()
+bool ArtifactLeaf::cancelInstall()
 {
-    return true;
+    Logger::debug(getClassName(), __FUNCTION__);
+
+    return AbsUpdaterFactory::getInstance().undeploy();
 }
 
 bool ArtifactLeaf::fromJson(const JValue& json)
@@ -199,23 +218,10 @@ bool ArtifactLeaf::fromJson(const JValue& json)
 
 bool ArtifactLeaf::toJson(JValue& json)
 {
-    Component::toJson(json);
+    Composite::toJson(json);
 
     json.put("filename", m_fileName);
     json.put("total", m_total);
     json.put("size", m_curSize);
     return true;
-}
-
-void ArtifactLeaf::completeStatus(bool success)
-{
-    // If installation has already started, it will not pause.
-    // So, this prevents the status to be changed, even if the installation is completed in the background.
-    if (m_status.getStatus() == StatusType_PAUSED)
-        return;
-
-    if (success)
-        m_status.complete();
-    else
-        m_status.fail();
 }

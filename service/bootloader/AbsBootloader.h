@@ -28,14 +28,11 @@ public:
     AbsBootloader();
     virtual ~AbsBootloader();
 
-    string getHawkBitId();
-
     virtual void setEnv(const string& key, const string& value) = 0;
     virtual string getEnv(const string& key) = 0;
 
     virtual void notifyUpdate() = 0;
     virtual void setRebootOK() = 0;
-    virtual bool isRebootAfterUpdate() = 0;
 
 };
 

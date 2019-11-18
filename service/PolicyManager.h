@@ -32,7 +32,8 @@ class PolicyManager : public ISingleton<PolicyManager>,
                       public ConnectionManagerListener,
                       public LS2HandlerListener,
                       public HawkBitClientListener,
-                      public SettingsServiceListener {
+                      public SettingsServiceListener,
+                      public CompositeListener {
 friend ISingleton<PolicyManager>;
 public:
     static gboolean _tick(gpointer user_data);
@@ -43,10 +44,6 @@ public:
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    // global events
-    virtual void onRequestStatusChange();
-    virtual void onRequestProgressUpdate();
-
     // ConnectionManagerListener
     virtual void onGetStatusSubscription(pbnjson::JValue subscriptionPayload) override;
 
@@ -54,13 +51,14 @@ public:
     virtual void onGetSystemSettingsSubscription(pbnjson::JValue subscriptionPayload) override;
 
     // LS2HandlerListener
-    virtual void onConnect(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onGetStatus(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
     virtual void onSetConfig(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onStart(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onPause(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onResume(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
-    virtual void onCancel(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onStartDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onPauseDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onResumeDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onCancelDownload(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onStartInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
+    virtual void onCancelInstall(LS::Message& request, JValue& requestPayload, JValue& responsePayload) override;
 
     // HawkBitClientListener
     virtual void onCancellationAction(JValue& responsePayload) override;
@@ -68,17 +66,21 @@ public:
     virtual void onPollingSleepAction(int seconds) override;
     virtual void onSettingConfigData() override;
 
+    // DeploymentActionCompositeListener
+    virtual void onChangedStatus(Composite* deploymentAction) override;
+    virtual void onCompletedDownload(Composite* deploymentAction) override;
+    virtual void onCompletedInstall(Composite* deploymentAction) override;
+    virtual void onFailedDownload(Composite* deploymentAction) override;
+    virtual void onFailedInstall(Composite* deploymentAction) override;
+
 private:
     PolicyManager();
 
     void postStatus();
 
     static const int DEFAULT_TICK_INTERVAL = 15;
-    static const string FILE_NON_VOLITILE_REBOOTCHECK;
-    static const string FILE_VOLITILE_REBOOTCHECK;
 
     shared_ptr<DeploymentActionComposite> m_currentAction;
-    JValue m_proceedingJson;
     LS::SubscriptionPoint *m_statusPoint;
 
     int m_tickInterval;

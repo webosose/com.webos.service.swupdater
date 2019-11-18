@@ -49,8 +49,3 @@ void ICAS::notifyUpdate()
 void ICAS::setRebootOK()
 {
 }
-
-bool ICAS::isRebootAfterUpdate()
-{
-    return false;
-}

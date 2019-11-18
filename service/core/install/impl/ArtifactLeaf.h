@@ -22,7 +22,7 @@
 
 #include "core/Status.h"
 #include "core/HttpFile.h"
-#include "core/install/design/Leaf.h"
+#include "core/install/design/Composite.h"
 #include "ls2/AppInstaller.h"
 #include "interface/IClassName.h"
 #include "interface/IListener.h"
@@ -34,7 +34,8 @@ using namespace pbnjson;
 class ArtifactLeaf : public IClassName,
                      public HttpFileListener,
                      public AppInstallerListener,
-                     public Leaf {
+                     public Composite,
+                     public IListener<CompositeListener> {
 public:
     ArtifactLeaf();
     virtual ~ArtifactLeaf();
@@ -48,13 +49,13 @@ public:
     // AppInstallerListener
     virtual void onInstallSubscription(pbnjson::JValue subscriptionPayload) override;
 
-    // Leaf
-    virtual bool prepare() override;
-    virtual bool start() override;
-    virtual bool pause() override;
-    virtual bool resume() override;
-    virtual bool cancel() override;
-    virtual bool setWaitingReboot() override;
+    // Composite
+    virtual bool startDownload() override;
+    virtual bool pauseDownload() override;
+    virtual bool resumeDownload() override;
+    virtual bool cancelDownload() override;
+    virtual bool startInstall() override;
+    virtual bool cancelInstall() override;
 
     // ISerializable
     virtual bool fromJson(const JValue& json) override;
@@ -86,8 +87,6 @@ public:
     {
         return DIRNAME + m_fileName.substr(0, m_fileName.find_last_of(".")) + "." + m_sha1 + "." + getFileExtension();
     }
-
-    void completeStatus(bool success = true);
 
 private:
     const static string DIRNAME;

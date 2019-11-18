@@ -36,27 +36,25 @@ public:
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    bool setJson(const JValue& json);
-
     bool isHawkBitInfoSet()
     {
         return m_isHawkBitInfoSet;
     }
     string getDeviceId()
     {
-        return m_json["deviceId"].asString();
+        return m_deviceId;
     }
     string getAddress()
     {
-        return m_json["address"].asString();
+        return m_address;
     }
     string getToken()
     {
-        return m_json["token"].asString();
+        return m_token;
     }
     string getTenant()
     {
-        return m_json["tenant"].asString();
+        return m_tenant;;
     }
     string getBaseUrl()
     {
@@ -66,12 +64,12 @@ public:
 private:
     HawkBitInfo();
 
-    static const string PATH_PREFERENCE;
-    static const string FILENAME_HAWKBIT_INFO;
-    static const string TENANT_DEFAULT;
-
-    JValue m_json;
     bool m_isHawkBitInfoSet;
+
+    string m_deviceId;
+    string m_address;
+    string m_tenant;
+    string m_token;
 };
 
 #endif /* HAWKBIT_HAWKBITINFO_H_ */

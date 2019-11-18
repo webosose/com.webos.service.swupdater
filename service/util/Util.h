@@ -18,6 +18,7 @@
 #define UTIL_UTIL_H_
 
 #include <iostream>
+#include <glib.h>
 
 using namespace std;
 
@@ -32,6 +33,40 @@ public:
     static bool writeFile(const string& filename, const string& contents);
     static bool makeDir(const string& dir);
     static bool reboot();
+
+    static string generateUuid();
+    static string sha1(const string& filename);
+
+    // Call function asynchronously
+    template <typename T>
+    static bool async(T function, guint timeout = 0)
+    {
+        AsyncCall<T> *p = new AsyncCall<T>(function);
+        g_timeout_add(timeout, cbAsync, (gpointer)p);
+        return true;
+    }
+
+private:
+    // abstract class for async call
+    class IAsyncCall {
+    public:
+        virtual ~IAsyncCall() { }
+        virtual void Call() = 0;
+    };
+
+    // implementaion for async call
+    template <typename T>
+    class AsyncCall : public IAsyncCall {
+    public:
+        AsyncCall(T _func) : func(_func) {}
+
+        void Call() { func(); }
+    private:
+        T func;
+    };
+
+    //! It's called when get response async call
+    static gboolean cbAsync(gpointer data);
 };
 
 #endif /* UTIL_FILEUTIL_H_ */

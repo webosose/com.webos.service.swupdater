@@ -3,9 +3,11 @@
         "com.webos.service.swupdater/connect",
         "com.webos.service.swupdater/getStatus",
         "com.webos.service.swupdater/setConfig",
-        "com.webos.service.swupdater/start",
-        "com.webos.service.swupdater/pause",
-        "com.webos.service.swupdater/resume",
-        "com.webos.service.swupdater/cancel"
+        "com.webos.service.swupdater/startDownload",
+        "com.webos.service.swupdater/pauseDownload",
+        "com.webos.service.swupdater/resumeDownload",
+        "com.webos.service.swupdater/cancelDownload",
+        "com.webos.service.swupdater/startInstall",
+        "com.webos.service.swupdater/cancelInstall"
     ]
 }
