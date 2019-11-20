@@ -16,7 +16,6 @@
 
 [Unit]
 Description=webos - "%n"
-ConditionPathExists=@WEBOS_INSTALL_PREFERENCESDIR@/com.webos.service.swupdater/hawkBitInfo.json
 Requires=ls-hubd.service wpa-supplicant.service
 After=ls-hubd.service wpa-supplicant.service
 
