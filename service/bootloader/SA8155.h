@@ -14,8 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef HARDWARE_ICAS_H_
-#define HARDWARE_ICAS_H_
+#ifndef BOOTLOADER_SA8155_H_
+#define BOOTLOADER_SA8155_H_
 
 #include <iostream>
 #include <sstream>
@@ -24,16 +24,19 @@
 
 using namespace std;
 
-class ICAS : public AbsBootloader {
+class SA8155 : public AbsBootloader {
 public:
-    ICAS();
-    virtual ~ICAS();
+    SA8155();
+    virtual ~SA8155();
 
     virtual void setEnv(const string& key, const string& value) override;
     virtual string getEnv(const string& key) override;
 
     virtual void notifyUpdate() override;
     virtual void setRebootOK() override;
+
+    virtual int getCurrentSlot() override;
+    virtual int setActiveBootSlot(int slot) override;
 };
 
-#endif /* HARDWARE_ICAS_H_ */
+#endif /* BOOTLOADER_SA8155_H_ */

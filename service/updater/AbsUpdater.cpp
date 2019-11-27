@@ -18,12 +18,17 @@
 
 #if defined(LIBOSTREE)
 #include "updater/ostree/OSTree.h"
+#elif defined(LIBBOOTCTRL)
+#include "updater/dd/DDCommand.h"
 #endif
 
 AbsUpdater& AbsUpdaterFactory::getInstance()
 {
 #if defined(LIBOSTREE)
     static OSTree instance;
+    return instance;
+#elif defined(LIBBOOTCTRL)
+    static DDCommand instance;
     return instance;
 #else
     static DummyUpdater instance;

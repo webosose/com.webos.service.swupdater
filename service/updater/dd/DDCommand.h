@@ -14,20 +14,19 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef UPDATER_OSTREE_OSTREE_H_
-#define UPDATER_OSTREE_OSTREE_H_
+#ifndef UPDATER_DD_DDCOMMAND_H_
+#define UPDATER_DD_DDCOMMAND_H_
 
 #include <iostream>
-#include <ostree-1/ostree.h>
 
 #include "updater/AbsUpdater.h"
 
 using namespace std;
 
-class OSTree : public AbsUpdater {
+class DDCommand : public AbsUpdater {
 friend class AbsUpdaterFactory;
 public:
-    virtual ~OSTree();
+    virtual ~DDCommand();
 
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
@@ -39,13 +38,8 @@ public:
     virtual void printDebug() override;
 
 private:
-    OSTree();
-
-    bool lock();
-    void unlock();
-
-    OstreeSysroot* m_sysroot;
+    DDCommand();
 
 };
 
-#endif /* UPDATER_OSTREE_OSTREE_H_ */
+#endif /* UPDATER_DD_DDCOMMAND_H_ */

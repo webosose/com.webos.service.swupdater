@@ -20,6 +20,7 @@
 
 UBoot::UBoot()
 {
+    setClassName("UBoot");
 }
 
 UBoot::~UBoot()

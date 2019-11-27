@@ -181,6 +181,26 @@ bool ArtifactLeaf::startInstall()
                     m_listener->onFailedInstall(this);
             }
             return true;
+        } else if (getFileExtension() == "img") {
+            if (AbsUpdaterFactory::getInstance().deploy(getDownloadName(), PartitionLabel_BOOT)) {
+                AbsUpdaterFactory::getInstance().printDebug();
+                if (m_listener)
+                    m_listener->onCompletedInstall(this);
+            } else {
+                if (m_listener)
+                    m_listener->onFailedInstall(this);
+            }
+            return true;
+        } else if (getFileExtension() == "gz") {
+            if (AbsUpdaterFactory::getInstance().deploy(getDownloadName(), PartitionLabel_SYSTEM)) {
+                AbsUpdaterFactory::getInstance().printDebug();
+                if (m_listener)
+                    m_listener->onCompletedInstall(this);
+            } else {
+                if (m_listener)
+                    m_listener->onFailedInstall(this);
+            }
+            return true;
         }
 
         Logger::warning(getClassName(), m_fileName, "Not supported file extension");

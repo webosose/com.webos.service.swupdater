@@ -19,13 +19,14 @@
 
 #include <iostream>
 
+#include "interface/IClassName.h"
+
 using namespace std;
 
-class AbsBootloader {
+class AbsBootloader : public IClassName {
 public:
     static AbsBootloader& getBootloader();
 
-    AbsBootloader();
     virtual ~AbsBootloader();
 
     virtual void setEnv(const string& key, const string& value) = 0;
@@ -34,6 +35,11 @@ public:
     virtual void notifyUpdate() = 0;
     virtual void setRebootOK() = 0;
 
+    virtual int getCurrentSlot() = 0;
+    virtual int setActiveBootSlot(int slot) = 0;
+
+protected:
+    AbsBootloader();
 };
 
 #endif /* BOOTLOADER_ABSBOOTLOADER_H_ */
