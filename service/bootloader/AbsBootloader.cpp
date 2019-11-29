@@ -15,19 +15,25 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "bootloader/AbsBootloader.h"
-#include "bootloader/ICAS.h"
+#include "bootloader/SA8155.h"
 #include "bootloader/UBoot.h"
 #include "Setting.h"
 #include "util/Socket.h"
 
 AbsBootloader& AbsBootloader::getBootloader()
 {
-    static UBoot uboot;
-    return uboot;
+#if defined(UBOOT)
+    static UBoot instance;
+#else
+    static SA8155 instance;
+#endif
+    return instance;
 }
 
 AbsBootloader::AbsBootloader()
+    : IClassName()
 {
+    setClassName("AbsBootloader");
 }
 
 AbsBootloader::~AbsBootloader()

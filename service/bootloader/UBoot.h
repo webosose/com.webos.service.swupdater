@@ -35,6 +35,16 @@ public:
     virtual void notifyUpdate() override;
     virtual void setRebootOK() override;
 
+    virtual int getCurrentSlot() override
+    {
+        return 0;
+    }
+
+    virtual int setActiveBootSlot(int slot) override
+    {
+        return 0;
+    }
+
 };
 
 #endif /* BOOTLOADER_UBOOT_H_ */

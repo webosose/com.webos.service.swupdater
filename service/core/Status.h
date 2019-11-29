@@ -90,7 +90,7 @@ public:
         if (statusStr == toString(StatusType_DOWNLOAD_PAUSED))
             return StatusType_DOWNLOAD_PAUSED;
         if (statusStr == toString(StatusType_INSTALL_READY))
-            return StatusType_DOWNLOAD_STARTED;
+            return StatusType_INSTALL_READY;
         if (statusStr == toString(StatusType_INSTALL_STARTED))
             return StatusType_INSTALL_STARTED;
         if (statusStr == toString(StatusType_INSTALL_COMPLETED))

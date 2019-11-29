@@ -23,7 +23,8 @@
 #define HAWKBIT_TOKEN                       "@HAWKBIT_TOKEN@"
 #define HAWKBIT_TENANT                      "DEFAULT"
 
-#define PATH_PREFERENCE                     "@WEBOS_INSTALL_PREFERENCESDIR@/" NAME_SWUPDATER
+// TODO /var is deleted, when A/B upgrades on current SA8155 board.
+#define PATH_PREFERENCE                     "/home/root/" NAME_SWUPDATER // "@WEBOS_INSTALL_PREFERENCESDIR@/" NAME_SWUPDATER // /var/preferences
 #define FILE_HAWKBIT_INFO                   "hawkBitInfo.json"
 
 #endif /* ENVIRONMENT_H_ */

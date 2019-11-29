@@ -17,11 +17,12 @@
 # LICENSE@@@
 
 option(LIBOSTREE "Build with libostree" ON)
+option(LIBBOOTCTRL "Build with libbootctrl" OFF)
 
 # Uncomment to override the following variables defined in .bb file.
 # set(HAWKBIT_ADDRESS http://10.178.84.116:8080)
 # set(HAWKBIT_TOKEN 377b83e10b9f894883e98351875151cb)
-webos_add_compiler_flags(ALL -DINCLUDE_WEBOS -DHAWKBIT_ADDRESS=${HAWKBIT_ADDRESS} -DHAWKBIT_TOKEN=${HAWKBIT_TOKEN})
+webos_add_compiler_flags(ALL -DINCLUDE_WEBOS)
 webos_configure_header_files(${CMAKE_CURRENT_SOURCE_DIR})
 
 include(FindPkgConfig)
@@ -69,7 +70,10 @@ webos_add_compiler_flags(ALL ${Boost_CFLAGS_OTHER})
 if (LIBOSTREE)
     pkg_check_modules(OSTREE REQUIRED ostree-1)
     include_directories(${OSTREE_INCLUDE_DIRS})
-    webos_add_compiler_flags(ALL ${OSTREE_CFLAGS_OTHER} -DLIBOSTREE)
+    webos_add_compiler_flags(ALL ${OSTREE_CFLAGS_OTHER} -DLIBOSTREE -DUBOOT)
+endif()
+if (LIBBOOTCTRL)
+    webos_add_compiler_flags(ALL -DLIBBOOTCTRL)
 endif()
 
 # Environment
@@ -77,6 +81,9 @@ set(BIN_NAME swupdater)
 file(GLOB_RECURSE SRC_CPP ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 if (NOT LIBOSTREE)
     list(REMOVE_ITEM SRC_CPP ${CMAKE_CURRENT_SOURCE_DIR}/updater/ostree/OSTree.cpp)
+endif()
+if (NOT LIBBOOTCTRL)
+    list(REMOVE_ITEM SRC_CPP ${CMAKE_CURRENT_SOURCE_DIR}/updater/dd/DDCommand.cpp)
 endif()
 file(GLOB_RECURSE SRC_C ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
 
@@ -100,6 +107,9 @@ set(LIBS
 )
 if (LIBOSTREE)
     set (LIBS ${LIBS} ${OSTREE_LDFLAGS})
+endif()
+if (LIBBOOTCTRL)
+    set (LIBS ${LIBS} -labctl -lboot_control)
 endif()
 target_link_libraries(${BIN_NAME} ${LIBS})
 

@@ -26,7 +26,8 @@
 #include "util/Logger.h"
 #include "util/Util.h"
 
-const string DeploymentActionComposite::FILE_NON_VOLITILE_REBOOTCHECK = "/var/luna/preferences/swupdater_reboot_required";
+// TODO /var is deleted, when A/B upgrades on current SA8155 board.
+const string DeploymentActionComposite::FILE_NON_VOLITILE_REBOOTCHECK = "/home/root/swupdater_reboot_required";
 const string DeploymentActionComposite::FILE_VOLITILE_REBOOTCHECK = "/tmp/swupdater_reboot_required";
 
 DeploymentActionComposite::DeploymentActionComposite()

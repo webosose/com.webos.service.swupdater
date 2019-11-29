@@ -254,6 +254,7 @@ void PolicyManager::onCancellationAction(JValue& responsePayload)
             HawkBitClient::getInstance().postCancellationAction(id, true);
             m_currentAction->removeDownloadedFiles();
             m_currentAction = nullptr;
+            postStatus();
         } else {
             Logger::info(getClassName(), "Failed to cancel update");
             HawkBitClient::getInstance().postCancellationAction(id, false);

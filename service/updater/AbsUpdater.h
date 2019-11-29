@@ -24,13 +24,19 @@
 
 using namespace std;
 
+enum PartitionLabel {
+    PartitionLabel_NONE,
+    PartitionLabel_BOOT,
+    PartitionLabel_SYSTEM,
+};
+
 class AbsUpdater : public IInitializable,
                    public ISingleton<AbsUpdater> {
 friend ISingleton<AbsUpdater>;
 public:
     virtual ~AbsUpdater() {}
 
-    virtual bool deploy(const string& path) = 0;
+    virtual bool deploy(const string& path, PartitionLabel partLabel = PartitionLabel_NONE) = 0;
     virtual bool undeploy() = 0;
     virtual bool setReadWriteMode() = 0;
     virtual bool isUpdated() = 0;
@@ -54,7 +60,7 @@ public:
         return true;
     }
 
-    virtual bool deploy(const string& path) override
+    virtual bool deploy(const string& path, PartitionLabel partLabel) override
     {
         return true;
     }
@@ -68,7 +74,7 @@ public:
     }
     virtual bool isUpdated() override
     {
-        return false;
+        return true;
     }
     virtual void printDebug() override
     {
