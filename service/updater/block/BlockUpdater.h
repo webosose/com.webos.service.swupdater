@@ -1,4 +1,4 @@
-// Copyright (c) 2019 LG Electronics, Inc.
+// Copyright (c) 2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef UPDATER_DD_DDCOMMAND_H_
-#define UPDATER_DD_DDCOMMAND_H_
+#ifndef UPDATER_BLOCK_BLOCKUPDATER_H_
+#define UPDATER_BLOCK_BLOCKUPDATER_H_
 
 #include <iostream>
 
@@ -23,23 +23,22 @@
 
 using namespace std;
 
-class DDCommand : public AbsUpdater {
+class BlockUpdater : public AbsUpdater {
 friend class AbsUpdaterFactory;
 public:
-    virtual ~DDCommand();
+    virtual ~BlockUpdater();
 
     virtual bool onInitialization() override;
     virtual bool onFinalization() override;
 
-    virtual bool deploy(const string& path, PartitionLabel partLabel) override;
+    virtual bool deploy(const string& path, PartitionLabel partitionLabel) override;
     virtual bool undeploy() override;
     virtual bool setReadWriteMode() override;
     virtual bool isUpdated() override;
     virtual void printDebug() override;
 
 private:
-    DDCommand();
-
+    BlockUpdater();
 };
 
-#endif /* UPDATER_DD_DDCOMMAND_H_ */
+#endif /* UPDATER_BLOCK_BLOCKUPDATER_H_ */

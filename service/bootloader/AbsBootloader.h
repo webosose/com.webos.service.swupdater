@@ -1,4 +1,4 @@
-// Copyright (c) 2019 LG Electronics, Inc.
+// Copyright (c) 2019-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,10 +33,10 @@ public:
     virtual string getEnv(const string& key) = 0;
 
     virtual void notifyUpdate() = 0;
-    virtual void setRebootOK() = 0;
+    virtual void setBootSuccess() = 0;
 
-    virtual int getCurrentSlot() = 0;
-    virtual int setActiveBootSlot(int slot) = 0;
+    virtual int getBootSlot() = 0;
+    virtual int setActive(int slot) = 0;
 
 protected:
     AbsBootloader();

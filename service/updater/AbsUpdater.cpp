@@ -1,4 +1,4 @@
-// Copyright (c) 2019 LG Electronics, Inc.
+// Copyright (c) 2019-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@
 
 #if defined(LIBOSTREE)
 #include "updater/ostree/OSTree.h"
-#elif defined(LIBBOOTCTRL)
-#include "updater/dd/DDCommand.h"
+#else
+#include "updater/block/BlockUpdater.h"
 #endif
 
 AbsUpdater& AbsUpdaterFactory::getInstance()
@@ -27,11 +27,8 @@ AbsUpdater& AbsUpdaterFactory::getInstance()
 #if defined(LIBOSTREE)
     static OSTree instance;
     return instance;
-#elif defined(LIBBOOTCTRL)
-    static DDCommand instance;
-    return instance;
 #else
-    static DummyUpdater instance;
+    static BlockUpdater instance;
     return instance;
 #endif
 }

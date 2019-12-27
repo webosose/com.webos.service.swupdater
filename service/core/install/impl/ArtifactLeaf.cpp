@@ -1,4 +1,4 @@
-// Copyright (c) 2019 LG Electronics, Inc.
+// Copyright (c) 2019-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -171,7 +171,7 @@ bool ArtifactLeaf::startInstall()
                 }
                 return true;
             }
-        } else if (getFileExtension() == "delta") {
+        } else if (getFileExtension() == "delta") { // ostree-hash1-hash2.delta
             if (AbsUpdaterFactory::getInstance().deploy(getDownloadName())) {
                 AbsUpdaterFactory::getInstance().printDebug();
                 if (m_listener)
@@ -181,7 +181,7 @@ bool ArtifactLeaf::startInstall()
                     m_listener->onFailedInstall(this);
             }
             return true;
-        } else if (getFileExtension() == "img") {
+        } else if (getFileExtension() == "img") { // boot.img
             if (AbsUpdaterFactory::getInstance().deploy(getDownloadName(), PartitionLabel_BOOT)) {
                 AbsUpdaterFactory::getInstance().printDebug();
                 if (m_listener)
@@ -191,7 +191,17 @@ bool ArtifactLeaf::startInstall()
                     m_listener->onFailedInstall(this);
             }
             return true;
-        } else if (getFileExtension() == "gz") {
+        } else if (getFileExtension() == "gz") { // webos-image.ext4.gz
+            if (AbsUpdaterFactory::getInstance().deploy(getDownloadName(), PartitionLabel_SYSTEM)) {
+                AbsUpdaterFactory::getInstance().printDebug();
+                if (m_listener)
+                    m_listener->onCompletedInstall(this);
+            } else {
+                if (m_listener)
+                    m_listener->onFailedInstall(this);
+            }
+            return true;
+        } else if (getFileExtension() == "xd3") { // xdelta3
             if (AbsUpdaterFactory::getInstance().deploy(getDownloadName(), PartitionLabel_SYSTEM)) {
                 AbsUpdaterFactory::getInstance().printDebug();
                 if (m_listener)

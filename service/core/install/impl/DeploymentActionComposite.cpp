@@ -1,4 +1,4 @@
-// Copyright (c) 2019 LG Electronics, Inc.
+// Copyright (c) 2019-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 
 #include <memory>
 
+#include "Setting.h"
 #include "bootloader/AbsBootloader.h"
 #include "hawkbit/HawkBitClient.h"
 #include "ls2/NotificationManager.h"
@@ -26,8 +27,7 @@
 #include "util/Logger.h"
 #include "util/Util.h"
 
-// TODO /var is deleted, when A/B upgrades on current SA8155 board.
-const string DeploymentActionComposite::FILE_NON_VOLITILE_REBOOTCHECK = "/home/root/swupdater_reboot_required";
+const string DeploymentActionComposite::FILE_NON_VOLITILE_REBOOTCHECK = PATH_PREFERENCE "/swupdater_reboot_required";
 const string DeploymentActionComposite::FILE_VOLITILE_REBOOTCHECK = "/tmp/swupdater_reboot_required";
 
 DeploymentActionComposite::DeploymentActionComposite()
@@ -313,7 +313,7 @@ bool DeploymentActionComposite::fromActionHistory(const JValue& json) {
             return true;
         }
         Logger::info(getClassName(), "Reboot detected, and updated OS applied.");
-        AbsBootloader::getBootloader().setRebootOK();
+        AbsBootloader::getBootloader().setBootSuccess();
         Util::removeFile(FILE_NON_VOLITILE_REBOOTCHECK);
     }
 

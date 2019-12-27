@@ -1,4 +1,4 @@
-// Copyright (c) 2019 LG Electronics, Inc.
+// Copyright (c) 2019-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,14 +33,14 @@ public:
     virtual string getEnv(const string& key) override;
 
     virtual void notifyUpdate() override;
-    virtual void setRebootOK() override;
+    virtual void setBootSuccess() override;
 
-    virtual int getCurrentSlot() override
+    virtual int getBootSlot() override
     {
         return 0;
     }
 
-    virtual int setActiveBootSlot(int slot) override
+    virtual int setActive(int slot) override
     {
         return 0;
     }
