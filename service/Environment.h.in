@@ -1,4 +1,4 @@
-// Copyright (c) 2019 LG Electronics, Inc.
+// Copyright (c) 2019-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,8 +23,7 @@
 #define HAWKBIT_TOKEN                       "@HAWKBIT_TOKEN@"
 #define HAWKBIT_TENANT                      "DEFAULT"
 
-// TODO /var is deleted, when A/B upgrades on current SA8155 board.
-#define PATH_PREFERENCE                     "/home/root/" NAME_SWUPDATER // "@WEBOS_INSTALL_PREFERENCESDIR@/" NAME_SWUPDATER // /var/preferences
+#define PATH_PREFERENCE                     "@WEBOS_INSTALL_PREFERENCESDIR@/" NAME_SWUPDATER // /var/preferences
 #define FILE_HAWKBIT_INFO                   "hawkBitInfo.json"
 
 #endif /* ENVIRONMENT_H_ */

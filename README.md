@@ -1,10 +1,11 @@
 Summary
 -------
-TBD
+The webOS FOTA service acts as the hawkBit client.
 
 Description
 -----------
-TBD
+The swupdater service checks for updates from the hawkBit server
+and downloads or installs them on user request.
 
 Environment variable for logging
 --------------------------------
@@ -15,7 +16,7 @@ Environment variable for logging
 
 # Copyright and License Information
 
-Copyright (c) 2019 LG Electronics, Inc.
+Copyright (c) 2019-2020 LG Electronics, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

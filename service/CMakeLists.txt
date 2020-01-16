@@ -1,6 +1,6 @@
 # @@@LICENSE
 #
-#      Copyright (c) 2019 LG Electronics, Inc.
+#      Copyright (c) 2019-2020 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 # LICENSE@@@
 
 option(LIBOSTREE "Build with libostree" ON)
-option(LIBBOOTCTRL "Build with libbootctrl" OFF)
+option(LIBABCTL "Build with libabctl" OFF)
 
 # Uncomment to override the following variables defined in .bb file.
 # set(HAWKBIT_ADDRESS http://10.178.84.116:8080)
@@ -72,8 +72,8 @@ if (LIBOSTREE)
     include_directories(${OSTREE_INCLUDE_DIRS})
     webos_add_compiler_flags(ALL ${OSTREE_CFLAGS_OTHER} -DLIBOSTREE -DUBOOT)
 endif()
-if (LIBBOOTCTRL)
-    webos_add_compiler_flags(ALL -DLIBBOOTCTRL)
+if (LIBABCTL)
+    webos_add_compiler_flags(ALL -DLIBABCTL)
 endif()
 
 # Environment
@@ -81,9 +81,6 @@ set(BIN_NAME swupdater)
 file(GLOB_RECURSE SRC_CPP ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 if (NOT LIBOSTREE)
     list(REMOVE_ITEM SRC_CPP ${CMAKE_CURRENT_SOURCE_DIR}/updater/ostree/OSTree.cpp)
-endif()
-if (NOT LIBBOOTCTRL)
-    list(REMOVE_ITEM SRC_CPP ${CMAKE_CURRENT_SOURCE_DIR}/updater/dd/DDCommand.cpp)
 endif()
 file(GLOB_RECURSE SRC_C ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
 
@@ -108,8 +105,8 @@ set(LIBS
 if (LIBOSTREE)
     set (LIBS ${LIBS} ${OSTREE_LDFLAGS})
 endif()
-if (LIBBOOTCTRL)
-    set (LIBS ${LIBS} -labctl -lboot_control)
+if (LIBABCTL)
+    set (LIBS ${LIBS} -labctl)
 endif()
 target_link_libraries(${BIN_NAME} ${LIBS})
 

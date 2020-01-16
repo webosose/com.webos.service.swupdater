@@ -1,4 +1,4 @@
-// Copyright (c) 2019 LG Electronics, Inc.
+// Copyright (c) 2019-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -139,6 +139,9 @@ void SoftwareModuleComposite::onCompletedDownload(Composite* artifact)
 void SoftwareModuleComposite::onCompletedInstall(Composite* artifact)
 {
     Logger::debug(getClassName(), __FUNCTION__, to_string(m_current));
+    // m_current is -1, if 'cancelInstall' is invoked.
+    if (m_current == -1)
+        return;
 
     m_current++;
     if (m_current < m_children.size()) {
