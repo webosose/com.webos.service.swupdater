@@ -1,4 +1,4 @@
-// Copyright (c) 2019 LG Electronics, Inc.
+// Copyright (c) 2019-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 #ifndef POLICYMANAGER_H_
 #define POLICYMANAGER_H_
+
+#include <boost/signals2.hpp>
 
 #include "bootloader/AbsBootloader.h"
 #include "core/AbsAction.h"
@@ -72,6 +74,8 @@ public:
     virtual void onCompletedInstall(Composite* deploymentAction) override;
     virtual void onFailedDownload(Composite* deploymentAction) override;
     virtual void onFailedInstall(Composite* deploymentAction) override;
+
+    boost::signals2::signal<bool()> signalOnInitialized;
 
 private:
     PolicyManager();
