@@ -1,4 +1,4 @@
-// Copyright (c) 2019 LG Electronics, Inc.
+// Copyright (c) 2019-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,10 +43,20 @@ const LSMethod LS2Handler::ROOT_METHODS[] = {
 
 bool LS2Handler::onRequest(LSHandle *sh, LSMessage *msg, void *category_context)
 {
-    static bool pending = false;
-
     // All LS2 requests are handled in queue
     LS2Handler::getInstance().m_requests.emplace(msg);
+
+    if (!PolicyManager::getInstance().isInitalized()) {
+        Logger::info(LS2Handler::getInstance().getClassName(), "Requested " + string(LSMessageGetKind(msg)) + ", but waiting to be initialized");
+        return true;
+    }
+
+    return LS2Handler::getInstance().handleRequest();
+}
+
+bool LS2Handler::handleRequest()
+{
+    static bool pending = false;
 
     // Not allowed recursive request handling To avoid unexpected behavior
     if (pending) {
@@ -108,6 +118,7 @@ LS2Handler::~LS2Handler()
 
 bool LS2Handler::onInitialization()
 {
+    m_connection = PolicyManager::getInstance().signalOnInitialized.connect(std::bind(&LS2Handler::handleRequest, this));
     attachToLoop(m_mainloop);
     AppInstaller::getInstance().initialize(m_mainloop);
     ConnectionManager::getInstance().initialize(m_mainloop);
@@ -124,6 +135,7 @@ bool LS2Handler::onFinalization()
     ConnectionManager::getInstance().finalize();
     AppInstaller::getInstance().finalize();
     detach();
+    m_connection.disconnect();
     return true;
 }
 

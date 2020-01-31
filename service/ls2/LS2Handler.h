@@ -1,4 +1,4 @@
-// Copyright (c) 2019 LG Electronics, Inc.
+// Copyright (c) 2019-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 
 #include <iostream>
 #include <queue>
+#include <boost/signals2.hpp>
 
 #include <luna-service2/lunaservice.hpp>
 #include <pbnjson.hpp>
@@ -71,10 +72,13 @@ private:
 
     LS2Handler();
 
+    bool handleRequest();
+
     static const string NAME;
     static const LSMethod ROOT_METHODS[];
 
     queue<LS::Message> m_requests;
+    boost::signals2::connection m_connection;
 
 };
 
