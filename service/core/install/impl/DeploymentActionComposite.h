@@ -59,12 +59,12 @@ public:
     virtual bool startInstall() override;
     virtual bool cancelInstall() override;
 
-    const bool isForceDownload()
+    bool isForceDownload()
     {
         return m_isForceDownload;
     }
 
-    const bool isForceUpdate()
+    bool isForceUpdate()
     {
         return m_isForceUpdate;
     }
