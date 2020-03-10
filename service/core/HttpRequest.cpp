@@ -80,26 +80,23 @@ bool HttpRequest::send(JValue request)
     CURLcode rc = CURLE_OK;
     rc = curl_easy_setopt(m_easyHandle, CURLOPT_WRITEDATA, this);
     if (rc != CURLE_OK) {
-        goto Done;
+        goto Error;
     }
     rc = curl_easy_setopt(m_easyHandle, CURLOPT_WRITEFUNCTION, &HttpRequest::onReceiveResponse);
     if (rc != CURLE_OK) {
-        goto Done;
+        goto Error;
     }
     rc = curl_easy_perform(m_easyHandle);
     if (rc != CURLE_OK) {
-        goto Done;
+        goto Error;
     }
 
     Logger::verbose(getClassName(), __FUNCTION__);
     return true;
 
-Done:
-    if (rc != CURLE_OK) {
-        Logger::error(getClassName(), "Failed in curl_easy_setopt(WRITEFUNCTION)", curl_easy_strerror(rc));
-        return false;
-    }
-    return true;
+Error:
+    Logger::error(getClassName(), "Failed in curl_easy_setopt", curl_easy_strerror(rc));
+    return false;
 }
 
 size_t HttpRequest::onReceiveResponse(char* ptr, size_t size, size_t nmemb, void* userdata)

@@ -319,7 +319,7 @@ void PolicyManager::onPollingSleepAction(int seconds)
         Logger::info(getClassName(), "Tick source was removed");
     }
     m_tickSrc = g_timeout_add_seconds(seconds, _tick, nullptr);
-    if (m_tickSrc < 0) {
+    if (m_tickSrc == 0) {
         Logger::error(getClassName(), "Failed to start tick timer");
         return;
     }

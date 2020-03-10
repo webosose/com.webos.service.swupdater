@@ -67,7 +67,7 @@ public:
     virtual bool startInstall() override;
     virtual bool cancelInstall() override;
 
-    const enum SoftwareModuleType getType()
+    enum SoftwareModuleType getType()
     {
         return m_type;
     }

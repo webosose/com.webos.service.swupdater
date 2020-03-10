@@ -170,11 +170,11 @@ void Logger::writePmlog(const enum LogLevel& level, const string& log)
 
     switch(level) {
     case LogLevel_VERBOSE:
-        PmLogDebug(context, "common", 0, log.c_str());
+        PmLogDebug(context, log.c_str());
         break;
 
     case LogLevel_DEBUG:
-        PmLogDebug(context, "common", 0, log.c_str());
+        PmLogDebug(context, log.c_str());
         break;
 
     case LogLevel_INFO:
