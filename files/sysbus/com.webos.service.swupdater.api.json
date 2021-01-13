@@ -1,8 +1,6 @@
 {
-    "swupdate": [
-        "com.webos.service.swupdater/connect",
+    "softwareupdate.operation": [
         "com.webos.service.swupdater/getStatus",
-        "com.webos.service.swupdater/setConfig",
         "com.webos.service.swupdater/startDownload",
         "com.webos.service.swupdater/pauseDownload",
         "com.webos.service.swupdater/resumeDownload",
