@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 LG Electronics, Inc.
+// Copyright (c) 2019-2021 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -147,8 +147,9 @@ void PolicyManager::onGetStatus(LS::Message& request, JValue& requestPayload, JV
     }
     if (m_statusPoint && request.isSubscription()) {
         Logger::debug(getClassName(), "Add subscription");
-        m_statusPoint->subscribe(request);
-        responsePayload.put("subscribed", true);
+        responsePayload.put("subscribed", m_statusPoint->subscribe(request));
+    } else {
+        responsePayload.put("subscribed", false);
     }
 }
 

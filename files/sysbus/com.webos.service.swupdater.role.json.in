@@ -1,6 +1,7 @@
 {
     "exeName":"@WEBOS_INSTALL_SBINDIR@/swupdater",
     "type": "regular",
+    "trustLevel": "oem",
     "allowedNames": ["com.webos.service.swupdater"],
     "permissions": [
         {
